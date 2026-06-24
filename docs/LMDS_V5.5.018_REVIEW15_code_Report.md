@@ -958,7 +958,7 @@ function reprocessReviewQueue() {
 
 /**
  * reprocPrepareContext_ — [REF-R2-01] Phase 1+2: Read sheets, load checkpoint, build RI/FI maps
- * @return {{reviewSheet, factSheet, reviewData, factData, factLookup, RI, FI, startIdx, reviewCols, factCols}|null}
+ * @return {Object|null}
  */
 function reprocPrepareContext_(startTime, timeLimit) {
   // [Body ย้ายมาจากบรรทัด 1007-1098 — อ่าน sheets, ตรวจ empty, load checkpoint, build RI/FI/factLookup]
@@ -1829,7 +1829,7 @@ function reprocessReviewQueue() {
 
 /**
  * reprocPrepareContext_ — [REF-R2-01] Phase 1+2: Read sheets, load checkpoint, build RI/FI maps
- * @return {{reviewSheet, factSheet, reviewData, factData, factLookup, RI, FI, startIdx, reviewCols, factCols}|null}
+ * @return {Object|null}
  */
 function reprocPrepareContext_(startTime, timeLimit) {
   // [Body ย้ายมาจากบรรทัด 1007-1098 — อ่าน sheets, ตรวจ empty, load checkpoint, build RI/FI/factLookup]
