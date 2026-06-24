@@ -538,8 +538,13 @@ function parseCandidatesFromReview_(rowData) {
   let candPersonIds = [];
   let candPlaceIds = [];
 
-  try { candPersonIds = JSON.parse(candPersonStr); } catch (e) {}
-  try { candPlaceIds = JSON.parse(candPlaceStr); } catch (e) {}
+  // [FIX BUG-H03 V5.5.022] เพิ่ม logWarn ใน catch — ละเมิด Rule 12 (No Silent Fail)
+  try { candPersonIds = JSON.parse(candPersonStr); } catch (e) {
+    logWarn('ReviewService', 'parseCandidatesFromReview_: candPersonIds JSON.parse ล้มเหลว — ' + candPersonStr.substring(0, 100));
+  }
+  try { candPlaceIds = JSON.parse(candPlaceStr); } catch (e) {
+    logWarn('ReviewService', 'parseCandidatesFromReview_: candPlaceIds JSON.parse ล้มเหลว — ' + candPlaceStr.substring(0, 100));
+  }
 
   return { candPersonIds: candPersonIds, candPlaceIds: candPlaceIds };
 }
@@ -861,6 +866,12 @@ function safeExtractArr_(arr, idx) {
  * วิธีรัน: เลือกฟังก์ชันนี้ใน dropdown → กด ▶ Run
  */
 function reprocessReviewQueue() {
+  // [FIX BUG-M01 V5.5.022] เพิ่ม AuthZ Guard — destructive op ที่เขียน Q_REVIEW + FACT_DELIVERY + SOURCE
+  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+    safeUiAlert_('🔒 คุณไม่มีสิทธิ์รัน Reprocess Review Queue\nกรุณาติดต่อ Admin');
+    return;
+  }
+
   // [PERF-001] BLOCKING FIX — เพิ่ม LockService + Time Guard + Checkpoint/Resume + flushLogBuffer_
   //   ปัญหาเดิม: ไม่มี guards ใดๆ → Q_REVIEW 200+ rows เสี่ยง Timeout แน่นอน
   //     - LockService: กัน concurrent writes (2 users พร้อมกัน → duplicate FACT rows)

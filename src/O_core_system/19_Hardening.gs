@@ -226,14 +226,15 @@ function generatePersonAliasesFromHistory() {
   //   4. finalizeAliasHistory_      — SECTION D: Final flush + clear checkpoint + report
   // Preserve Behavior 100% — same AuthZ, same checkpoint, same flush pattern, same report message
 
-  var setup = acquireAliasHistoryLock_();
+  // [FIX BUG-M02 V5.5.022] var → const/let — Rule 1 (Clean Code)
+  const setup = acquireAliasHistoryLock_();
   if (!setup) return;
 
   try {
-    var ctx = prepareAliasHistoryContext_(setup.ss);
+    const ctx = prepareAliasHistoryContext_(setup.ss);
     if (ctx === null) return;  // empty/error path already handled in prepare
 
-    var loopResult = runAliasHistoryLoop_(ctx, setup.ss);
+    const loopResult = runAliasHistoryLoop_(ctx, setup.ss);
     finalizeAliasHistory_(ctx, loopResult, setup.ss);
   } catch (err) {
     logError('Hardening', 'generatePersonAliasesFromHistory ล้มเหลว: ' + err.message, err);
@@ -552,9 +553,10 @@ function flushGlobalAliasRows_(ss, rows) {
   if (!rows || rows.length === 0) return 0;
 
   // [PERF-003] โหลด dedup set 1 ครั้งก่อนลูป แทนที่จะเรียก createGlobalAlias() ทุกรอบ
-  var existingSet = buildGlobalAliasDedupSet_();
+  // [FIX BUG-M02 V5.5.022] var → const/let — Rule 1 (Clean Code)
+  const existingSet = buildGlobalAliasDedupSet_();
 
-  var newRows = [];
+  const newRows = [];
   rows.forEach(function(aliasRow) {
     var masterUuid   = String(aliasRow[ALIAS_IDX.MASTER_UUID]  || '');
     var variantName  = String(aliasRow[ALIAS_IDX.VARIANT_NAME] || '');
@@ -563,8 +565,8 @@ function flushGlobalAliasRows_(ss, rows) {
     var source       = String(aliasRow[ALIAS_IDX.SOURCE]       || 'MANUAL');
 
     // Dedup check ใน RAM
-    var norm = normalizeForCompare(variantName);
-    var dedupKey = entityType + '::' + masterUuid + '::' + norm;
+    let norm = normalizeForCompare(variantName);
+    const dedupKey = entityType + '::' + masterUuid + '::' + norm;
     if (!norm || existingSet.has(dedupKey)) return;
 
     // เพิ่มเข้า set เพื่อป้องกัน duplicate ใน batch เดียวกัน
@@ -574,7 +576,7 @@ function flushGlobalAliasRows_(ss, rows) {
 
   // Batch write ทั้งหมดครั้งเดียว
   if (newRows.length > 0) {
-    var mAliasSheet = ss.getSheetByName(SHEET.M_ALIAS);
+    const mAliasSheet = ss.getSheetByName(SHEET.M_ALIAS);
     if (mAliasSheet) {
       mAliasSheet.getRange(
         mAliasSheet.getLastRow() + 1, 1,

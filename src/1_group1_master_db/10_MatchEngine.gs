@@ -676,8 +676,16 @@ function matchCommitGlobalAlias_(mAliasSheet, rows) {
       mAliasSheet.getLastRow() + 1, 1,
       rows.length, SCHEMA[SHEET.M_ALIAS].length
     ).setValues(rows);
-    // [FIX CRIT-002] Use CACHE_KEY constants instead of hardcoded strings — Single Source of Truth
-    CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    // [FIX BUG-C01 V5.5.022] Use invalidateChunkedCache_ instead of removeAll
+    //   เดิมใช้ removeAll เฉพาะ base keys ทำให้ chunk keys (_CHUNKS, _0, _1, ...) ตกค้าง
+    //   loadGlobalAliasesMap_/loadGlobalAliasReverseIndex_ อ่านจาก chunk keys เก่า → stale alias data
+    //   ทำให้ fastLookupByShipToName ไม่เจอ alias ใหม่จนกว่า TTL จะหมด
+    if (typeof invalidateChunkedCache_ === 'function') {
+      invalidateChunkedCache_(CACHE_KEY.GLOBAL_ALIAS_ALL);
+      invalidateChunkedCache_(CACHE_KEY.GLOBAL_ALIAS_REVERSE);
+    } else {
+      CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    }
   }
 }
 

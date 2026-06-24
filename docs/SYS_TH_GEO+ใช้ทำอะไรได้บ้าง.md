@@ -198,7 +198,7 @@ function extractGeoFromAddress(addressText) {
  * ใช้ใน PlaceService เพื่อเพิ่ม Confidence score
  * @param {string} addressText
  * @param {string} postalCode
- * @returns {{ valid: boolean, confidence: number, details: string }}
+ * @returns {Object} { valid: boolean, confidence: number, details: string }
  */
 function validateAddressWithGeo(addressText, postalCode) {
   if (!addressText && !postalCode) return { valid: false, confidence: 0, details: 'no input' };

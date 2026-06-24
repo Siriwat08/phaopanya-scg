@@ -482,15 +482,16 @@ function findRowByIdInSheet_(sheet, targetId) {
   // [PERF-012] TextFinder แทน manual loop — เร็วกว่าสำหรับ sheet ใหญ่
   //   matchEntireCell(true) → ต้อง match ทั้ง cell ไม่ใช่ substring (เหมือน === )
   //   matchCase(false) → case-insensitive (เหมือน .toUpperCase() compare)
-  var textFinder = sheet.createTextFinder(targetId)
+  // [FIX BUG-M02 V5.5.022] var → const/let — Rule 1 (Clean Code)
+  const textFinder = sheet.createTextFinder(targetId)
     .matchCase(false)
     .matchEntireCell(true);
 
-  var matches = textFinder.findAll();
+  const matches = textFinder.findAll();
   if (matches.length === 0) return -1;
 
   // Filter เฉพาะ matches ใน col A (column 1)
-  for (var i = 0; i < matches.length; i++) {
+  for (let i = 0; i < matches.length; i++) {
     if (matches[i].getColumn() === 1) {
       return matches[i].getRow();
     }
@@ -510,14 +511,15 @@ function findRowByIdInSheet_(sheet, targetId) {
 function findRowByIdInSheetByCol_(sheet, targetId, colIdx) {
   if (!targetId) return -1;
 
-  var textFinder = sheet.createTextFinder(targetId)
+  // [FIX BUG-M02 V5.5.022] var → const/let — Rule 1 (Clean Code)
+  const textFinder = sheet.createTextFinder(targetId)
     .matchCase(false)
     .matchEntireCell(true);
 
-  var matches = textFinder.findAll();
-  var targetCol = colIdx + 1;  // convert 0-based to 1-based
+  const matches = textFinder.findAll();
+  const targetCol = colIdx + 1;  // convert 0-based to 1-based
 
-  for (var i = 0; i < matches.length; i++) {
+  for (let i = 0; i < matches.length; i++) {
     if (matches[i].getColumn() === targetCol) {
       return matches[i].getRow();
     }

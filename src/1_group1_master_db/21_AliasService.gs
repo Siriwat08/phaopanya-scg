@@ -1396,7 +1396,11 @@ function saveMigrationCheckpoint_(step, rowIndex) {
 function loadMigrationCheckpoint_() {
   var raw = PropertiesService.getScriptProperties()
     .getProperty(MIGRATION_CHECKPOINT_KEY);
-  if (raw) { try { return JSON.parse(raw); } catch(e) {} }
+  if (raw) { try { return JSON.parse(raw); } catch(e) {
+    // [FIX BUG-H02 V5.5.022] เพิ่ม logWarn — ละเมิด Rule 12 (No Silent Fail)
+    //   checkpoint data เสีย → เริ่ม migration จาก step 1 ใหม่ อาจทำให้ข้อมูลซ้ำซ้อน
+    logWarn('AliasService', 'loadMigrationCheckpoint_: JSON.parse ล้มเหลว — resetting to step 1 — raw: ' + String(raw).substring(0, 100));
+  } }
   return { step: 1, rowIndex: 0 };
 }
 

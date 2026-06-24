@@ -120,9 +120,17 @@ function upsertFactDelivery(srcObj, personId, placeId, geoId, destId, decision) 
 
   if (existingRow > 0) {
     // --- UPDATE ---
-    const rowRange = factSheet.getRange(existingRow, 1, 1,
-                      SCHEMA[SHEET.FACT_DELIVERY].length);
-    const rowData  = rowRange.getValues()[0];
+    // [FIX BUG-M03 V5.5.022] เพิ่ม Math.min guard ป้องกัน Range error
+    //   ถ้า FACT_DELIVERY sheet มีคอลัมน์น้อยกว่า SCHEMA (เช่นยังไม่ได้ add คอลัมน์ใหม่)
+    //   getRange จะ throw error ทันที — ต่างจาก data loaders อื่นที่มี Math.min guard
+    const schemaLen = SCHEMA[SHEET.FACT_DELIVERY].length;
+    const sheetCols = Math.min(schemaLen, factSheet.getLastColumn());
+    const rowRange = factSheet.getRange(existingRow, 1, 1, sheetCols);
+    const rawRowData = rowRange.getValues()[0];
+    // ถ้าข้อมูลในชีตสั้นกว่า SCHEMA → extend array ให้ครบ ป้องกัน undefined index
+    const rowData = rawRowData.length < schemaLen
+      ? rawRowData.concat(new Array(schemaLen - rawRowData.length).fill(''))
+      : rawRowData;
     return factUpdateRow_(rowRange, rowData, personId, placeId, geoId, destId,
                           decision, resolvedLat, resolvedLng, now, srcObj);
 
