@@ -1,0 +1,44 @@
+# 🏷️ Auto Labeler Config
+# ใช้กับ actions/labeler@v5 ใน workflow 03-pr-validation.yml
+
+feature:
+  - changed-files:
+      - any-glob-to-any-file: 'src/**/*'
+
+bug:
+  - changed-files:
+      - any-glob-to-any-file: 'src/**/*'
+    base-branch:
+      - main
+    title:
+      - regex: '^fix[:(]'
+
+refactor:
+  - title:
+      - regex: '^refactor[:(]'
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file: 'docs/**/*'
+      - any-glob-to-any-file: '*.md'
+
+config:
+  - changed-files:
+      - any-glob-to-any-file: 'appsscript.json'
+
+breaking-change:
+  - changed-files:
+      - any-glob-to-any-file: 'src/O_core_system/01_Config.gs'
+      - any-glob-to-any-file: 'src/O_core_system/02_Schema.gs'
+
+performance:
+  - title:
+      - regex: '^perf[:(]'
+
+chore:
+  - title:
+      - regex: '^chore[:(]|^ci[:(]|^build[:(]'
+
+test:
+  - changed-files:
+      - any-glob-to-any-file: 'tests/**/*'
