@@ -25,12 +25,22 @@
  *     - PropertiesService.getScriptProperties()
  *     - Session.getActiveUser()
  *   DEFINES:
- *     - doGet(e)                    — Web App entry point
- *     - include_(filename)          — HTML template loader for <?!= include_('...') ?>
+ *     - doGet(e)                     — Web App entry point
+ *     - include_(filename)           — HTML template loader for <?!= include_('...') ?>
  *     - isAuthorizedDashboardUser_() — Dashboard auth check (separate from LMDS_ADMINS)
- *     - getCurrentDashboardUser_()  — Return current user info for frontend
- *     - getDashboardData()          — Overview stats for Dashboard view
- *     - getDashboardDataFromSheet_() — Read sheets and compute stats (internal)
+ *     - getCurrentDashboardUser_()   — Return current user info for frontend
+ *     - maskEmailSafe_(email)        — PII masking for logs (defense-in-depth)
+ *     - getDashboardData()           — Overview stats for Dashboard view
+ *     - computeFactStats_(sheet, stats)         — FACT_DELIVERY stats (internal)
+ *     - computeReviewStats_(sheet, stats)       — Q_REVIEW stats (internal)
+ *     - computeSourceStats_(sheet, stats)       — Source sheet stats (internal)
+ *     - computeTopIssues_(reviewSheet, limit)   — Top issue_type counts (internal)
+ *     - isAutoMatchStatus_(status)              — Check auto-match status (internal)
+ *     - formatDateForCompare_(date)             — YYYY-MM-DD format (internal)
+ *     - ping()                       — Health check endpoint
+ *     - getFactDeliveryPage() (stub) — Phase 2 (TODO)
+ *     - getQReviewPage() (stub)      — Phase 2 (TODO)
+ *     - getMatchEngineMetrics() (stub) — Phase 3 (TODO)
  *   USED BY:
  *     - Web App deployment (script.google.com/macros/s/.../exec)
  * ===================================================

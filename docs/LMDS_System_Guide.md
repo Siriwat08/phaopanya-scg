@@ -3,7 +3,7 @@
 > **Logistics Master Data System (LMDS)** — ระบบจัดการข้อมูลหลักด้านโลจิสติกส์
 > เวอร์ชัน: V5.5.022 (REFACTOR_CYCLE6_RESIDUAL) | อัปเดตล่าสุด: 2026-06-26
 > แพลตฟอร์ม: Google Apps Script (GAS) บน Google Sheets
-> ฟังก์ชันทั้งหมด: 369 | บรรทัดโค้ด: ~17,399 | Production Readiness: 97% (Security Hardened)
+> ฟังก์ชันทั้งหมด: 385 | บรรทัดโค้ด: ~17,399 | Production Readiness: 97% (Security Hardened)
 
 ---
 

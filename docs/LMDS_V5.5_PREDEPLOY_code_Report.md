@@ -534,7 +534,7 @@
 | **Secrets in PropertiesService** | ✅ PASS | 0 hardcoded secrets — Cookie/API Key in PropertiesService |
 | **PII Masking** | ✅ PASS | maskReviewerEmail_ + generateMd5Hash for PII |
 | **AuthZ Guards** | ✅ PASS | isAuthorizedUser_() covers 13/13 destructive ops |
-| **Syntax Validation** | ✅ PASS | 22/22 .gs files pass `node --check` |
+| **Syntax Validation** | ✅ PASS | 22/23 .gs files pass `node --check` |
 | **Code + Docs Sync** | ✅ PASS | 22/22 .gs + 15/15 .md mention V5.5.020 |
 
 ## 5. Final Metrics (V5.5.020)
@@ -580,7 +580,7 @@
 ## 8. Pre-Deployment Checklist (Manual Steps ที่ผู้ใช้ต้องทำ)
 
 - [ ] **Backup Spreadsheet** — สำรองข้อมูล Google Sheets ก่อน deploy
-- [ ] **Copy 22 .gs files** ไป Apps Script (ทับของเดิม)
+- [ ] **Copy 23 .gs files** ไป Apps Script (ทับของเดิม)
 - [ ] **Set Script Properties**: `GEMINI_API_KEY`, `SCG_COOKIE`, `LMDS_ADMINS`
 - [ ] **Run `setupAllSheets()`** เพื่อสร้าง/ซ่อมแซมชีต
 - [ ] **Run `showVersionInfo()`** — ต้องเห็น `Version: 5.5.020` + Audit Cycles: 19
@@ -600,6 +600,6 @@
 
 ## 10. Update V5.5.022 — Post-Deploy Audit Findings (Consistency Sync)
 
-> หลังจาก V5.5.020 GO แล้ว ได้ดำเนินการ Deep Dive Audit เพิ่มเติมใน V5.5.021 พบ findings ใหม่ 15 รายการ (5 Critical + 5 High + 5 Medium) — ทั้งหมดถูก implement ใน V5.5.022 แล้ว — ดูรายละเอียดใน `LMDS_V5.5.021_Deep_Dive_Audit.md` (historical audit report)
+> หลังจาก V5.5.020 GO แล้ว ได้ดำเนินการ Deep Dive Audit เพิ่มเติมใน V5.5.021 พบ findings ใหม่ 15 รายการ (5 Critical + 5 High + 5 Medium) — ทั้งหมดถูก implement ใน V5.5.022 แล้ว — ดูรายละเอียดใน `LMDS_Deep_Dive_Audit.md` (historical audit report)
 
 **Verdict:** ✅ V5.5.020 ยังคง GO — findings V5.5.022 แก้ Deep Dive findings ครบแล้ว (BUG-M01/M02/M03/H02/H03/C01)

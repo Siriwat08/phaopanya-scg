@@ -8,7 +8,7 @@
 | **Last Updated** | 2026-06-21 |
 | **Platform** | Google Apps Script + Google Sheets |
 | **Core Engine** | MatchEngine V5.5 with Hybrid Alias Architecture |
-| **Total Files** | 22 `.gs` files |
+| **Total Files** | 23 `.gs` files |
 | **Total Lines** | ~17,399 |
 | **Total Functions** | 327 (321 + 6 helpers ใน V5.5.018 REVIEW15 R2-01 split reprocessReviewQueue) |
 | **Total Sheets** | 19 |
@@ -241,7 +241,7 @@ Cycle 14 (SEC POSTFX):████████████████  16/16 PA
 | `17_SearchService.gs` | `findBestGeoByPersonPlace` ผ่าน `normalizePersonNameFull` ก่อน lookup + fallback rawName |
 | `12_ReviewService.gs` | เพิ่ม `buildRecommendedAction_()` + ปรับ `enqueueReview` ให้ใส่ recommended_action ที่มี ID |
 | `00_App.gs` | ขยาย `handleSelectionChange_` รองรับ col P + เพิ่ม `handleRecommendClick_` + `navigateFromRecommend_` |
-| All 22 `.gs` files | Bump VERSION: 5.5.010 → 5.5.011 |
+| All 23 `.gs` files | Bump VERSION: 5.5.010 → 5.5.011 |
 | All 20 `.md` files | อัปเดตเวอร์ชัน V5.5.008 → V5.5.011 |
 
 ### New Functions Added in V5.5.011
@@ -707,7 +707,7 @@ LMDS_V5.5_FINAL_PACKAGE/
 │   ├── LMDS_V5.5_REFACTOR_code_Report.md             ← รายงาน Refactor Cycle (V5.5.004 + V5.5.019+020 merged)
 │   ├── LMDS_V5.5_PREDEPLOY_code_Report.md            ← รายงาน Pre-Deploy (V5.5.004 + V5.5.020 merged)
 │   ├── LMDS_V5.5.018_REVIEW15_CODE_FIX_Report.md     ← รายงาน REVIEW15 Code Fix (V5.5.018)
-│   ├── LMDS_V5.5.021_Deep_Dive_Audit.md              ← 🔬 Deep Dive Audit V5.5.022 (Findings Implemented)
+│   ├── LMDS_Deep_Dive_Audit.md                       ← 🔬 Deep Dive Audit V5.5.022 (Findings Implemented)
 │   ├── READINESS_AUDIT_FINAL.md                      ← รายงาน Production Readiness Audit สุดท้าย
 │   ├── cache_audit.md                                ← รายงาน Cache Audit
 │   ├── system_preflight_audit.md                     ← รายงาน Pre-Flight Audit
@@ -1103,7 +1103,7 @@ Match Engine Decision (8 Rules)
 | **docs/LMDS_V5.5_REFACTOR_code_Report.md** | รายงาน Refactor Cycle (V5.5.004) |
 | **docs/LMDS_V5.5_PREDEPLOY_code_Report.md** | รายงาน Pre-Deploy (V5.5.004 + V5.5.020 merged) |
 | **docs/LMDS_V5.5.018_REVIEW15_CODE_FIX_Report.md** | รายงาน REVIEW15 Code Fix (V5.5.018) |
-| **docs/LMDS_V5.5.021_Deep_Dive_Audit.md** | 🔬 Deep Dive Audit V5.5.022 — System-wide + 17/18 Deep Dive (Findings Implemented) |
+| **docs/LMDS_Deep_Dive_Audit.md** | 🔬 Deep Dive Audit V5.5.022 — System-wide + 17/18 Deep Dive (Findings Implemented) |
 | **docs/READINESS_AUDIT_FINAL.md** | รายงาน Production Readiness Audit สุดท้าย |
 | **docs/cache_audit.md** | รายงาน Cache Audit (V5.5.022) |
 | **docs/system_preflight_audit.md** | รายงาน Pre-Flight System Audit (V5.5.022) |
@@ -1114,7 +1114,7 @@ Match Engine Decision (8 Rules)
 | **docs/LMDS_สายที่1_SCG_Source.md** | 🟢 สายที่ 1: Source Sheet → Master DB Pipeline (V5.5.022) |
 | **docs/LMDS_สายที่2_Daily_Job.md** | 🔵 สายที่ 2: Daily Job → GPS Lookup Pipeline (V5.5.022) |
 | **docs/LMDS_Q_REVIEW_คู่มือ.md** | คู่มือ Q_REVIEW (22 คอลัมน์) — คิวรอคนตรวจสอบ (V5.5.022) |
-| **docs/LMDS_V5.5.021_Deep_Dive_Audit.md** | 🔬 Deep Dive Audit V5.5.022 — System-wide findings + Deep Dive 17/18 (Findings Implemented) |
+| **docs/LMDS_Deep_Dive_Audit.md** | 🔬 Deep Dive Audit V5.5.022 — System-wide findings + Deep Dive 17/18 (Findings Implemented) |
 
 > **Note**: Audit cycles 6-9 (SYNC V5.5.006, CACHE-FIX V5.5.007, CACHE-CLEANUP V5.5.008,
 > DOC-SYNC V5.5.009, CACHE-HOTFIX V5.5.010, DATA-CONSISTENCY V5.5.011) ไม่มี report แยก —

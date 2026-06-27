@@ -417,7 +417,7 @@ Hybrid Alias Architecture เป็นระบบจัดการชื่อ
 
 | ตัวชี้วัด | ค่า |
 |----------|-----|
-| **Total Files** | 22 |
+| **Total Files** | 23 |
 | **Total Lines** | ~17,399 |
 | **Total Functions** | 312 |
 | **Largest File** | `10_MatchEngine.gs` (1,374 บรรทัด) |

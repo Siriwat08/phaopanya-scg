@@ -951,4 +951,4 @@ APP_CONST = {
 > 4. **SYS_LOG auto-clean** ในโค้ด trigger เมื่อเกิน 5,001 แถว และเก็บไว้ 1,000 แถวล่าสุด (ไม่ใช่ 5,000 ตามที่ System Guide เขียน)
 > 5. **SHEET count** ในโค้ดมี 19 entries (หลัง V5.5.013 ลบ MAPS_CACHE ออก; V5.5.014 เพิ่ม 2 cols ใน FACT_DELIVERY/SOURCE/DAILY_JOB)
 >
-> **สถิติระบบ:** ฟังก์ชัน 369 | บรรทัดโค้ด ~16,077 | IDX sets 16 | Compliance 16/16 COMPLIANT (Rule 16: Security-First Design, SEC-001→012, 18 audit cycles, 116 issues fixed, 97% Production Readiness, OAuth scopes 10→6, isAuthorizedUser_ 13/13, Sheet Protection 8/19 + Q_REVIEW range)
+> **สถิติระบบ:** ฟังก์ชัน 385 | บรรทัดโค้ด ~16,545 | IDX sets 16 | Compliance 16/16 COMPLIANT (Rule 16: Security-First Design, SEC-001→012, 18 audit cycles, 116 issues fixed, 97% Production Readiness, OAuth scopes 10→6, isAuthorizedUser_ 13/13, Sheet Protection 8/19 + Q_REVIEW range)

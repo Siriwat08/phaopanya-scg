@@ -2,7 +2,7 @@
 **Audit Date:** 2026-06-21
 **Auditor:** LMDS Supreme AI Engineer
 **Scope:** Full project audit before real-data deployment
-**Codebase:** 22 `.gs` files, 16,077 lines, 369 functions, 19 sheets, 16 IDX sets, 19 SCHEMA definitions
+**Codebase:** 23 `.gs` files, 16,545 lines, 385 functions, 19 sheets, 16 IDX sets, 19 SCHEMA definitions
 
 ---
 
@@ -29,7 +29,7 @@
 
 | # | Law | Status | Evidence |
 |---|-----|:------:|----------|
-| 1 | Clean Code | ✅ | camelCase สม่ำเสมอ, 369 ฟังก์ชันแยกหน้าที่ชัดเจน |
+| 1 | Clean Code | ✅ | camelCase สม่ำเสมอ, 385 ฟังก์ชันแยกหน้าที่ชัดเจน |
 | 2 | Single Responsibility | ✅ | 211 helper functions แตกจาก SRP Refactoring (REFACTOR Cycle 5) |
 | 3 | No Hardcode Index | ✅ | ทุก index ใช้ `*_IDX` constants — เจอ hardcoded `row[0]` 1 จุด ใน GeoDictBuilder แต่เป็น single-column projection (อ่านเฉพาะ 1 คอลัมน์) ถือว่ายอมรับได้ |
 | 4 | Batch Operations Only | ✅ | ไม่มี `appendRow`/`getValue`/`setValue` ใน loop — ทุกจุดใช้ `getValues`/`setValues` แบบ batch (PERF-001, PERF-006 ลด API calls 8-12x) |

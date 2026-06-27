@@ -2,7 +2,7 @@
 
 > **เอกสารรวบรวมการ Audit เชิงลึก** ของระบบ LMDS V5.5.022 (Audit performed at V5.5.021 state; findings implemented in V5.5.022)
 > รวม: V5.5.010 Cache Hotfix root causes + System-wide findings + Deep Dive 17_SearchService + 18_ServiceSCG
-> Audit Date: 2026-06-26 | Scope: 22 `.gs` files, 16,077 lines, 369 functions
+> Audit Date: 2026-06-26 | Scope: 23 `.gs` files, 16,545 lines, 385 functions
 
 ---
 
@@ -348,7 +348,7 @@ Loop แต่ละ DailyJob row อ่าน Source sheet ใหม่ → ถ
 > ดูรายละเอียดเพิ่มเติมใน `system_preflight_audit.md` และ `READINESS_AUDIT_FINAL.md`
 
 ### โครงสร้างโปรเจกต์
-- 22 `.gs` files, 16,077 lines, 369 functions, 19 sheets, 16 IDX sets
+- 23 `.gs` files, 16,545 lines, 385 functions, 19 sheets, 16 IDX sets
 - 3 Domain Groups: Core (6 files), Group 1 Master DB (9 files), Group 2 Daily Ops (7 files)
 
 ### สถานะการตรวจสอบ Syntax

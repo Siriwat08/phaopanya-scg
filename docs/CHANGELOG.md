@@ -45,12 +45,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - แก้ header comment ใน 01_Config.gs: SHEET count 20→19, IDX count 17→16 (ให้ตรงกับจริงหลัง V5.5.013 ลบ MAPS_CACHE)
 - เพิ่มจังหวัดบึงกาฬ (บึงกาฬ) เข้าไปใน TH_PROVINCES array — ก่อนหน้านี้ขาดหายไปทำให้นับได้แค่ 76 จังหวัด ทั้งที่เอกสารอ้างว่า 77
 - อัปเดต showVersionInfo(): เพิ่ม Audit Cycles 18 → 18 + เปลี่ยน module versions 5.5.020 → 5.5.022
-- อัปเดต VERSION header ใน 22 .gs files: 5.5.021 → 5.5.022
+- อัปเดต VERSION header ใน 23 .gs files: 5.5.021 → 5.5.022
 
 ### Documentation Sync (168 discrepancies fixed)
 - อัปเดต Version 5.5.021 → 5.5.022 ใน 32 เอกสาร (97 จุด)
 - อัปเดต Total Lines: 17,399 → 16,075 (verified by wc -l)
-- อัปเดต Total Functions: 321/327 → 369 (360 function declarations + 10 arrow const ใน 15_GoogleMapsAPI.gs)
+- อัปเดต Total Functions: 321/327 → 385 (360 function declarations + 10 arrow const ใน 15_GoogleMapsAPI.gs)
 - อัปเดต FACT_IDX cols: 32 → 34, SRC_IDX cols: 37 → 39, DATA_IDX cols: 29 → 31 (post-V5.5.014 DRIVER_VERIFIED columns)
 - อัปเดต APP_CONST entries: 16 → 16 (3 STATUS + 4 COLOR + 3 RETRY/LOCK/BATCH + 6 MATCH)
 - แก้ SECURITY-POSTFIX attribution: V5.5.021 → V5.5.017 (ถูกต้องตาม CHANGELOG)
@@ -63,9 +63,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - มาตรฐาน isAuthorizedUser_ Coverage: 6/13 → 13/13 destructive ops
 
 ### Cumulative Impact
-- Total .gs files: 22 (unchanged)
-- Total lines: 16,077 (verified by wc -l)
-- Total functions: 369 (360 function declarations + 9 arrow const)
+- Total .gs files: 23 (added 22_WebApp.gs in Phase 1)
+- Total lines: 16,545 (verified by wc -l)
+- Total functions: 385 (376 function declarations + 9 arrow const)
 - Sheets: 19, IDX sets: 16, SCHEMA definitions: 19, CACHE_KEY entries: 13
 - OAuth scopes: 6 (Least Privilege since V5.5.017)
 - TH_PROVINCES: 77 (after adding Bueng Kan)
@@ -96,7 +96,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Bump Version + Documentation Sync
 - APP_VERSION: 5.5.019 → 5.5.020 (note: headers were bumped to 5.5.021 but constants stayed at 5.5.020 until V5.5.022)
 - SCHEMA_VERSION: 5.5.019 → 5.5.020
-- 21/22 .gs files: bump VERSION header + update Latest 3 versions block
+- 21/23 .gs files: bump VERSION header + update Latest 3 versions block
 - showVersionInfo(): แสดง v5.5.020 + Audit Cycles 18 → 18
 - CHANGELOG.md: เพิ่ม V5.5.021 entry
 
@@ -124,7 +124,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   - installAutoResume_ + removeAutoResume_ integration
 - [REF-004] runMatchEngine Split: 132 → 35 บรรทัด orchestrator + 4 section helpers
   - acquireMatchEngineLock_, prepareMatchEngineContext_, runMatchEngineLoop_, finalizeMatchEngine_
-- [REF-005] CHANGELOG Centralization: 22 .gs files × ~50-100 lines → 15 lines each + centralized docs/CHANGELOG.md
+- [REF-005] CHANGELOG Centralization: 23 .gs files × ~50-100 lines → 15 lines each + centralized docs/CHANGELOG.md
   - ลด ~1,430 บรรทัดซ้ำซ้อนทั่วโปรเจกต์
 
 ### Medium Priority (5) — Phase B
@@ -308,7 +308,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 5 audit cycles complete:
 - CRITICAL → PERFORMANCE → SECURITY → REVIEW15 → REFACTOR
 - 53 issues fixed across 22 files
-- 369 functions, 16,077 lines
+- 385 functions, 16,545 lines
 
 ---
 
