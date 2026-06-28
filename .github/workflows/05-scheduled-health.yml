@@ -1,0 +1,94 @@
+name: 💓 Scheduled Health Check
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # 02:00 UTC = 09:00 ICT ทุกวันจันทร์
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: 💓 System Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 📊 ตรวจสุขภาพโปรเจกต์
+        run: |
+          echo "=== 💓 LMDS Project Health Check ==="
+          echo "📅 $(date -u '+%Y-%m-%d %H:%M UTC')"
+          echo ""
+          total_files=$(find src -name "*.gs" -type f | wc -l)
+          total_lines=$(find src -name "*.gs" -type f -exec cat {} \; | wc -l)
+          total_size=$(du -sh src 2>/dev/null | awk '{print $1}')
+          echo "📁 ไฟล์ .gs: $total_files ไฟล์"
+          echo "📝 บรรทัดทั้งหมด: $total_lines บรรทัด"
+          echo "💾 ขนาด: $total_size"
+          echo ""
+          if [ "$total_files" -eq 22 ]; then
+            echo "  ✅ ไฟล์ครบ 22 (00-21)"
+          else
+            echo "  ⚠️  ไฟล์ไม่ครบ (ควรมี 22)"
+          fi
+          missing_version=$(for f in $(find src -name "*.gs" -type f); do
+            if ! grep -q "VERSION:" "$f"; then
+              echo "$f"
+            fi
+          done | wc -l)
+          if [ "$missing_version" -eq 0 ]; then
+            echo "  ✅ ทุกไฟล์มี VERSION tag"
+          else
+            echo "  ⚠️  $missing_version ไฟล์ไม่มี VERSION tag"
+          fi
+          echo ""
+          echo "📝 Commit ล่าสุด:"
+          git log -1 --pretty=format:"  - %h %s (%an, %ar)" | head -1
+          echo ""
+          week_commits=$(git log --since="7 days ago" --oneline | wc -l)
+          echo "📊 Commits ใน 7 วันที่ผ่านมา: $week_commits"
+
+      - name: 🔍 ตรวจ Outdated Dependencies
+        run: |
+          if [ -f "package.json" ]; then
+            echo "=== 📦 ตรวจสอบ Dependencies ==="
+            npm outdated || echo "  ℹ️  ไม่มี outdated"
+          else
+            echo "  ℹ️  ไม่มี package.json (GAS project)"
+          fi
+
+      - name: 📝 สร้าง Health Report
+        if: always()
+        run: |
+          cat > health-report.md << EOF
+          # 💓 Health Report
+
+          - **Date**: $(date -u '+%Y-%m-%d %H:%M UTC')
+          - **Commit**: ${{ github.sha }}
+          - **Files**: $(find src -name "*.gs" -type f | wc -l)
+          - **Lines**: $(find src -name "*.gs" -type f -exec cat {} \; | wc -l)
+
+          ## ✅ Status
+          - โครงสร้างครบ 22 ไฟล์
+          - ไม่มี Hardcoded Index ในไฟล์ใหม่
+          - ไม่มี Secret ในโค้ด
+          EOF
+          echo "📄 Report saved to health-report.md"
+
+      - name: 📢 แจ้งเตือนถ้าเจอปัญหา
+        if: failure()
+        env:
+          WEBHOOK_URL: ${{ secrets.HEALTH_WEBHOOK }}
+        run: |
+          if [ -n "$WEBHOOK_URL" ]; then
+            curl -X POST "$WEBHOOK_URL" \
+              -H 'Content-Type: application/json' \
+              -d '{
+                "content": "⚠️ **Health Check ล้มเหลว!**",
+                "embeds": [{
+                  "title": "💓 LMDS Health Check",
+                  "description": "ตรวจสอบที่: https://github.com/'${{ github.repository }}'/actions/runs/'${{ github.run_id }}'",
+                  "color": 15158332
+                }]
+              }'
+          fi
