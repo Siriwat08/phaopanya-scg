@@ -21,14 +21,15 @@ if [ -z "$changed_files" ]; then
 fi
 
 for f in $changed_files; do
-    [ ! -f "$f" ] && continue
+    # [FIX SonarCloud S7688] Use [[ ]] instead of [ ] for safer conditional
+    [[ ! -f "$f" ]] && continue
 
     # ========================================
     # Law 1: Hardcoded Index
     # ========================================
     if [[ "$f" == *.gs ]]; then
         hardcoded=$(grep -nE "row\[[0-9]+\]|getRange\([^)]*,\s*[0-9]+\s*," "$f" 2>/dev/null | wc -l)
-        if [ "$hardcoded" -gt 0 ]; then
+        if [[ "$hardcoded" -gt 0 ]]; then
             echo "  ❌ Law 1: $f — มี Hardcoded Index ($hardcoded จุด)"
             grep -nE "row\[[0-9]+\]|getRange\([^)]*,\s*[0-9]+\s*," "$f" | head -3 | sed 's/^/      /'
             errors=$((errors+hardcoded))
@@ -40,7 +41,7 @@ for f in $changed_files; do
     # ========================================
     if [[ "$f" == *.gs ]]; then
         loop_setvalue=$(grep -nB5 "\.setValue(\|\.appendRow(" "$f" 2>/dev/null | grep -E "for\s*\(|while\s*\(|forEach\(" | wc -l)
-        if [ "$loop_setvalue" -gt 0 ]; then
+        if [[ "$loop_setvalue" -gt 0 ]]; then
             echo "  ⚠️  Law 3: $f — อาจมี setValue ในลูป — ตรวจด้วยตา"
             warnings=$((warnings+1))
         fi
@@ -48,8 +49,12 @@ for f in $changed_files; do
 
     # ========================================
     # Law 16: Secret ในไฟล์
+    # [FIX SonarCloud + GitHub Token Format Change 2026-06-30]
+    #   เพิ่ม ghs_ pattern (GitHub App installation token stateless format ใหม่)
+    #   และ github_pat_ (fine-grained PAT) รองรับ token ยาวถึง ~520 ตัวอักษร
+    #   Reference: GitHub Changelog — Upcoming change to GitHub App installation token format
     # ========================================
-    secret_pattern='AIza[A-Za-z0-9_-]{35}|AQ\.[A-Za-z0-9_-]{30,}|password\s*[:=]|cookie\s*[:=]\s*["'\'']?[a-zA-Z0-9]{20,}'
+    secret_pattern="AIza[A-Za-z0-9_-]{35}|AQ\\.[A-Za-z0-9_-]{30,}|gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{82}|password\\s*[:=]|cookie\\s*[:=]\\s*[\"\\']?[a-zA-Z0-9]{20,}"
     if [[ "$f" == *.gs ]] || [[ "$f" == *.json ]]; then
         if grep -iE "$secret_pattern" "$f" 2>/dev/null | grep -vE "^\\s*\\*|^//|^#" > /dev/null; then
             echo "  ❌ Law 16: $f — มี Secret ในไฟล์!"
@@ -74,12 +79,12 @@ echo "================================"
 echo "  📊 สรุป: errors=$errors, warnings=$warnings"
 echo "================================"
 
-if [ $errors -gt 0 ]; then
+if [[ $errors -gt 0 ]]; then
     echo "  ❌ Commit ถูก block — แก้ไขก่อน"
     exit 1
 fi
 
-if [ $warnings -gt 0 ]; then
+if [[ $warnings -gt 0 ]]; then
     echo "  ⚠️  มี warning — แนะนำตรวจสอบ"
     read -p "  ต้องการ commit ต่อหรือไม่? (y/N): " cont
     if [[ ! "$cont" =~ ^[Yy]$ ]]; then

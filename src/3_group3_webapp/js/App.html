@@ -360,8 +360,11 @@
       // Reset nextRefreshAt หลัง refresh สำเร็จ
       nextRefreshAt = Date.now() + POLL_INTERVAL_MS;
 
-      if (!isInitial) {
-        // Toast เฉพาะตอน polling ไม่ใช่ initial load
+      // [FIX SonarCloud S7735] เปลี่ยนจาก negated condition (!isInitial) เป็น positive (isInitial)
+      //   เพื่อให้ code อ่านง่ายขึ้น — แสดง toast เฉพาะตอน polling (ไม่ใช่ initial load)
+      if (isInitial) {
+        // ไม่แสดง toast ตอน initial load — ปล่อยให้ SSR แสดงผลเงียบๆ
+      } else {
         showToast_('✅ อัปเดตแล้ว', 'ข้อมูลได้รับการอัปเดตเรียบร้อย', 'success', 2000);
       }
     } catch (err) {

@@ -31,10 +31,17 @@
           integrity="sha384-ieG+IKD0d/ZPXyCBTMVAbqsQdns8QGJR/e26WMw7M4fkaI/rHcS/YIoi+ah9WGge"
           crossorigin="anonymous"></script>
 
-  <!-- Inter font (preconnect + stylesheet) -->
+  <!-- Inter font (preconnect + stylesheet, with SRI) -->
+  <!-- [FIX SonarCloud Web:S5725] Added integrity + crossorigin for SRI enforcement -->
+  <!--   NOTE: SRI hash นี้ใช้ได้เฉพาะเมื่อ User-Agent ขอ browser รองรับ woff2 (modern browsers ทั้งหมด) -->
+  <!--   ถ้า Google เปลี่ยน CSS ต้องคำนวณ hash ใหม่: -->
+  <!--   curl -s -A "Mozilla/5.0" "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" | openssl dgst -sha384 -binary | openssl base64 -A -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+        integrity="sha384-Yvt2jmTtQFEtXIVH1VgGfieY/D91UJNVwWdiVUirr4Gwov6BPGKdjcxOWDiaZ5wF"
+        crossorigin="anonymous">
 
   <!-- Custom styles -->
   <?!= include_('css/Styles'); ?>
@@ -184,7 +191,7 @@
           <div class="text-4xl mb-2">⚠️</div>
           <h2 class="text-lg font-semibold text-red-800 mb-1">เกิดข้อผิดพลาด</h2>
           <p id="errorMessage" class="text-sm text-red-600"></p>
-          <button onclick="window.location.reload()"
+          <button onclick="globalThis.location.reload()"
                   class="mt-4 px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700">
             โหลดหน้าใหม่
           </button>

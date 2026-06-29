@@ -46,7 +46,7 @@
       </ol>
     </div>
 
-    <button onclick="window.location.reload()"
+    <button onclick="globalThis.location.reload()"
             class="w-full px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
       ลองใหม่อีกครั้ง
     </button>
@@ -75,7 +75,9 @@
           .getCurrentDashboardUser_();
       }
     } catch (e) {
-      console.warn('[Unauthorized] google.script.run not available in this context:', e);
+      // [FIX SonarCloud S2486] google.script.run อาจไม่พร้อมใน IDE preview
+      //   ไม่สามารถ recover ได้ — ผู้ใช้ต้องรีโหลดหน้าใน Apps Script Web App context จริง
+      console.warn('[Unauthorized] google.script.run not available (likely IDE preview):', e.message);
     }
   </script>
 

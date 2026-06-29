@@ -71,8 +71,10 @@ globalThis.auth = (function () {
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch (e) {
-      // localStorage อาจไม่พร้อมในบาง context (incognito, sandboxed iframe)
-      console.warn('[auth] Cannot write session to localStorage:', e);
+      // [FIX SonarCloud S2486] localStorage อาจไม่พร้อมในบาง context (incognito, sandboxed iframe)
+      //   กรณีนี้ไม่สามารถ recover ได้ — บันทึก warning แล้วปล่อยให้ server-side auth เป็น fallback
+      //   (Auth ทุกครั้งยังผ่านการ re-validate ฝั่ง server อยู่แล้ว)
+      console.warn('[auth] Cannot write session to localStorage (likely incognito/sandboxed):', e.message);
     }
   }
 

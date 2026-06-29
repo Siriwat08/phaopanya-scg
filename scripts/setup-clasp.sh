@@ -6,9 +6,12 @@
 
 set -e
 
-echo "=========================================="
+# [FIX SonarCloud S1192] Define separator constant instead of repeating literal
+SEP="=========================================="
+
+echo "$SEP"
 echo "  🔐 Clasp Setup for GitHub Actions"
-echo "=========================================="
+echo "$SEP"
 echo ""
 
 # ตรวจสอบว่ามี clasp ติดตั้งหรือยัง
@@ -25,7 +28,7 @@ echo "🔑 ขั้นตอนที่ 1: Login ด้วย Google Account"
 echo "   (ต้องเป็น account ที่มีสิทธิ์เข้าถึง Apps Script project)"
 echo ""
 
-if [ -f ~/.clasprc.json ]; then
+if [[ -f ~/.clasprc.json ]]; then
     echo "⚠️  พบไฟล์ ~/.clasprc.json เดิม"
     read -p "   ต้องการ login ใหม่หรือไม่? (y/N): " re_login
     if [[ ! "$re_login" =~ ^[Yy]$ ]]; then
@@ -53,7 +56,7 @@ echo ""
 
 read -p "   กรอก Script ID: " script_id
 
-if [ -z "$script_id" ]; then
+if [[ -z "$script_id" ]]; then
     echo "❌ ไม่ได้ระบุ Script ID"
     exit 1
 fi
@@ -69,7 +72,7 @@ mkdir -p test-clasp
 cd test-clasp
 clasp clone --scriptId "$script_id" 2>&1 | head -5
 
-if [ ! -f "appsscript.json" ]; then
+if [[ ! -f "appsscript.json" ]]; then
     echo "❌ ไม่สามารถ clone ได้ — ตรวจสอบ Script ID และสิทธิ์"
     exit 1
 fi
@@ -79,9 +82,9 @@ cd /tmp
 rm -rf test-clasp
 
 echo ""
-echo "=========================================="
+echo "$SEP"
 echo "  📤 ขั้นตอนที่ 3: เตรียม Secret สำหรับ GitHub"
-echo "=========================================="
+echo "$SEP"
 echo ""
 
 # แสดง CLASPRC content
