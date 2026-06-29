@@ -353,9 +353,10 @@ function resolveMasterUuidViaGlobalAlias(queryName, entityType) {
  * ไม่ต้องผ่าน resolvePerson หรือ resolvePlace ที่หนัก
  * @param {string} shipToName - ชื่อปลายทางจากคอลัมน์ ShipToName
  * @param {Object} [preNormResult] - ผลลัพธ์จากการทำ normalizePersonNameFull (optional) เพื่อป้องกัน double normalization
+ * @param {string} [rawAddress] - ShipToAddress ดิบ (optional - ใช้เป็น tie-breaker เมื่อ ShipToName ซ้ำ) [ADD v5.5.022-PATCH1]
  * @return {Object|null} { lat, lng, destId, status, confidence, reason } หรือ null
  */
-function fastLookupByShipToName(shipToName, preNormResult) {
+function fastLookupByShipToName(shipToName, preNormResult, rawAddress) {
   if (!shipToName) return null;
   // [FIX v5.5.021 C1] ใช้ preNormResult.cleanName ถ้ามี เพื่อลด overhead
   var cleanName = (preNormResult && preNormResult.cleanName) 
@@ -404,7 +405,18 @@ function fastLookupByShipToName(shipToName, preNormResult) {
     if (dests.length > 0) {
       // Sort by usageCount descending
       dests.sort(function(a, b) { return (b.usageCount || 0) - (a.usageCount || 0); });
+      // [ADD v5.5.022-PATCH1] Tie-Breaker: ถ้ามีหลาย dest และมี rawAddress → เลือกด้วย address matching
+      //   ใช้ helper จาก 17_SearchService.gs (selectBestDestByAddress_) ผ่าน typeof guard
+      //   ถ้า helper ไม่พร้อม หรือไม่ match → fallback เอา usageCount สูงสุด (พฤติกรรมเดิม)
       var topDest = dests[0];
+      if (dests.length > 1 && rawAddress && typeof selectBestDestByAddress_ === 'function') {
+        try {
+          var matched = selectBestDestByAddress_(dests, rawAddress);
+          if (matched) topDest = matched;
+        } catch (e) {
+          // ไม่ throw — fallback ใช้ usageCount สูงสุด
+        }
+      }
       return {
         lat: topDest.lat,
         lng: topDest.lng,

@@ -538,6 +538,9 @@ function applyMasterCoordinatesToDailyJob() {
     runLookupEnrichment();
     // [ADD v5.5.014] คัดลอก "ชื่อจริง" + "ที่อยู่จริง" จาก Source sheet → DAILY_JOB
     copyDriverVerifiedToDailyJob_();
+    // [ADD v5.5.022-PATCH1] Restore Email พนักงาน logic จาก Service_SCG.gs (V5.0)
+    //   โหลด EMPLOYEE sheet → map driver name → email → batch write ลง DAILY_JOB col 22
+    enrichEmployeeEmailsToDailyJob_();
     logInfo('ServiceSCG', 'applyMasterCoordinates เสร็จสิ้น');
   } catch (err) {
     logError('ServiceSCG', 'applyMasterCoordinates ล้มเหลว: ' + err.message, err);
@@ -545,6 +548,107 @@ function applyMasterCoordinatesToDailyJob() {
     safeUiAlert_('เกิดข้อผิดพลาด: ' + err.message);
   } finally {
     prop.deleteProperty('LOCK_ENRICHMENT');
+  }
+}
+
+/**
+ * enrichEmployeeEmailsToDailyJob_ — [ADD v5.5.022-PATCH1]
+ * Restore logic จาก Service_SCG.gs (V5.0) บรรทัด 218-270 ที่หายไปใน refactor
+ *
+ * Logic:
+ *   1. อ่านชีต "ข้อมูลพนักงาน" → สร้าง empMap[normalizedFullName] = email
+ *      ใช้ normalizePersonNameFull เพื่อตัดคำนำหน้า (นาย/นาง/บริษัท) และช่องว่าง
+ *   2. อ่าน DAILY_JOB ทุกแถว (batch read ครั้งเดียว)
+ *   3. สำหรับแต่ละแถว: normalize driver name → lookup email ใน empMap
+ *   4. Batch write email ลง DAILY_JOB col DATA_IDX.EMAIL (col 22)
+ *
+ * @private
+ */
+function enrichEmployeeEmailsToDailyJob_() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const empSheet = ss.getSheetByName(SHEET.EMPLOYEE);
+    const djSheet  = ss.getSheetByName(SHEET.DAILY_JOB);
+    if (!empSheet || !djSheet) {
+      logWarn('ServiceSCG', 'enrichEmployeeEmailsToDailyJob_: ไม่พบชีต EMPLOYEE หรือ DAILY_JOB');
+      return;
+    }
+    if (djSheet.getLastRow() < 2) return;
+
+    // 1. โหลด EMPLOYEE → empMap (normalized name → email)
+    const empMap = {};
+    if (empSheet.getLastRow() >= 2) {
+      // ใช้ SCHEMA width (8 cols) ป้องกัน over-read
+      const empCols = SCHEMA[SHEET.EMPLOYEE].length;
+      const empData = empSheet.getRange(2, 1, empSheet.getLastRow() - 1, empCols).getValues();
+      empData.forEach(function(r) {
+        const fullName = String(r[EMPLOYEE_IDX.FULL_NAME] || '').trim();
+        const email    = String(r[EMPLOYEE_IDX.EMAIL]    || '').trim();
+        if (fullName && email) {
+          // Normalize driver name เหมือน Sheet1 — ตัดคำนำหน้า (นาย/นาง/บริษัท) และช่องว่าง
+          let normName = fullName;
+          try {
+            if (typeof normalizePersonNameFull === 'function') {
+              const nr = normalizePersonNameFull(fullName);
+              if (nr && nr.cleanName && nr.cleanName.length >= 2) {
+                normName = nr.cleanName;
+              }
+            }
+          } catch (e) { /* fallback ใช้ fullName เดิม */ }
+
+          // Key ใน empMap ใช้ normalizeForCompare เพื่อ match แบบ forgiving (ไม่สนใจ case/spacing)
+          if (typeof normalizeForCompare === 'function') {
+            const key = normalizeForCompare(normName);
+            if (key) empMap[key] = email;
+          } else {
+            empMap[String(normName).toLowerCase()] = email;
+          }
+        }
+      });
+    }
+    logInfo('ServiceSCG', 'enrichEmployeeEmailsToDailyJob_: โหลด EMPLOYEE ' + Object.keys(empMap).length + ' คน');
+
+    // 2. อ่าน DAILY_JOB → lookup email → batch write col EMAIL
+    const djCols = SCHEMA[SHEET.DAILY_JOB].length;
+    const djData = djSheet.getRange(2, 1, djSheet.getLastRow() - 1, djCols).getValues();
+
+    let updated = 0;
+    const emailValues = [];
+    djData.forEach(function(r) {
+      const driverName = String(r[DATA_IDX.DRIVER_NAME] || '').trim();
+      let email = '';
+      if (driverName) {
+        // Normalize driver name เหมือนตอนโหลด empMap เพื่อ match
+        let normName = driverName;
+        try {
+          if (typeof normalizePersonNameFull === 'function') {
+            const nr = normalizePersonNameFull(driverName);
+            if (nr && nr.cleanName && nr.cleanName.length >= 2) {
+              normName = nr.cleanName;
+            }
+          }
+        } catch (e) { /* fallback ใช้ driverName เดิม */ }
+
+        let key;
+        if (typeof normalizeForCompare === 'function') {
+          key = normalizeForCompare(normName);
+        } else {
+          key = String(normName).toLowerCase();
+        }
+        if (key && empMap[key]) {
+          email = empMap[key];
+          updated++;
+        }
+      }
+      emailValues.push([email]);
+    });
+
+    // 3. Batch write email ลง col DATA_IDX.EMAIL (1-based = EMAIL + 1)
+    const emailCol = DATA_IDX.EMAIL + 1;
+    djSheet.getRange(2, emailCol, emailValues.length, 1).setValues(emailValues);
+    logInfo('ServiceSCG', 'enrichEmployeeEmailsToDailyJob_: เติม Email พนักงาน ' + updated + '/' + emailValues.length + ' แถว');
+  } catch (e) {
+    logError('ServiceSCG', 'enrichEmployeeEmailsToDailyJob_ ล้มเหลว: ' + e.message, e);
   }
 }
 
@@ -662,9 +766,13 @@ function buildOwnerSummary(optData) {
       return row;
     },
     // formatFn: จัด number format
+    // [FIX v5.5.022-PATCH1] แยก setNumberFormat ทีละคอลัมน์ เพื่อหลีกเลี่ยง GAS error
+    //   "โปรดเลือกภายในคอลัมน์เดียวเพื่อดำเนินการระดับคอลัมน์" เมื่อใช้ range 2 cols กับ format "#,##0"
+    //   ที่ GAS runtime บางครั้งแยกตาม comma เป็น array หลาย format
     function(summarySheet, rows, numCols) {
       if (rows.length > 0) {
-        summarySheet.getRange(2, OWNER_SUM_IDX.QTY_ALL + 1, rows.length, 2).setNumberFormat("#,##0");
+        summarySheet.getRange(2, OWNER_SUM_IDX.QTY_ALL + 1, rows.length, 1).setNumberFormat("#,##0");
+        summarySheet.getRange(2, OWNER_SUM_IDX.QTY_EPOD + 1, rows.length, 1).setNumberFormat("#,##0");
         summarySheet.getRange(2, OWNER_SUM_IDX.LAST_UPDATE + 1, rows.length, 1).setNumberFormat("dd/mm/yyyy HH:mm");
       }
     }
@@ -709,9 +817,13 @@ function buildShipmentSummary(optData) {
       return row;
     },
     // formatFn: จัด number format
+    // [FIX v5.5.022-PATCH1] แยก setNumberFormat ทีละคอลัมน์ เพื่อหลีกเลี่ยง GAS error
+    //   "โปรดเลือกภายในคอลัมน์เดียวเพื่อดำเนินการระดับคอลัมน์" เมื่อใช้ range 2 cols กับ format "#,##0"
+    //   ที่ GAS runtime บางครั้งแยกตาม comma เป็น array หลาย format
     function(summarySheet, rows, numCols) {
       if (rows.length > 0) {
-        summarySheet.getRange(2, SHIPMENT_SUM_IDX.QTY_ALL + 1, rows.length, 2).setNumberFormat("#,##0");
+        summarySheet.getRange(2, SHIPMENT_SUM_IDX.QTY_ALL + 1, rows.length, 1).setNumberFormat("#,##0");
+        summarySheet.getRange(2, SHIPMENT_SUM_IDX.QTY_EPOD + 1, rows.length, 1).setNumberFormat("#,##0");
         summarySheet.getRange(2, SHIPMENT_SUM_IDX.LAST_UPDATE + 1, rows.length, 1).setNumberFormat("dd/mm/yyyy HH:mm");
       }
     },

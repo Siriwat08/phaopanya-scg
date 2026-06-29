@@ -69,12 +69,22 @@
  *   - แล้วลองค้นด้วย cleanName ก่อน, หากไม่เจอค่อย fallback ด้วย rawName
  *
  * Tier 0: ShipToName → normalizePersonNameFull → M_ALIAS → masterUuid → dest → lat,lng (เร็วสุด)
+ *         [Tie-Breaker ถ้าพบหลาย dest]
  * Tier 1: ShipToName → normalizePersonNameFull → resolvePerson() → getDestsByPersonId() (usage-dominant)
+ *         [Tie-Breaker ถ้าพบหลาย dest]
  * NOT_FOUND: เว้นว่าง LatLong_Actual
  *
+ * [ADD v5.5.022-PATCH1] ShipToAddress Tie-Breaker Policy:
+ *   - กรณี ShipToName ซ้ำ (พบหลาย Destination ใน Person/Place เดียวกัน)
+ *     จะใช้ ShipToAddress เป็น tie-breaker โดยเปรียบเทียบกับ address ของแต่ละ Destination
+ *   - ถ้า tie-breaker match อันใดอันหนึ่ง → ใช้ dest นั้น
+ *   - ถ้า tie-breaker ไม่ match เลย → fallback เอา usageCount สูงสุด (พฤติกรรมเดิม)
+ *   - ถ้าไม่มี rawAddress ส่งเข้ามา → ใช้พฤติกรรมเดิม (เอา usageCount สูงสุด)
+ *
  * @param {string} rawPerson - ShipToName จาก ตารางงานประจำวัน
+ * @param {string} [rawAddress] - ShipToAddress จาก ตารางงานประจำวัน (optional - ใช้เป็น tie-breaker)
  */
-function findBestGeoByPersonPlace(rawPerson) {
+function findBestGeoByPersonPlace(rawPerson, rawAddress) {
   // Guard: ชื่อว่างหรือสั้นเกิน → NOT_FOUND ทันที
   if (!rawPerson || String(rawPerson).trim().length < 2) {
     return buildSearchResult_(null, null, 'NOT_FOUND', 0, null,
@@ -82,6 +92,7 @@ function findBestGeoByPersonPlace(rawPerson) {
   }
 
   const rawName = String(rawPerson).trim();
+  const rawAddr = rawAddress ? String(rawAddress).trim() : '';
 
   // [V5.5.011] ทำความสะอาดชื่อแบบเดียวกับ Sheet1 ก่อนนำไปค้นหา
   // normalizePersonNameFull จะ:
@@ -108,11 +119,12 @@ function findBestGeoByPersonPlace(rawPerson) {
 
   // ─── Tier 0: M_ALIAS Fast Track ───────────────────────────────────
   // [FIX v5.5.021 C1] ส่ง cleanName เข้าไปเลย เพื่อลดการทำ Normalization ซ้ำซ้อน
+  // [ADD v5.5.022-PATCH1] ส่ง rawAddress เข้าไปเพื่อ tie-breaker กรณีพบหลาย dest
   if (typeof fastLookupByShipToName === 'function') {
-    let fastResult = fastLookupByShipToName(cleanName, normResult);
+    let fastResult = fastLookupByShipToName(cleanName, normResult, rawAddr);
     if (!fastResult && cleanName !== rawName) {
       // Fallback: ลองด้วย rawName เผื่อ M_ALIAS เก็บ variant แบบ raw ไว้
-      fastResult = fastLookupByShipToName(rawName, null);
+      fastResult = fastLookupByShipToName(rawName, null, rawAddr);
     }
     if (fastResult && fastResult.lat != null && fastResult.lng != null) {
       // [FIX v5.5.021 M1/M2] Mask rawName เพื่อป้องกัน PII Leak ใน SYS_LOG
@@ -139,7 +151,10 @@ function findBestGeoByPersonPlace(rawPerson) {
       .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0));
 
     if (dests.length > 0) {
-      const top = dests[0];
+      // [ADD v5.5.022-PATCH1] Tie-Breaker: ถ้ามีหลาย dest และมี rawAddress → เลือกด้วย address matching
+      const top = (dests.length > 1 && rawAddr)
+        ? (selectBestDestByAddress_(dests, rawAddr) || dests[0])
+        : dests[0];
       // [FIX v5.5.021 M1/M2] Mask rawName
       const reason = cleanName !== rawName
         ? `Person match (cleaned) → "${cleanName}" → usageCount:${top.usageCount}`
@@ -161,6 +176,151 @@ function findBestGeoByPersonPlace(rawPerson) {
     'NOT_FOUND', 0, null,
     reason
   );
+}
+
+// ============================================================
+// SECTION 1a: ShipToAddress Tie-Breaker Helper — [ADD v5.5.022-PATCH1]
+// ============================================================
+
+/**
+ * selectBestDestByAddress_ — [ADD v5.5.022-PATCH1]
+ * Tie-Breaker: เลือก Destination ที่มี address ตรงกับ ShipToAddress มากที่สุด
+ *
+ * Algorithm (Token Overlap with Dice coefficient):
+ *   1. สร้าง address string ของแต่ละ destination จาก place.canonical + sub_district + district + province + postcode
+ *      (place โหลดจาก loadAllPlaces_ ซึ่งมี cache อยู่แล้ว — ไม่ต้องอ่าน sheet ซ้ำ)
+ *   2. Normalize ทั้ง ShipToAddress และ destAddress ด้วย normalizeForCompare (ลบ case/spacing/punctuation)
+ *   3. แยก tokens เป็น bigram sets แล้วคำนวณ Dice coefficient (overlap ของ bigram sets)
+ *   4. คืน dest ที่มี Dice >= 0.4 (40%) และสูงสุด — ถ้าไม่มีอันไหนผ่าน คืน null (caller fallback usageCount)
+ *
+ * @param {Array} dests - array ของ destination object (จาก getDestsByPersonId)
+ * @param {string} rawAddress - ShipToAddress ดิบ
+ * @return {Object|null} destination object ที่ match ที่สุด หรือ null
+ * @private
+ */
+function selectBestDestByAddress_(dests, rawAddress) {
+  if (!dests || dests.length === 0 || !rawAddress) return null;
+
+  // Normalize ShipToAddress ครั้งเดียว
+  let normAddr = String(rawAddress).trim();
+  try {
+    if (typeof normalizeForCompare === 'function') {
+      normAddr = normalizeForCompare(normAddr);
+    } else {
+      normAddr = normAddr.toLowerCase().replace(/\s+/g, '');
+    }
+  } catch (e) { /* fallback */ }
+  if (normAddr.length < 4) return null; // ที่อยู่สั้นเกินไป ไม่น่าเชื่อถือ
+
+  // โหลด place map (placeId → address string) — ใช้ loadAllPlaces_ cache อยู่แล้ว
+  let placeMap = null;
+  try {
+    if (typeof loadAllPlaces_ === 'function') {
+      const allPlaces = loadAllPlaces_();
+      placeMap = {};
+      allPlaces.forEach(function(p) {
+        if (p && p.placeId) {
+          // ประกอบ address จาก canonical + sub_district + district + province + postcode
+          const parts = [
+            p.canonical || '',
+            p.subDistrict || '',
+            p.district || '',
+            p.province || '',
+            p.postcode || ''
+          ].filter(Boolean);
+          placeMap[p.placeId] = parts.join(' ');
+        }
+      });
+    }
+  } catch (e) {
+    logWarn('SearchService', 'selectBestDestByAddress_: loadAllPlaces_ ล้มเหลว — skip tie-breaker: ' + e.message);
+    return null;
+  }
+  if (!placeMap) return null;
+
+  // สร้าง bigram set ของ ShipToAddress
+  let addrBigrams;
+  try {
+    addrBigrams = buildBigramSetSafe_(normAddr);
+  } catch (e) {
+    return null;
+  }
+  if (!addrBigrams || addrBigrams.size === 0) return null;
+
+  // คะแนนแต่ละ dest
+  let bestDest = null;
+  let bestScore = 0;
+  const TIE_BREAK_THRESHOLD = 0.4; // 40% Dice — พอจะบอกได้ว่าเป็นที่เดียวกัน
+
+  for (let i = 0; i < dests.length; i++) {
+    const dest = dests[i];
+    if (!dest.placeId) continue;
+
+    const placeAddrRaw = placeMap[dest.placeId] || '';
+    if (!placeAddrRaw) continue;
+
+    let normPlaceAddr = placeAddrRaw;
+    try {
+      if (typeof normalizeForCompare === 'function') {
+        normPlaceAddr = normalizeForCompare(normPlaceAddr);
+      } else {
+        normPlaceAddr = normPlaceAddr.toLowerCase().replace(/\s+/g, '');
+      }
+    } catch (e) { /* fallback */ }
+    if (normPlaceAddr.length < 4) continue;
+
+    let placeBigrams;
+    try {
+      placeBigrams = buildBigramSetSafe_(normPlaceAddr);
+    } catch (e) { continue; }
+    if (!placeBigrams || placeBigrams.size === 0) continue;
+
+    // Dice coefficient = 2 * |A ∩ B| / (|A| + |B|)
+    let intersection = 0;
+    addrBigrams.forEach(function(b) {
+      if (placeBigrams.has(b)) intersection++;
+    });
+    const dice = (2.0 * intersection) / (addrBigrams.size + placeBigrams.size);
+
+    if (dice > bestScore) {
+      bestScore = dice;
+      bestDest = dest;
+    }
+  }
+
+  if (bestDest && bestScore >= TIE_BREAK_THRESHOLD) {
+    logDebug('SearchService',
+      'selectBestDestByAddress_: match destId=' + bestDest.destId +
+      ' (Dice=' + bestScore.toFixed(2) + ')');
+    return bestDest;
+  }
+
+  // ไม่มีอันไหนผ่าน threshold — return null ให้ caller fallback usageCount
+  if (bestDest) {
+    logDebug('SearchService',
+      'selectBestDestByAddress_: best Dice=' + bestScore.toFixed(2) +
+      ' ต่ำกว่า threshold ' + TIE_BREAK_THRESHOLD + ' → fallback usageCount');
+  }
+  return null;
+}
+
+/**
+ * buildBigramSetSafe_ — [ADD v5.5.022-PATCH1]
+ * สร้าง Set ของ bigrams (2-char substrings) จาก string
+ * ใช้สำหรับ Dice coefficient ใน selectBestDestByAddress_
+ *
+ * @param {string} str - normalized string (no spaces, lowercase)
+ * @return {Set<string>} set ของ bigrams
+ * @private
+ */
+function buildBigramSetSafe_(str) {
+  const s = String(str || '');
+  if (s.length < 2) return new Set();
+  const set = new Set();
+  for (let i = 0; i < s.length - 1; i++) {
+    set.add(s.substring(i, i + 2));
+  }
+  return set;
 }
 
 // [REMOVED v5.4.003] callGeminiReasoning_ — ลบแล้วตาม ShipToName-Only Policy
@@ -269,7 +429,9 @@ function runLookupEnrichment() {
  */
 function lookupEnrichOneRow_(row) {
   // [REDESIGN v5.4.003] อ่านเฉพาะ ShipToName — ShipToAddress/LatLong_SCG ไม่ใช้แล้ว
+  // [ADD v5.5.022-PATCH1] อ่าน ShipToAddress เพิ่ม — ใช้เป็น tie-breaker กรณี ShipToName ซ้ำ
   const rawPerson  = String(row[DATA_IDX.SHIP_TO_NAME]  || '').trim();
+  const rawAddress = String(row[DATA_IDX.SHIP_TO_ADDR]  || '').trim();
   const existingLL = String(row[DATA_IDX.LATLNG_ACTUAL] || '').trim();
 
   // ตรวจ existingLL — ข้ามแถวที่มีพิกัดดีอยู่แล้ว
@@ -280,8 +442,8 @@ function lookupEnrichOneRow_(row) {
     }
   }
 
-  // ค้นหาพิกัดจาก ShipToName เท่านั้น
-  const result   = findBestGeoByPersonPlace(rawPerson);
+  // ค้นหาพิกัดจาก ShipToName เท่านั้น (rawAddress ใช้เป็น tie-breaker เมื่อ ShipToName ซ้ำ)
+  const result   = findBestGeoByPersonPlace(rawPerson, rawAddress);
 
   // [FIX v5.5.021 C2] รวบ switch case ป้องกัน silent fallback
   if (['FOUND', 'FOUND_DOMINANT', 'FOUND_ALIAS_FAST'].includes(result.status) && result.lat != null && result.lng != null) {
@@ -357,9 +519,10 @@ function lookupSingleRow(rowNumber) {
   const rowData   = sheet.getRange(rowNumber, 1, 1,
                      SCHEMA[SHEET.DAILY_JOB].length).getValues()[0];
   const rawPerson = String(rowData[DATA_IDX.SHIP_TO_NAME] || '').trim();
-  // ShipToAddress และ LatLong_SCG ถูกลบออกตาม ShipToName-Only Policy
+  const rawAddress = String(rowData[DATA_IDX.SHIP_TO_ADDR] || '').trim();
+  // [ADD v5.5.022-PATCH1] ส่ง rawAddress เป็น tie-breaker กรณี ShipToName ซ้ำ
 
-  const result = findBestGeoByPersonPlace(rawPerson);
+  const result = findBestGeoByPersonPlace(rawPerson, rawAddress);
 
   logDebug('SearchService',
     `Row ${rowNumber} → Status:${result.status} ` +
