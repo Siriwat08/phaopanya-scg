@@ -122,12 +122,37 @@ jobs:
           echo "  📋 Script ID: $APPS_SCRIPT_ID"
           mkdir -p apps-script-target
           cd apps-script-target
+
           # [FIX Deploy] clasp clone รับ scriptId เป็น positional argument ไม่ใช่ --scriptId flag
           #   เดิม: clasp clone --scriptId "$APPS_SCRIPT_ID" --title "..." → error: unknown option
           #   ใหม่: clasp clone "$APPS_SCRIPT_ID"
-          clasp clone "$APPS_SCRIPT_ID"
-          echo "  ✅ Clone สำเร็จ"
-          ls -la .clasp.json 2>/dev/null && echo "  ✅ .clasp.json พบแล้ว" || echo "  ❌ ไม่พบ .clasp.json"
+          #
+          # [FIX Deploy #2] เพิ่ม retry 3 ครั้ง เพราะ Google API บางครั้ง return "Premature close"
+          #   ซึ่งเป็น transient network error ไม่ใช่ code bug
+
+          MAX_RETRIES=3
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "  🔄 Clone attempt $attempt/$MAX_RETRIES..."
+            if clasp clone "$APPS_SCRIPT_ID" 2>&1; then
+              echo "  ✅ Clone สำเร็จ (attempt $attempt)"
+              break
+            else
+              echo "  ⚠️ Clone ล้มเหลว (attempt $attempt)"
+              rm -f .clasp.json
+              if [[ $attempt -eq $MAX_RETRIES ]]; then
+                echo "  ❌ Clone ล้มเหลวครบ $MAX_RETRIES ครั้ง — ตรวจสอบ:"
+                echo "     1. APPS_SCRIPT_ID ถูกต้องหรือไม่ (จาก script.google.com > Project Settings > IDs)"
+                echo "     2. Google Account ใน CLASPRC มีสิทธิ์เข้าถึง Apps Script project หรือไม่"
+                echo "     3. Apps Script API enabled ใน Google Cloud Project หรือไม่"
+                exit 1
+              fi
+              echo "  ⏳ รอ 10 วินาทีก่อน retry..."
+              sleep 10
+            fi
+          done
+
+          echo ""
+          ls -la .clasp.json 2>/dev/null && echo "  ✅ .clasp.json พบแล้ว" || { echo "  ❌ ไม่พบ .clasp.json"; exit 1; }
 
       - name: 📋 Copy source files (flatten for Apps Script)
         run: |
