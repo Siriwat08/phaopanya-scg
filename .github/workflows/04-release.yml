@@ -31,7 +31,7 @@ jobs:
           current=$(grep "VERSION:" src/O_core_system/00_App.gs | head -1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+" || echo "5.5.022")
           echo "  📋 Current version: v$current"
           input_version="${{ github.event.inputs.version }}"
-          if [ -n "$input_version" ]; then
+          if [[ -n "$input_version" ]]; then
             version=$(echo "$input_version" | sed 's/^v//')
           else
             IFS='.' read -r major minor patch <<< "$current"
@@ -46,7 +46,7 @@ jobs:
         id: commits
         run: |
           latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$latest_tag" ]; then
+          if [[ -n "$latest_tag" ]]; then
             echo "  🏷️  Latest tag: $latest_tag"
             commits=$(git log "${latest_tag}..HEAD" --pretty=format:"- %s (%h)" --no-merges)
           else

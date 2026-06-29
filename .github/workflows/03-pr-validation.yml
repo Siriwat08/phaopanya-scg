@@ -27,9 +27,9 @@ jobs:
           echo "  📝 Changes: $changes"
           files_changed=$(git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null | wc -l)
           echo "  📁 Files changed: $files_changed"
-          if [ "$files_changed" -gt 15 ]; then
+          if [[ "$files_changed" -gt 15 ]]; then
             echo "  ⚠️  PR ใหญ่มาก — แนะนำให้แตกเป็น PR ย่อย"
-          elif [ "$files_changed" -gt 8 ]; then
+          elif [[ "$files_changed" -gt 8 ]]; then
             echo "  ⚠️  PR ค่อนข้างใหญ่"
           else
             echo "  ✅ ขนาด PR เหมาะสม"
@@ -39,7 +39,7 @@ jobs:
         run: |
           echo "=== 🔍 ตรวจเฉพาะไฟล์ที่เปลี่ยนใน PR นี้ ==="
           changed_files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null | grep -E "src/.*\.gs$" || true)
-          if [ -z "$changed_files" ]; then
+          if [[ -z "$changed_files" ]]; then
             echo "  ℹ️  ไม่มีไฟล์ .gs เปลี่ยนแปลง"
             exit 0
           fi
@@ -49,23 +49,23 @@ jobs:
           issues=0
           echo "🛡️  Anti-pattern Check:"
           for f in $changed_files; do
-            [ ! -f "$f" ] && continue
+            [[ ! -f "$f" ]] && continue
             hardcoded=$(git diff origin/${{ github.base_ref }}...HEAD -- "$f" | grep -E "^\+.*row\[[0-9]+\]|^\+.*getRange\([^)]*,\s*[0-9]+\s*," | wc -l)
-            if [ "$hardcoded" -gt 0 ]; then
+            if [[ "$hardcoded" -gt 0 ]]; then
               echo "  ❌ $f: +$hardcoded Hardcoded Index (Law 1)"
               issues=$((issues+hardcoded))
             fi
             secret=$(git diff origin/${{ github.base_ref }}...HEAD -- "$f" | grep -iE "^\+.*(AIza[A-Za-z0-9_-]{35}|password\s*=|cookie\s*=)" | wc -l)
-            if [ "$secret" -gt 0 ]; then
+            if [[ "$secret" -gt 0 ]]; then
               echo "  ❌ $f: +$secret บรรทัดที่อาจมี Secret (Law 16)"
               issues=$((issues+secret))
             fi
             loop_setvalue=$(git diff origin/${{ github.base_ref }}...HEAD -- "$f" | grep -E "^\+.*setValue\(|^\+.*appendRow\(" | wc -l)
-            if [ "$loop_setvalue" -gt 0 ]; then
+            if [[ "$loop_setvalue" -gt 0 ]]; then
               echo "  ⚠️  $f: +$loop_setvalue setValue/appendRow — ตรวจว่าอยู่นอกลูป (Law 3)"
             fi
           done
-          if [ "$issues" -eq 0 ]; then
+          if [[ "$issues" -eq 0 ]]; then
             echo "  ✅ ไม่พบปัญหาร้ายแรง"
           else
             echo "  ⚠️  พบ $issues ปัญหาที่ควรตรวจสอบ"
@@ -75,7 +75,7 @@ jobs:
         run: |
           echo "=== 📋 Version Bump Check ==="
           version_changes=$(git diff origin/${{ github.base_ref }}...HEAD -- 'src/**/*.gs' | grep -E "^\+.*VERSION:" | head -5)
-          if [ -n "$version_changes" ]; then
+          if [[ -n "$version_changes" ]]; then
             echo "  ✅ มีการเปลี่ยน VERSION:"
             echo "$version_changes" | sed 's/^/      /'
           else

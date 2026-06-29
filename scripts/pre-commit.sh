@@ -15,7 +15,7 @@ warnings=0
 # ดูไฟล์ที่กำลังจะ commit
 changed_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.gs$|\.json$|\.md$" || true)
 
-if [ -z "$changed_files" ]; then
+if [[ -z "$changed_files" ]]; then
     echo "  ℹ️  ไม่มีไฟล์ .gs/.json/.md ที่เปลี่ยน — ผ่าน"
     exit 0
 fi
@@ -55,22 +55,20 @@ for f in $changed_files; do
     #   Reference: GitHub Changelog — Upcoming change to GitHub App installation token format
     # ========================================
     secret_pattern="AIza[A-Za-z0-9_-]{35}|AQ\\.[A-Za-z0-9_-]{30,}|gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{82}|password\\s*[:=]|cookie\\s*[:=]\\s*[\"\\']?[a-zA-Z0-9]{20,}"
-    if [[ "$f" == *.gs ]] || [[ "$f" == *.json ]]; then
-        if grep -iE "$secret_pattern" "$f" 2>/dev/null | grep -vE "^\\s*\\*|^//|^#" > /dev/null; then
-            echo "  ❌ Law 16: $f — มี Secret ในไฟล์!"
-            grep -iE "$secret_pattern" "$f" | head -3 | sed 's/^/      /'
-            errors=$((errors+1))
-        fi
+    # [FIX SonarCloud S1066] Merged nested if into single condition with && to reduce nesting
+    if { [[ "$f" == *.gs ]] || [[ "$f" == *.json ]]; } && grep -iE "$secret_pattern" "$f" 2>/dev/null | grep -vE "^\\s*\\*|^//|^#" > /dev/null; then
+        echo "  ❌ Law 16: $f — มี Secret ในไฟล์!"
+        grep -iE "$secret_pattern" "$f" | head -3 | sed 's/^/      /'
+        errors=$((errors+1))
     fi
 
     # ========================================
     # ตรวจ JSON syntax
     # ========================================
-    if [[ "$f" == *.json ]]; then
-        if ! python3 -c "import json; json.load(open('$f'))" 2>/dev/null; then
-            echo "  ❌ JSON Invalid: $f"
-            errors=$((errors+1))
-        fi
+    # [FIX SonarCloud S1066] Merged nested if into single condition with &&
+    if [[ "$f" == *.json ]] && ! python3 -c "import json; json.load(open('$f'))" 2>/dev/null; then
+        echo "  ❌ JSON Invalid: $f"
+        errors=$((errors+1))
     fi
 done
 

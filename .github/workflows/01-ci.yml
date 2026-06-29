@@ -33,7 +33,7 @@ jobs:
           echo "=== 🔍 ตรวจสอบขนาดไฟล์ (เกิน 60KB อาจมีปัญหา) ==="
           find src -name "*.gs" -type f -exec sh -c '
             size=$(stat -c%s "$1")
-            if [ "$size" -gt 61440 ]; then
+            if [[ "$size" -gt 61440 ]]; then
               echo "  ⚠️  $1: $((size/1024))KB (ไฟล์ใหญ่)"
             else
               echo "  ✅  $1: $((size/1024))KB"
@@ -64,20 +64,20 @@ jobs:
             # ตรวจวงเล็บไม่สมดุล
             open_paren=$(grep -o '(' "$f" | wc -l)
             close_paren=$(grep -o ')' "$f" | wc -l)
-            if [ "$open_paren" -ne "$close_paren" ]; then
+            if [[ "$open_paren" -ne "$close_paren" ]]; then
               echo "  ❌ $f: วงเล็บ () ไม่สมดุล ($open_paren vs $close_paren)"
               errors=$((errors+1))
             fi
 
             open_brace=$(grep -o '{' "$f" | wc -l)
             close_brace=$(grep -o '}' "$f" | wc -l)
-            if [ "$open_brace" -ne "$close_brace" ]; then
+            if [[ "$open_brace" -ne "$close_brace" ]]; then
               echo "  ❌ $f: วงเล็บปีกกา {} ไม่สมดุล ($open_brace vs $close_brace)"
               errors=$((errors+1))
             fi
           done
 
-          if [ $errors -eq 0 ]; then
+          if [[ $errors -eq 0 ]]; then
             echo "  ✅ ไม่พบ syntax error พื้นฐาน"
           else
             echo "  ⚠️  พบ $errors ปัญหา"
@@ -94,13 +94,13 @@ jobs:
           hardcoded_count=0
           for f in $(find src -name "*.gs" -type f); do
             matches=$(grep -nE 'row\[[0-9]+\]|getRange\([^)]*,\s*[0-9]+\s*,' "$f" | head -5)
-            if [ -n "$matches" ]; then
+            if [[ -n "$matches" ]]; then
               echo "  ⚠️  $f:"
               echo "$matches" | sed 's/^/      /'
               hardcoded_count=$((hardcoded_count+1))
             fi
           done
-          if [ $hardcoded_count -eq 0 ]; then
+          if [[ $hardcoded_count -eq 0 ]]; then
             echo "  ✅ ไม่พบ Hardcoded Index"
           fi
           total_issues=$((total_issues + hardcoded_count))
@@ -136,7 +136,7 @@ jobs:
               secret_count=$((secret_count+1))
             fi
           done
-          if [ $secret_count -eq 0 ]; then
+          if [[ $secret_count -eq 0 ]]; then
             echo "  ✅ ไม่พบ Secret"
           fi
           total_issues=$((total_issues + secret_count))
@@ -148,7 +148,7 @@ jobs:
       - name: 📋 ตรวจสอบ appsscript.json
         run: |
           echo "=== 📋 ตรวจสอบ appsscript.json ==="
-          if [ ! -f "appsscript.json" ]; then
+          if [[ ! -f "appsscript.json" ]]; then
             echo "  ❌ ไม่พบไฟล์ appsscript.json"
             exit 1
           fi
@@ -216,7 +216,7 @@ jobs:
           echo ""
           echo "📊 ไฟล์ .gs ทั้งหมด: $total ไฟล์"
 
-          if [ "$total" -ne 22 ]; then
+          if [[ "$total" -ne 22 ]]; then
             echo "  ⚠️  ควรมี 22 ไฟล์ (00 ถึง 21) — ตอนนี้มี $total ไฟล์"
           else
             echo "  ✅ ครบ 22 ไฟล์ ตามที่ CONTEXT ระบุ"
@@ -272,7 +272,7 @@ jobs:
           echo "  📊 try { } blocks: $try_count"
           echo "  📊 catch blocks: $catch_count"
 
-          if [ "$try_count" -gt 0 ]; then
+          if [[ "$try_count" -gt 0 ]]; then
             ratio=$((catch_count * 100 / try_count))
             echo "  📊 Coverage: ${ratio}%"
           fi
@@ -290,7 +290,7 @@ jobs:
           missing=0
           for f in $(find src -name "*.gs" -type f | sort); do
             version=$(grep -E "^ \* VERSION:|VERSION:" "$f" | head -1)
-            if [ -z "$version" ]; then
+            if [[ -z "$version" ]]; then
               echo "  ⚠️  $f: ไม่มี VERSION tag"
               missing=$((missing+1))
             else
@@ -298,7 +298,7 @@ jobs:
             fi
           done
           echo ""
-          if [ $missing -gt 0 ]; then
+          if [[ $missing -gt 0 ]]; then
             echo "  ⚠️  $missing ไฟล์ไม่มี VERSION tag"
           else
             echo "  ✅ ทุกไฟล์มี VERSION tag"

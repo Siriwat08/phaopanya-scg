@@ -26,7 +26,7 @@ jobs:
           echo "📝 บรรทัดทั้งหมด: $total_lines บรรทัด"
           echo "💾 ขนาด: $total_size"
           echo ""
-          if [ "$total_files" -eq 22 ]; then
+          if [[ "$total_files" -eq 22 ]]; then
             echo "  ✅ ไฟล์ครบ 22 (00-21)"
           else
             echo "  ⚠️  ไฟล์ไม่ครบ (ควรมี 22)"
@@ -36,7 +36,7 @@ jobs:
               echo "$f"
             fi
           done | wc -l)
-          if [ "$missing_version" -eq 0 ]; then
+          if [[ "$missing_version" -eq 0 ]]; then
             echo "  ✅ ทุกไฟล์มี VERSION tag"
           else
             echo "  ⚠️  $missing_version ไฟล์ไม่มี VERSION tag"
@@ -50,7 +50,7 @@ jobs:
 
       - name: 🔍 ตรวจ Outdated Dependencies
         run: |
-          if [ -f "package.json" ]; then
+          if [[ -f "package.json" ]]; then
             echo "=== 📦 ตรวจสอบ Dependencies ==="
             npm outdated || echo "  ℹ️  ไม่มี outdated"
           else
@@ -80,7 +80,7 @@ jobs:
         env:
           WEBHOOK_URL: ${{ secrets.HEALTH_WEBHOOK }}
         run: |
-          if [ -n "$WEBHOOK_URL" ]; then
+          if [[ -n "$WEBHOOK_URL" ]]; then
             curl -X POST "$WEBHOOK_URL" \
               -H 'Content-Type: application/json' \
               -d '{
