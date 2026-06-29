@@ -126,9 +126,11 @@ jobs:
           echo "  ✅ ~/.clasprc.json size: $CLASPRC_SIZE bytes"
 
           # ตรวจ CLASPRC format (ควรมี access_token, refresh_token, scope)
+          # [FIX] ใช้ $HOME แทน /root/ เพราะ GitHub Actions runner ใช้ /home/runner
           if ! python3 -c "
-          import json
-          with open('/root/.clasprc.json') as f:
+          import json, os
+          clasprc_path = os.path.join(os.environ.get('HOME', '/root'), '.clasprc.json')
+          with open(clasprc_path) as f:
               d = json.load(f)
           if 'access_token' not in d and 'token' not in str(d):
               print('  ⚠️  ไม่พบ access_token ใน clasprc.json')
@@ -138,7 +140,7 @@ jobs:
           print('  ✅ CLASPRC format ถูกต้อง')
           " 2>&1; then
             echo "  ℹ️  CLASPRC format check ข้ามไป (อาจไม่ใช่ปัญหา)"
-          fi
+          fi || true
 
           # 2. ตรวจ APPS_SCRIPT_ID format (ควรยาว ~57 ตัวอักษร)
           echo ""
@@ -159,17 +161,21 @@ jobs:
           echo ""
           echo "  🔍 ตรวจสอบ API access โดยตรง..."
           ACCESS_TOKEN=$(python3 -c "
-          import json
-          with open('/root/.clasprc.json') as f:
-              d = json.load(f)
-          # clasprc.json อาจเก็บ token ใน field ต่างกันตาม clasp version
-          if 'access_token' in d:
-              print(d['access_token'])
-          elif 'token' in d and isinstance(d['token'], dict):
-              print(d['token'].get('access_token', ''))
-          else:
+          import json, os
+          clasprc_path = os.path.join(os.environ.get('HOME', '/root'), '.clasprc.json')
+          try:
+              with open(clasprc_path) as f:
+                  d = json.load(f)
+              # clasprc.json อาจเก็บ token ใน field ต่างกันตาม clasp version
+              if 'access_token' in d:
+                  print(d['access_token'])
+              elif 'token' in d and isinstance(d['token'], dict):
+                  print(d['token'].get('access_token', ''))
+              else:
+                  print('')
+          except Exception:
               print('')
-          " 2>/dev/null)
+          " 2>/dev/null || echo "")
 
           if [[ -z "$ACCESS_TOKEN" ]]; then
             echo "  ⚠️  ไม่สามารถดึง access_token จาก clasprc.json — ข้าม API test"
