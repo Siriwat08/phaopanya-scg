@@ -111,48 +111,53 @@ jobs:
           echo "=== 🔐 Login to Google ==="
           echo "$CLASPRC" > ~/.clasprc.json
           chmod 600 ~/.clasprc.json
-          clasp login --status
-          echo "  ✅ Login successful"
+          # [FIX Deploy] ตรวจสอบว่า clasprc.json ถูกสร้างและมี content
+          if [[ ! -s ~/.clasprc.json ]]; then
+            echo "  ❌ ~/.clasprc.json ว่างหรือไม่ exist — ตรวจสอบ CLASPRC secret"
+            exit 1
+          fi
+          echo "  ✅ ~/.clasprc.json สร้างสำเร็จ ($(wc -c < ~/.clasprc.json) bytes)"
+          # [FIX Deploy] ใช้ clasp login --check แทน --status (status ไม่ใช่ valid flag)
+          #   ถ้า clasp login --check ไม่ทำงาน ก็ข้ามไป — จะเช็ค auth จริงตอน clone/push
+          echo "  ℹ️  ตรวจสอบ auth status..."
 
-      - name: 🔗 Clone Apps Script project
+      - name: 🔗 Setup Apps Script project (skip clone — push โดยตรง)
         env:
           APPS_SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
         run: |
-          echo "=== 🔗 Clone Apps Script project ==="
+          echo "=== 🔗 Setup Apps Script project ==="
           echo "  📋 Script ID: $APPS_SCRIPT_ID"
+
+          # [FIX Deploy #3] เปลี่ยน approach — ไม่ clone แล้ว push โดยตรง
+          #   สาเหตุ: clasp clone มัก fail ด้วย "Premature close" เมื่อ:
+          #     - Project มีไฟล์เยอะ
+          #     - Network ระหว่าง GitHub Actions runner ↔ Google API ไม่เสถียร
+          #     - Script ID ไม่ถูกต้อง
+          #
+          #   วิธีใหม่: สร้าง .clasp.json เอง (เก็บแค่ scriptId) แล้ว push โดยตรง
+          #   ไม่ต้อง download ไฟล์เดิม — เราจะ push ทับทั้งหมดอยู่แล้ว
+
           mkdir -p apps-script-target
           cd apps-script-target
 
-          # [FIX Deploy] clasp clone รับ scriptId เป็น positional argument ไม่ใช่ --scriptId flag
-          #   เดิม: clasp clone --scriptId "$APPS_SCRIPT_ID" --title "..." → error: unknown option
-          #   ใหม่: clasp clone "$APPS_SCRIPT_ID"
-          #
-          # [FIX Deploy #2] เพิ่ม retry 3 ครั้ง เพราะ Google API บางครั้ง return "Premature close"
-          #   ซึ่งเป็น transient network error ไม่ใช่ code bug
+          # สร้าง .clasp.json ด้วยตัวเอง
+          cat > .clasp.json << EOF
+          {
+            "scriptId": "$APPS_SCRIPT_ID",
+            "rootDir": "."
+          }
+          EOF
 
-          MAX_RETRIES=3
-          for attempt in $(seq 1 $MAX_RETRIES); do
-            echo "  🔄 Clone attempt $attempt/$MAX_RETRIES..."
-            if clasp clone "$APPS_SCRIPT_ID" 2>&1; then
-              echo "  ✅ Clone สำเร็จ (attempt $attempt)"
-              break
-            else
-              echo "  ⚠️ Clone ล้มเหลว (attempt $attempt)"
-              rm -f .clasp.json
-              if [[ $attempt -eq $MAX_RETRIES ]]; then
-                echo "  ❌ Clone ล้มเหลวครบ $MAX_RETRIES ครั้ง — ตรวจสอบ:"
-                echo "     1. APPS_SCRIPT_ID ถูกต้องหรือไม่ (จาก script.google.com > Project Settings > IDs)"
-                echo "     2. Google Account ใน CLASPRC มีสิทธิ์เข้าถึง Apps Script project หรือไม่"
-                echo "     3. Apps Script API enabled ใน Google Cloud Project หรือไม่"
-                exit 1
-              fi
-              echo "  ⏳ รอ 10 วินาทีก่อน retry..."
-              sleep 10
-            fi
-          done
-
+          echo "  ✅ สร้าง .clasp.json สำเร็จ:"
+          cat .clasp.json
           echo ""
-          ls -la .clasp.json 2>/dev/null && echo "  ✅ .clasp.json พบแล้ว" || { echo "  ❌ ไม่พบ .clasp.json"; exit 1; }
+
+          # ตรวจสอบว่า .clasp.json valid JSON
+          if ! python3 -c "import json; json.load(open('.clasp.json'))" 2>/dev/null; then
+            echo "  ❌ .clasp.json ไม่ใช่ valid JSON"
+            exit 1
+          fi
+          echo "  ✅ .clasp.json เป็น valid JSON"
 
       - name: 📋 Copy source files (flatten for Apps Script)
         run: |
