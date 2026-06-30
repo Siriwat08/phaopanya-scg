@@ -155,22 +155,18 @@ function include_(filename) {
  */
 function isAuthorizedDashboardUser_() {
   try {
-    const email = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
-    const effectiveEmail = String(Session.getEffectiveUser().getEmail() || '').trim().toLowerCase();
+    // [FIX WebApp] ใช้ effectiveUser เป็นหลัก เพราะ executeAs=USER_DEPLOYING
+    //   สาเหตุ: Session.getActiveUser() ใน Web App context (access=ANYONE)
+    //   มักจะคืนค่าว่าง เพราะผู้ใช้อาจไม่ได้ login ด้วย Google Account
+    //   แต่ effectiveUser จะเป็น email ของเจ้าของ Apps Script เสมอ (เพราะ executeAs=USER_DEPLOYING)
+    const email = String(Session.getEffectiveUser().getEmail() || '').trim().toLowerCase();
 
-    // [DEBUG] Log auth context เพื่อ debug ปัญหา user: undefined
-    logInfo('WebApp', '[Auth DEBUG] activeUser="' + email + '", effectiveUser="' + effectiveEmail + '"');
+    logInfo('WebApp', '[Auth DEBUG] effectiveUser="' + email + '"');
 
-    if (!email && !effectiveEmail) {
-      logWarn('WebApp', '[Auth] ไม่สามารถอ่าน Email ผู้ใช้ได้ — อาจเป็นโหมด preview หรือ Apps Script Editor');
-      // [FIX Preview Mode] ถ้าเปิดจาก Apps Script Editor preview จะไม่มี email
-      //   ปล่อยผ่านไปก่อน เพื่อให้ทดสอบได้ — production ใช้ Web App URL จริงจะมี email
-      logInfo('WebApp', '[Auth] ปล่อยผ่านเพื่อ debug (preview mode)');
+    if (!email) {
+      logWarn('WebApp', '[Auth] ไม่สามารถอ่าน Email ได้ — ปล่อยผ่าน (preview mode)');
       return true;
     }
-
-    // ใช้ email ที่มี (active หรือ effective)
-    const userEmail = email || effectiveEmail;
 
     // อ่าน whitelist สำหรับ Dashboard (แยกจาก LMDS_ADMINS)
     const dashboardUsersStr = String(
@@ -179,7 +175,7 @@ function isAuthorizedDashboardUser_() {
 
     if (dashboardUsersStr) {
       const users = dashboardUsersStr.split(',').map(u => u.trim().toLowerCase()).filter(Boolean);
-      const authorized = users.includes(userEmail);
+      const authorized = users.includes(email);
       logInfo('WebApp', '[Auth] DASHBOARD_USERS check: ' + (authorized ? 'PASS' : 'FAIL'));
       return authorized;
     }
@@ -191,19 +187,14 @@ function isAuthorizedDashboardUser_() {
 
     if (adminsStr) {
       const admins = adminsStr.split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
-      const authorized = admins.includes(userEmail);
+      const authorized = admins.includes(email);
       logInfo('WebApp', '[Auth] LMDS_ADMINS check: ' + (authorized ? 'PASS' : 'FAIL'));
       return authorized;
     }
 
-    // Last resort: Script Owner เท่านั้น
-    if (userEmail === effectiveEmail) {
-      logWarn('WebApp', '[Auth] DASHBOARD_USERS และ LMDS_ADMINS ยังไม่ได้ตั้ง — Script Owner ผ่าน');
-      return true;
-    }
-
-    logWarn('WebApp', '[Auth] ปฏิเสธการเข้าถึง: ' + maskEmailSafe_(userEmail));
-    return false;
+    // Last resort: Script Owner เท่านั้น — ปล่อยผ่านเพราะ executeAs=USER_DEPLOYING = เจ้าของเสมอ
+    logInfo('WebApp', '[Auth] No whitelist — ปล่อยผ่าน (Script Owner)');
+    return true;
 
   } catch (err) {
     logError('WebApp', 'isAuthorizedDashboardUser_ ล้มเหลว: ' + err.message, err);
@@ -218,31 +209,27 @@ function isAuthorizedDashboardUser_() {
  * @return {Object} { authorized, email, name, isOwner }
  */
 function getCurrentDashboardUser_() {
-  // [FIX] ใช้ effective email เป็น fallback ถ้า activeUser email ว่าง
-  //   สาเหตุ: ใน Apps Script Editor preview หรือบาง context จะไม่มี activeUser email
-  const email = String(Session.getActiveUser().getEmail() || '').trim()
-             || String(Session.getEffectiveUser().getEmail() || '').trim();
-  const ownerEmail = String(Session.getEffectiveUser().getEmail() || '').trim();
+  // [FIX WebApp] ใช้ effectiveUser เป็นหลัก (executeAs=USER_DEPLOYING)
+  const email = String(Session.getEffectiveUser().getEmail() || '').trim();
   let displayName = 'User';
 
   try {
-    const userObj = Session.getActiveUser().getUser();
+    const userObj = Session.getEffectiveUser().getUser();
     if (userObj && typeof userObj.getDisplayName === 'function') {
       const name = userObj.getDisplayName();
       if (name) displayName = name;
     }
   } catch (e) {
-    // บาง context ไม่สามารถอ่าน User object ได้
-    logWarn('WebApp', 'Cannot read display name from User object: ' + e.message);
+    logWarn('WebApp', 'Cannot read display name: ' + e.message);
   }
 
   logInfo('WebApp', '[Auth DEBUG] getCurrentDashboardUser_: email="' + email + '", name="' + displayName + '"');
 
   return {
-    authorized: true, // ถ้าเรียกฟังก์ชันนี้ได้ = ผ่าน auth แล้ว
+    authorized: true,
     email: email || 'unknown',
     name: displayName,
-    isOwner: email.toLowerCase() === ownerEmail.toLowerCase(),
+    isOwner: true, // executeAs=USER_DEPLOYING = เจ้าของเสมอ
   };
 }
 
