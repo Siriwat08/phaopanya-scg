@@ -6,15 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LMDS V5.5 Dashboard</title>
 
-  <!-- Tailwind CSS v3.4.16 (precompiled, with SRI) -->
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.16/dist/tailwind.min.css"
-        integrity="sha384-wAkE1abywdsF0VP/+RDLxHADng231vt6gsqcjBzQFUoAQNkuN63+cJ4XDiE7LVjx"
-        crossorigin="anonymous">
+  <!-- Tailwind CSS v4 (browser runtime compiler, with SRI) -->
+  <!-- [FIX WebApp Phase 1] tailwindcss@3.4.16/dist/tailwind.min.css ไม่มีอยู่จริงบน jsDelivr (404) -->
+  <!--   สาเหตุ: Tailwind v3+ เลิกให้ precompiled CSS บน CDN แล้ว ต้องใช้ build process -->
+  <!--   แก้โดยใช้ @tailwindcss/browser@4 ซึ่งเป็น runtime compiler ทางการจาก Tailwind Labs -->
+  <!--   รองรับ utility classes ทั้งหมดที่ใช้ (bg-*, text-*, grid-*, flex-*, etc.) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"
+          integrity="sha384-shaHAtPgz0ulP7R/YmFe0nZtC8FxdhJPi73vwJQcADVttxvHLJBJt/pjzkLSbIvL"
+          crossorigin="anonymous"></script>
 
   <!-- Custom Tailwind config (inline, runs after Tailwind loads) -->
   <script>
-    // Extend Tailwind with LMDS colors — ใช้ CSS variables แทนเพราะเป็น precompiled CSS
+    // Extend Tailwind with LMDS colors — ใช้ CSS variables
     document.documentElement.style.setProperty('--color-lmds-found', '#b6d7a8');
     document.documentElement.style.setProperty('--color-lmds-fallback', '#ffe599');
     document.documentElement.style.setProperty('--color-lmds-not-found', '#f4cccc');
@@ -235,6 +238,7 @@
   <?!= include_('StatCard'); ?>
   <?!= include_('DataTable'); ?>
   <?!= include_('ChartCard'); ?>
+  <?!= include_('Dashboard'); ?>
   <?!= include_('App'); ?>
 
 </body>
