@@ -388,11 +388,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: deploy
+    # [FIX Deploy #6] verify job ต้อง setup Node + clasp ใหม่ เพราะเป็น job แยก
+    #   deploy job ลง clasp ไว้ใน PATH ของตัวเอง แต่ verify job เริ่มใหม่ PATH ว่าง
+    #   ทำให้เจอ 'clasp: command not found' หลัง push สำเร็จ
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: 📥 ดึง Apps Script กลับมาตรวจ
+      - name: 📦 Setup Node.js 20 + clasp (สำหรับ verify)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          check-latest: true
+
+      - name: 📦 ติดตั้ง clasp
+        run: npm install -g @google/clasp
+
+      - name: 📥 ดึง Apps Script กลับมา verify
         env:
           CLASPRC: ${{ secrets.CLASPRC }}
           APPS_SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
@@ -402,7 +414,8 @@ jobs:
           chmod 600 ~/.clasprc.json
           mkdir -p verify-target
           cd verify-target
-          clasp pull --scriptId "$APPS_SCRIPT_ID"
+          # [FIX Deploy #6] ใช้ npx clasp เพื่อให้หา command ได้แม้ PATH ไม่ตรง
+          npx clasp pull "$APPS_SCRIPT_ID" || clasp pull "$APPS_SCRIPT_ID"
 
       - name: 🔍 ตรวจว่าไฟล์ใน Apps Script ตรงกับ repo
         run: |
