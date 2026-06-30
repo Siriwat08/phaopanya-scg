@@ -7,6 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Cycle | Issues |
 |---------|------|-------|--------|
+| 5.5.024 | 2026-06-30 | PHASE 2.1: Q_REVIEW VIEW | Q_REVIEW page implementation |
 | 5.5.023 | 2026-06-30 | WEBAPP WHITE SCREEN v2 FIX | 4 root cause fixes |
 | 5.5.022 | 2026-06-26 | CONSISTENCY SYNC + DEEP DIVE FIX | 9 BUG fixes + 168 doc inconsistencies |
 | 5.5.021 | 2026-06-22 | REFACTOR_CYCLE6_RESIDUAL | REF-005 cleanup + REF-011 pilot |
@@ -27,6 +28,40 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 | 5.5.006 | 2026-06-18 | CONSISTENCY SYNC | 28 doc inconsistencies |
 | 5.5.005 | 2026-06-16 | REVIEW SERVICE FIX | (intermediate) |
 | 5.5.004 | 2026-06-15 | INITIAL AUDIT CYCLES | 53 audit issues |
+
+---
+
+## [5.5.024] — 2026-06-30 — PHASE 2.1: Q_REVIEW VIEW
+
+### New Feature: Q_REVIEW page (Phase 2)
+หน้า Q_REVIEW ใช้งานได้จริงแล้ว ไม่ใช่ Coming Soon
+
+**Server-side (22_WebApp.gs)**:
+- `getQReviewPage(offset, limit, statusFilter)` — ดึงรายการแบบ server pagination + filter
+  - รองรับ filter: Pending / Approved / Rejected / Escalated / Done / all
+  - ส่งกลับ `statusCounts` สำหรับแสดง count ใน filter tabs
+  - อ่าน batch ด้วย `getRange().getValues()` ครั้งเดียว (เร็วกว่า row-by-row)
+- `submitReviewDecision(reviewId, decision, note)` — wrapper รอบ `applyReviewDecision()` ใน 12_ReviewService.gs
+  - ตรวจ auth + ตรวจว่ารายการยัง Pending อยู่
+  - decisions: `CREATE_NEW` / `MERGE_TO_CANDIDATE` / `IGNORE` / `ESCALATE`
+- `safeParseJsonArray_()` — helper แปลง JSON string เป็น array อย่างปลอดภัย
+
+**Frontend**:
+- `views/QReview.html` — view component ใหม่
+  - Filter tabs 6 ตัว พร้อม count badge
+  - ตารางรายการ: Issue / Invoice / ชื่อ-สถานที่ / ที่อยู่ / พิกัด / Score / แนะนำ / การจัดการ
+  - ปุ่ม 3 ปุ่มต่อแถว: Approve (เลือก CREATE_NEW หรือ MERGE_TO_CANDIDATE ตาม recommend), Reject (IGNORE), Escalate
+  - Server pagination (50 rows/page)
+  - ยืนยันด้วย `confirm()` ก่อน action
+  - แสดง toast หลัง action สำเร็จ/ล้มเหลว
+- `js/Api.html` — เพิ่ม `api.getQReviewPage()` และ `api.submitReviewDecision()`
+- `js/App.html` — route 'qreview' เรียก `QReviewView.render()` แทน `renderComingSoon_()`
+- `Index.html` — include QReview.html + ลบ "soon" จาก Q_REVIEW nav button
+
+### Test
+- จำลอง GAS environment ด้วย mock server + Playwright
+- ทดสอบครบ: navigate, โหลดตาราง, filter tabs, Approve, สลับ tab, กลับ Dashboard
+- ผล: ทุก step ผ่าน ไม่มี page errors ไม่มีหน้าขาว
 
 ---
 

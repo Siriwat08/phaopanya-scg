@@ -86,10 +86,24 @@ globalThis.api = (function () {
       promisify_('getFactDeliveryPage', offset, limit, filter),
 
     /**
-     * getQReviewPage — Phase 2 (stub)
+     * getQReviewPage — Phase 2: ดึงรายการ Q_REVIEW แบบ pagination + filter
+     * @param {number} offset - 0-based
+     * @param {number} limit - rows per page (default 50)
+     * @param {string} statusFilter - 'Pending' | 'Approved' | 'Rejected' | 'Escalated' | 'Done' | 'all'
+     * @return {Promise<{rows: Array, total: number, offset: number, limit: number, statusFilter: string, statusCounts: Object, elapsedMs: number}>}
      */
     getQReviewPage: (offset, limit, statusFilter) =>
       promisify_('getQReviewPage', offset, limit, statusFilter),
+
+    /**
+     * submitReviewDecision — Phase 2: บันทึกการตัดสินใจ Approve/Reject
+     * @param {string} reviewId
+     * @param {string} decision - 'CREATE_NEW' | 'MERGE_TO_CANDIDATE' | 'IGNORE' | 'ESCALATE'
+     * @param {string} note - optional note
+     * @return {Promise<{ok: boolean, reviewId: string, decision: string, message: string}>}
+     */
+    submitReviewDecision: (reviewId, decision, note) =>
+      promisify_('submitReviewDecision', reviewId, decision, note),
 
     /**
      * getMatchEngineMetrics — Phase 3 (stub)

@@ -539,19 +539,225 @@ function getFactDeliveryPage(offset, limit, filter) {
 }
 
 /**
- * getQReviewPage — Phase 2 (TODO)
+ * getQReviewPage — Phase 2: ดึงรายการ Q_REVIEW แบบ pagination + filter
+ *   เรียกจาก frontend ผ่าน google.script.run
+ *
+ * @param {number} offset - แถวเริ่มต้น (0-based, หลัง header) — default 0
+ * @param {number} limit - จำนวนแถวต่อหน้า — default 50
+ * @param {string} statusFilter - 'Pending' | 'Approved' | 'Rejected' | 'Escalated' | 'Done' | 'all'
+ *                                ถ้าไม่ระบุ จะใช้ 'Pending' เป็น default
+ * @return {Object} { rows, total, offset, limit, statusFilter, statusCounts }
+ *   - rows: array ของ review objects (เลือกเฉพาะ field ที่ frontend ต้องการ เพื่อลด payload)
+ *   - total: จำนวนรายการทั้งหมดที่ match filter (ไม่ใช่ทั้ง sheet)
+ *   - statusCounts: จำนวนรายการแต่ละ status ทั้งหมด (สำหรับ filter tabs)
  */
 function getQReviewPage(offset, limit, statusFilter) {
   if (!isAuthorizedDashboardUser_()) throw new Error('Unauthorized');
-  // TODO: Phase 2 implementation
+
+  const startTime = Date.now();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
+
+  if (!sheet) {
+    return {
+      rows: [],
+      total: 0,
+      offset: 0,
+      limit: limit || 50,
+      statusFilter: statusFilter || 'Pending',
+      statusCounts: {},
+      elapsedMs: 0,
+      error: 'ไม่พบ sheet Q_REVIEW',
+    };
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    return {
+      rows: [],
+      total: 0,
+      offset: 0,
+      limit: limit || 50,
+      statusFilter: statusFilter || 'Pending',
+      statusCounts: {},
+      elapsedMs: 0,
+    };
+  }
+
+  // อ่านข้อมูลทั้งหมด (GAS อ่าน batch เร็วกว่า row-by-row)
+  const data = sheet.getRange(2, 1, lastRow - 1, SCHEMA[SHEET.Q_REVIEW].length).getValues();
+
+  // นับ status ทั้งหมด (สำหรับ filter tabs)
+  const statusCounts = { 'Pending': 0, 'Approved': 0, 'Rejected': 0, 'Escalated': 0, 'Done': 0, 'Other': 0 };
+  data.forEach(function(row) {
+    const s = String(row[REVIEW_IDX.STATUS] || '').trim();
+    if (s === 'Pending' || s === 'PENDING' || s === '') statusCounts['Pending']++;
+    else if (s === 'Approved' || s === 'APPROVED') statusCounts['Approved']++;
+    else if (s === 'Rejected' || s === 'REJECTED') statusCounts['Rejected']++;
+    else if (s === 'Escalated' || s === 'ESCALATED') statusCounts['Escalated']++;
+    else if (s === 'Done' || s === 'DONE') statusCounts['Done']++;
+    else statusCounts['Other']++;
+  });
+
+  // Filter
+  const wantStatus = (statusFilter || 'Pending').toLowerCase();
+  const filtered = data.filter(function(row) {
+    if (wantStatus === 'all') return true;
+    const s = String(row[REVIEW_IDX.STATUS] || '').trim().toLowerCase();
+    if (wantStatus === 'pending') return s === '' || s === 'pending';
+    return s === wantStatus;
+  });
+
+  // Pagination
+  const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
+  const safeLimit = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+  const pageRows = filtered.slice(safeOffset, safeOffset + safeLimit);
+
+  // แปลง rows เป็น objects (เลือกเฉพาะ field ที่ frontend ใช้)
+  const rows = pageRows.map(function(row, idx) {
+    return {
+      reviewId: String(row[REVIEW_IDX.REVIEW_ID] || ''),
+      issueType: String(row[REVIEW_IDX.ISSUE_TYPE] || ''),
+      priority: String(row[REVIEW_IDX.PRIORITY] || ''),
+      invoiceNo: String(row[REVIEW_IDX.INVOICE_NO] || ''),
+      rawPerson: String(row[REVIEW_IDX.RAW_PERSON] || ''),
+      rawPlace: String(row[REVIEW_IDX.RAW_PLACE] || ''),
+      rawAddress: String(row[REVIEW_IDX.RAW_SYS_ADDR] || ''),
+      rawLat: Number(row[REVIEW_IDX.RAW_LAT] || 0),
+      rawLng: Number(row[REVIEW_IDX.RAW_LNG] || 0),
+      matchScore: Number(row[REVIEW_IDX.MATCH_SCORE] || 0),
+      recommend: String(row[REVIEW_IDX.RECOMMEND] || ''),
+      status: String(row[REVIEW_IDX.STATUS] || 'Pending'),
+      reviewer: String(row[REVIEW_IDX.REVIEWER] || ''),
+      decision: String(row[REVIEW_IDX.DECISION] || ''),
+      note: String(row[REVIEW_IDX.NOTE] || ''),
+      candPersonIds: safeParseJsonArray_(row[REVIEW_IDX.CAND_PERSONS]),
+      candPlaceIds: safeParseJsonArray_(row[REVIEW_IDX.CAND_PLACES]),
+      sourceRowNumber: Number(row[REVIEW_IDX.SOURCE_ROW] || 0),
+      // ส่ง row index (1-based ใน sheet) กลับไป เพื่อใช้ตอน applyReviewDecision
+      _sheetRow: idx + safeOffset + 2,
+    };
+  });
+
+  const elapsedMs = Date.now() - startTime;
+  logInfo('WebApp', 'getQReviewPage: status=' + (statusFilter || 'Pending') +
+    ' offset=' + safeOffset + ' limit=' + safeLimit +
+    ' → ' + rows.length + '/' + filtered.length + ' rows in ' + elapsedMs + 'ms');
+
   return {
-    rows: [],
-    total: 0,
-    offset: offset || 0,
-    limit: limit || 50,
-    statusFilter: statusFilter || 'PENDING',
-    message: 'Phase 2 — coming soon',
+    rows: rows,
+    total: filtered.length,
+    offset: safeOffset,
+    limit: safeLimit,
+    statusFilter: statusFilter || 'Pending',
+    statusCounts: statusCounts,
+    elapsedMs: elapsedMs,
   };
+}
+
+/**
+ * safeParseJsonArray_ — parse JSON string เป็น array อย่างปลอดภัย
+ * @param {*} val
+ * @return {Array}
+ * @private
+ */
+function safeParseJsonArray_(val) {
+  if (val === null || val === undefined || val === '') return [];
+  if (Array.isArray(val)) return val;
+  try {
+    const parsed = JSON.parse(String(val));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * submitReviewDecision — Phase 2: บันทึกการตัดสินใจ Approve/Reject ของ reviewer
+ *   wrapper รอบ applyReviewDecision() ใน 12_ReviewService.gs
+ *   เพิ่ม auth check + return structured response สำหรับ frontend
+ *
+ * @param {string} reviewId - review_id ของรายการที่จะตัดสินใจ
+ * @param {string} decision - 'CREATE_NEW' (Approve = สร้าง entity ใหม่)
+ *                            | 'MERGE_TO_CANDIDATE' (Approve = merge เข้า candidate)
+ *                            | 'IGNORE' (Reject = ไม่ action, ปิดไป)
+ *                            | 'ESCALATE' (Reject + ส่งต่อ)
+ * @param {string} note - หมายเหตุ (optional)
+ * @return {Object} { ok, reviewId, decision, message }
+ */
+function submitReviewDecision(reviewId, decision, note) {
+  if (!isAuthorizedDashboardUser_()) throw new Error('Unauthorized');
+
+  if (!reviewId || !decision) {
+    return { ok: false, message: 'กรุณาระบุ reviewId และ decision' };
+  }
+
+  const validDecisions = ['CREATE_NEW', 'MERGE_TO_CANDIDATE', 'IGNORE', 'ESCALATE'];
+  if (validDecisions.indexOf(decision) === -1) {
+    return { ok: false, message: 'decision ไม่ถูกต้อง ต้องเป็น: ' + validDecisions.join(', ') };
+  }
+
+  try {
+    // ดึง rowData ล่าสุดจาก sheet (frontend ส่งมาอาจเก่าแล้ว)
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
+    if (!sheet) {
+      return { ok: false, message: 'ไม่พบ sheet Q_REVIEW' };
+    }
+
+    // หา row ที่มี reviewId นี้
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return { ok: false, message: 'Q_REVIEW ว่าง' };
+    }
+
+    const data = sheet.getRange(2, 1, lastRow - 1, SCHEMA[SHEET.Q_REVIEW].length).getValues();
+    let targetRow = -1;
+    let rowData = null;
+    for (let i = 0; i < data.length; i++) {
+      if (String(data[i][REVIEW_IDX.REVIEW_ID]).trim() === reviewId) {
+        targetRow = i + 2;
+        rowData = data[i];
+        break;
+      }
+    }
+
+    if (targetRow === -1 || !rowData) {
+      return { ok: false, message: 'ไม่พบ reviewId: ' + reviewId };
+    }
+
+    // ตรวจว่ารายการยัง Pending อยู่หรือไม่ (defense-in-depth)
+    const currentStatus = String(rowData[REVIEW_IDX.STATUS] || '').trim().toLowerCase();
+    if (currentStatus === 'approved' || currentStatus === 'rejected' || currentStatus === 'done' || currentStatus === 'escalated') {
+      return {
+        ok: false,
+        message: 'รายการนี้ถูกตัดสินใจแล้ว (status=' + currentStatus + ') ไม่สามารถเปลี่ยนแปลงได้',
+        reviewId: reviewId,
+      };
+    }
+
+    // เพิ่ม note ถ้ามี
+    if (note) {
+      rowData[REVIEW_IDX.NOTE] = note;
+    }
+
+    // เรียกใช้ฟังก์ชันที่มีอยู่แล้วใน 12_ReviewService.gs
+    const result = applyReviewDecision(reviewId, decision, rowData, targetRow);
+
+    logInfo('WebApp', 'submitReviewDecision: ' + reviewId + ' → ' + decision +
+      ' โดย ' + (getCurrentDashboardUser_().email || '?'));
+
+    return {
+      ok: true,
+      reviewId: reviewId,
+      decision: decision,
+      message: 'บันทึกการตัดสินใจสำเร็จ',
+      result: result ? { factRowWritten: true } : null,
+    };
+  } catch (err) {
+    logError('WebApp', 'submitReviewDecision ล้มเหลว: ' + err.message, err);
+    return { ok: false, message: err.message || 'Unknown error', reviewId: reviewId };
+  }
 }
 
 /**
