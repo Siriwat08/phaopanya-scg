@@ -337,12 +337,200 @@ jobs:
             exit 1
           fi
 
-      - name: 📝 สร้าง Version
+      - name: 📝 สร้าง Version + อัปเดต Web App Deployment
+        env:
+          APPS_SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
+          CLASPRC: ${{ secrets.CLASPRC }}
         run: |
           echo "=== 📝 สร้าง Versioned Deployment ==="
           cd apps-script-target
-          version_description="auto-${{ github.sha }}-${{ github.event.inputs.version }}"
-          clasp deploy --description "$version_description" --deploymentId "" || echo "  ⚠️ ใช้ @HEAD แทน"
+
+          # 1. สร้าง version ใหม่ใน Apps Script
+          version_description="auto-${{ github.sha }}"
+          echo "  📝 สร้าง version: $version_description"
+          clasp deploy --description "$version_description" || echo "  ⚠️ deploy ล้มเหลว — ใช้ @HEAD แทน"
+
+          # 2. [FIX] อัปเดต Web App deployment ให้ชี้ไป version ล่าสุด
+          #   สาเหตุ: clasp push อัปเดตโค้ดที่ @HEAD แต่ Web App URL ใช้ version เฉพาะ
+          #   ต้องอัปเดต deployment ด้วย ไม่งั้น URL เดิมยังชี้ไปโค้ดเก่า
+          echo ""
+          echo "  🔄 อัปเดต Web App deployment ให้ชี้ไป version ล่าสุด..."
+
+          # ดึง access token — ลองหลายวิธีเพราะ clasprc.json format เปลี่ยนตาม clasp version
+          ACCESS_TOKEN=""
+          
+          # วิธีที่ 1: ใช้ clasp ตรงๆ (ถ้ามี command ที่ใช้ได้)
+          if command -v clasp &> /dev/null; then
+            # clasp ไม่มี command ดึง token ตรง — ข้ามไปวิธีอื่น
+            :
+          fi
+          
+          # วิธีที่ 2: อ่านจาก clasprc.json ด้วย python (รองรับหลาย format)
+          ACCESS_TOKEN=$(python3 -c "
+          import json, os, sys
+          clasprc_path = os.path.join(os.environ.get('HOME', '/root'), '.clasprc.json')
+          try:
+              with open(clasprc_path) as f:
+                  d = json.load(f)
+              # Format 1: clasp 2.x — { token: { access_token: '...' } }
+              if 'token' in d and isinstance(d['token'], dict):
+                  token = d['token']
+                  if 'access_token' in token:
+                      print(token['access_token'])
+                      sys.exit(0)
+              # Format 2: clasp 3.x — { access_token: '...' }
+              if 'access_token' in d:
+                  print(d['access_token'])
+                  sys.exit(0)
+              # Format 3: clasp 3.x — { oauth2Client: { access_token: '...' } }
+              if 'oauth2Client' in d and isinstance(d['oauth2Client'], dict):
+                  if 'access_token' in d['oauth2Client']:
+                      print(d['oauth2Client']['access_token'])
+                      sys.exit(0)
+              print('')
+          except Exception as e:
+              print('')
+          " 2>/dev/null || echo "")
+
+          # วิธีที่ 3: ถ้ายังไม่ได้ token — refresh ด้วย refresh_token
+          if [[ -z "$ACCESS_TOKEN" ]]; then
+            echo "  ℹ️  ไม่พบ access_token ใน clasprc.json — ลอง refresh token..."
+            REFRESH_TOKEN=$(python3 -c "
+            import json, os
+            clasprc_path = os.path.join(os.environ.get('HOME', '/root'), '.clasprc.json')
+            try:
+                with open(clasprc_path) as f:
+                    d = json.load(f)
+                if 'token' in d and isinstance(d['token'], dict):
+                    print(d['token'].get('refresh_token', ''))
+                elif 'refresh_token' in d:
+                    print(d['refresh_token'])
+                else:
+                    print('')
+            except Exception:
+                print('')
+            " 2>/dev/null || echo "")
+
+            CLIENT_ID=$(python3 -c "
+            import json, os
+            clasprc_path = os.path.join(os.environ.get('HOME', '/root'), '.clasprc.json')
+            try:
+                with open(clasprc_path) as f:
+                    d = json.load(f)
+                if 'token' in d and isinstance(d['token'], dict):
+                    print(d['token'].get('client_id', ''))
+                elif 'oauth2Client' in d:
+                    print(d['oauth2Client'].get('client_id', ''))
+                else:
+                    print('')
+            except Exception:
+                print('')
+            " 2>/dev/null || echo "")
+
+            CLIENT_SECRET=$(python3 -c "
+            import json, os
+            clasprc_path = os.path.join(os.environ.get('HOME', '/root'), '.clasprc.json')
+            try:
+                with open(clasprc_path) as f:
+                    d = json.load(f)
+                if 'token' in d and isinstance(d['token'], dict):
+                    print(d['token'].get('client_secret', ''))
+                elif 'oauth2Client' in d:
+                    print(d['oauth2Client'].get('client_secret', ''))
+                else:
+                    print('')
+            except Exception:
+                print('')
+            " 2>/dev/null || echo "")
+
+            if [[ -n "$REFRESH_TOKEN" && -n "$CLIENT_ID" && -n "$CLIENT_SECRET" ]]; then
+              ACCESS_TOKEN=$(curl -s -X POST \
+                -d "client_id=$CLIENT_ID" \
+                -d "client_secret=$CLIENT_SECRET" \
+                -d "refresh_token=$REFRESH_TOKEN" \
+                -d "grant_type=refresh_token" \
+                "https://oauth2.googleapis.com/token" | python3 -c "
+              import json, sys
+              try:
+                  d = json.load(sys.stdin)
+                  print(d.get('access_token', ''))
+              except Exception:
+                  print('')
+              " 2>/dev/null || echo "")
+              if [[ -n "$ACCESS_TOKEN" ]]; then
+                echo "  ✅ Refresh token สำเร็จ"
+              fi
+            fi
+          fi
+
+          if [[ -z "$ACCESS_TOKEN" ]]; then
+            echo "  ⚠️  ไม่สามารถดึง access_token — ข้ามการอัปเดต deployment"
+            echo "  ℹ️  ผู้ใช้ต้องอัปเดต deployment เองใน Apps Script Editor"
+          else
+            # List deployments เพื่อหา Web App deployment ID
+            DEPLOYMENTS_JSON=$(curl -s \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              "https://script.googleapis.com/v1/projects/$APPS_SCRIPT_ID/deployments")
+
+            # หา deployment ที่มี webApp config (entryPoint.webApp)
+            WEBAPP_DEPLOYMENT_ID=$(echo "$DEPLOYMENTS_JSON" | python3 -c "
+            import json, sys
+            try:
+                d = json.load(sys.stdin)
+                for dep in d.get('deployments', []):
+                    entry_points = dep.get('entryPoints', [])
+                    for ep in entry_points:
+                        if ep.get('entryPointType') == 'WEB_APP':
+                            print(dep.get('deploymentId', ''))
+                            sys.exit(0)
+                print('')
+            except Exception:
+                print('')
+            " 2>/dev/null)
+
+            if [[ -z "$WEBAPP_DEPLOYMENT_ID" ]]; then
+              echo "  ⚠️  ไม่พบ Web App deployment — ผู้ใช้ต้องสร้าง deployment เอง"
+            else
+              echo "  📋 Web App deployment ID: $WEBAPP_DEPLOYMENT_ID"
+
+              # ดึง version ล่าสุด
+              LATEST_VERSION=$(curl -s \
+                -H "Authorization: Bearer $ACCESS_TOKEN" \
+                "https://script.googleapis.com/v1/projects/$APPS_SCRIPT_ID/versions" | \
+                python3 -c "
+              import json, sys
+              try:
+                  d = json.load(sys.stdin)
+                  versions = d.get('versions', [])
+                  if versions:
+                      print(versions[0].get('versionNumber', ''))
+                  else:
+                      print('')
+              except Exception:
+                  print('')
+              " 2>/dev/null)
+
+              if [[ -n "$LATEST_VERSION" ]]; then
+                echo "  📋 Latest version: $LATEST_VERSION"
+
+                # อัปเดต deployment ให้ชี้ไป version ล่าสุด
+                UPDATE_RESULT=$(curl -s -X PUT \
+                  -H "Authorization: Bearer $ACCESS_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"versionNumber\": $LATEST_VERSION, \"manifestFileName\": \"appsscript.json\", \"description\": \"$version_description\"}" \
+                  "https://script.googleapis.com/v1/projects/$APPS_SCRIPT_ID/deployments/$WEBAPP_DEPLOYMENT_ID")
+
+                if echo "$UPDATE_RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if 'deploymentId' in d else 1)" 2>/dev/null; then
+                  echo "  ✅ อัปเดต Web App deployment สำเร็จ → version $LATEST_VERSION"
+                else
+                  echo "  ⚠️  อัปเดต deployment ล้มเหลว:"
+                  echo "$UPDATE_RESULT" | head -5
+                fi
+              else
+                echo "  ⚠️  ไม่สามารถดึง version ล่าสุด"
+              fi
+            fi
+          fi
 
       - name: 📢 แจ้งเตือน Discord/Slack (ถ้ามี Webhook)
         if: success()

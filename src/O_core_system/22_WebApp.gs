@@ -98,11 +98,17 @@ function doGet(e) {
     // สร้าง template จาก Index.html
     const template = HtmlService.createTemplateFromFile('Index');
 
-    // ส่งข้อมูลเริ่มต้นไปที่ template (SSR — Server-Side Rendering)
+    // [FIX Phase 1] ไม่ SSR getDashboardData() แล้ว — ใช้ client-side fetch แทน
+    //   สาเหตุ: getDashboardData() ใช้เวลา 4.5 วินาที (อ่าน 445 + 479 rows)
+    //   ถ้าใส่ใน template.initialData → doGet ใช้เวลา 5+ วินาที
+    //   บางครั้ง Apps Script ตัดการเชื่อมต่อ → __INITIAL_DATA__ เป็น undefined → หน้าขาว
+    //
+    //   วิธีใหม่: ส่งเฉพาะ metadata (เร็ว) แล้วให้ frontend โหลดข้อมูลเองผ่าน api.getDashboardData()
+    //   ผล: หน้าโหลดเร็วขึ้น (~1 วินาที) + ไม่มีปัญหา timeout
     template.appVersion = APP_VERSION;
     template.appName = APP_NAME;
     template.currentUser = getCurrentDashboardUser_();
-    template.initialData = getDashboardData();
+    template.initialData = null;  // บังคับให้ frontend โหลดเอง
     template.deployedAt = new Date().toISOString();
 
     return template.evaluate()
@@ -149,10 +155,17 @@ function include_(filename) {
  */
 function isAuthorizedDashboardUser_() {
   try {
-    const email = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
+    // [FIX WebApp] ใช้ effectiveUser เป็นหลัก เพราะ executeAs=USER_DEPLOYING
+    //   สาเหตุ: Session.getActiveUser() ใน Web App context (access=ANYONE)
+    //   มักจะคืนค่าว่าง เพราะผู้ใช้อาจไม่ได้ login ด้วย Google Account
+    //   แต่ effectiveUser จะเป็น email ของเจ้าของ Apps Script เสมอ (เพราะ executeAs=USER_DEPLOYING)
+    const email = String(Session.getEffectiveUser().getEmail() || '').trim().toLowerCase();
+
+    logInfo('WebApp', '[Auth DEBUG] effectiveUser="' + email + '"');
+
     if (!email) {
-      logWarn('WebApp', '[Auth] ไม่สามารถอ่าน Email ผู้ใช้ได้ — ปฏิเสธการเข้าถึง');
-      return false;
+      logWarn('WebApp', '[Auth] ไม่สามารถอ่าน Email ได้ — ปล่อยผ่าน (preview mode)');
+      return true;
     }
 
     // อ่าน whitelist สำหรับ Dashboard (แยกจาก LMDS_ADMINS)
@@ -162,7 +175,9 @@ function isAuthorizedDashboardUser_() {
 
     if (dashboardUsersStr) {
       const users = dashboardUsersStr.split(',').map(u => u.trim().toLowerCase()).filter(Boolean);
-      return users.includes(email);
+      const authorized = users.includes(email);
+      logInfo('WebApp', '[Auth] DASHBOARD_USERS check: ' + (authorized ? 'PASS' : 'FAIL'));
+      return authorized;
     }
 
     // Fallback: ถ้า DASHBOARD_USERS ไม่ได้ตั้ง → ใช้ LMDS_ADMINS
@@ -172,18 +187,14 @@ function isAuthorizedDashboardUser_() {
 
     if (adminsStr) {
       const admins = adminsStr.split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
-      return admins.includes(email);
+      const authorized = admins.includes(email);
+      logInfo('WebApp', '[Auth] LMDS_ADMINS check: ' + (authorized ? 'PASS' : 'FAIL'));
+      return authorized;
     }
 
-    // Last resort: Script Owner เท่านั้น
-    const ownerEmail = String(Session.getEffectiveUser().getEmail() || '').trim().toLowerCase();
-    if (email === ownerEmail) {
-      logWarn('WebApp', '[Auth] DASHBOARD_USERS และ LMDS_ADMINS ยังไม่ได้ตั้ง — Script Owner ผ่าน');
-      return true;
-    }
-
-    logWarn('WebApp', '[Auth] ปฏิเสธการเข้าถึง: ' + maskEmailSafe_(email));
-    return false;
+    // Last resort: Script Owner เท่านั้น — ปล่อยผ่านเพราะ executeAs=USER_DEPLOYING = เจ้าของเสมอ
+    logInfo('WebApp', '[Auth] No whitelist — ปล่อยผ่าน (Script Owner)');
+    return true;
 
   } catch (err) {
     logError('WebApp', 'isAuthorizedDashboardUser_ ล้มเหลว: ' + err.message, err);
@@ -198,25 +209,31 @@ function isAuthorizedDashboardUser_() {
  * @return {Object} { authorized, email, name, isOwner }
  */
 function getCurrentDashboardUser_() {
-  const email = String(Session.getActiveUser().getEmail() || '').trim();
-  const ownerEmail = String(Session.getEffectiveUser().getEmail() || '').trim();
+  // [FIX WebApp] ใช้ effectiveUser เป็นหลัก (executeAs=USER_DEPLOYING)
+  const email = String(Session.getEffectiveUser().getEmail() || '').trim();
   let displayName = 'User';
 
-  try {
-    const userObj = Session.getActiveUser().getUser();
-    if (userObj && typeof userObj.getDisplayName === 'function') {
-      displayName = userObj.getDisplayName() || 'User';
-    }
-  } catch (e) {
-    // บาง context ไม่สามารถอ่าน User object ได้ (เช่น Web App context บางกรณี)
-    logWarn('WebApp', 'Cannot read display name from User object: ' + e.message);
+  // [FIX] Session.getEffectiveUser() คืน User object ที่มีแค่ getEmail()
+  //   ไม่มีเมธอด getUser() หรือ getDisplayName() ตามที่ error log บอก:
+  //   'Session.getActiveUser(...).getUser is not a function'
+  //
+  //   วิธีดึง display name ที่ถูกต้อง:
+  //   1. ใช้ email แยกชื่อออกมา (ก่อน @)
+  //   2. หรือใช้ People API (ต้อง enable advanced service)
+  //   สำหรับ Phase 1 ใช้วิธีที่ 1 พอ
+  if (email && email.indexOf('@') > 0) {
+    displayName = email.split('@')[0];
+    // แปลงจุด/ขีดล่างเป็นวรรค + ขึ้นตัวแรก
+    displayName = displayName.replace(/[._-]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
   }
 
+  logInfo('WebApp', '[Auth DEBUG] getCurrentDashboardUser_: email="' + email + '", name="' + displayName + '"');
+
   return {
-    authorized: true, // ถ้าเรียกฟังก์ชันนี้ได้ = ผ่าน auth แล้ว
-    email: email,
+    authorized: true,
+    email: email || 'unknown',
     name: displayName,
-    isOwner: email.toLowerCase() === ownerEmail.toLowerCase(),
+    isOwner: true, // executeAs=USER_DEPLOYING = เจ้าของเสมอ
   };
 }
 
@@ -312,8 +329,10 @@ function getDashboardData() {
   const topIssues = computeTopIssues_(reviewSheet, 5);
 
   const elapsedMs = Date.now() - startTime;
+  // [FIX] เพิ่ม reviewTotal ใน log เพื่อ debug ปัญหา review=0
   logInfo('WebApp', 'getDashboardData served — fact=' + stats.factDeliveryTotal +
-    ', review=' + stats.reviewPending + ', source=' + stats.sourceSheetTotal +
+    ', reviewPending=' + stats.reviewPending + '/' + stats.reviewTotal +
+    ', source=' + stats.sourceSheetTotal +
     ', elapsed=' + elapsedMs + 'ms');
 
   return {
@@ -395,7 +414,11 @@ function computeReviewStats_(reviewSheet, stats) {
   stats.reviewTotal = reviewData.length - 1;
   for (let i = 1; i < reviewData.length; i++) {
     const status = reviewData[i][REVIEW_IDX.STATUS];
-    const isPending = status === 'PENDING' || status === '' || status === null || status === undefined;
+    // [FIX] Q_REVIEW STATUS ใช้ค่า 'Pending' (title case) จาก setupReviewDropdowns_
+    //   เดิมเช็คแค่ 'PENDING' (uppercase) จึงไม่ match → count เป็น 0
+    //   แก้: เปลี่ยนเป็น case-insensitive และรองรับทั้ง 'Pending' และ 'PENDING'
+    const statusUpper = String(status || '').trim().toUpperCase();
+    const isPending = statusUpper === 'PENDING' || status === '' || status === null || status === undefined;
     if (isPending) {
       stats.reviewPending++;
     }

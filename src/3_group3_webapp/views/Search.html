@@ -9,7 +9,6 @@
 globalThis.SearchView = (function () {
   'use strict';
 
-  let currentQuery = '';
   let isSearching = false;
 
   /**
@@ -102,7 +101,6 @@ globalThis.SearchView = (function () {
 
     if (isSearching) return;
     isSearching = true;
-    currentQuery = trimmed;
 
     const resultsEl = document.getElementById('searchResults');
     if (resultsEl) {
@@ -233,8 +231,8 @@ globalThis.SearchView = (function () {
     const copyBtns = container.querySelectorAll('[data-copy-lat]');
     copyBtns.forEach(function(btn) {
       btn.addEventListener('click', function() {
-        const lat = btn.getAttribute('data-copy-lat');
-        const lng = btn.getAttribute('data-copy-lng');
+        const lat = btn.dataset.copyLat;
+        const lng = btn.dataset.copyLng;
         const text = lat + ', ' + lng;
         copyToClipboard_(text);
         showToast_('คัดลอกแล้ว', text, 'success', 2000);
@@ -282,11 +280,11 @@ globalThis.SearchView = (function () {
    */
   function escapeHtml_(str) {
     return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
   }
 
   /**
@@ -305,7 +303,7 @@ globalThis.SearchView = (function () {
         document.body.appendChild(textarea);
         textarea.select();
         document.execCommand('copy');
-        document.body.removeChild(textarea);
+        textarea.remove();
       }
     } catch (e) {
       console.warn('[SearchView] copy failed:', e);
