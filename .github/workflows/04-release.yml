@@ -25,6 +25,17 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: ⚙️ Configure Git identity
+        # [FIX Release] GitHub Actions runner ไม่ได้ตั้ง git user.name/email ไว้
+        #   ทำให้ git tag -a fail ด้วย 'Committer identity unknown'
+        #   แก้โดยตั้ง identity ก่อนที่จะมีการ commit/tag
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          echo "  ✅ Git identity configured:"
+          git config --global user.name
+          git config --global user.email
+
       - name: 🔍 ดึง Version ปัจจุบันจากโค้ด
         id: version
         run: |
