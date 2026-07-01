@@ -121,6 +121,16 @@ globalThis.api = (function () {
     getMatchEngineMetrics: () => promisify_('getMatchEngineMetrics'),
 
     /**
+     * getSourcePage — Phase 2.4: ดึงรายการจาก SOURCE sheet (ข้อมูลดิบจาก SCG API)
+     * @param {number} offset - 0-based
+     * @param {number} limit - rows per page (default 50, max 200)
+     * @param {Object} filter - { syncStatus: 'SUCCESS' | 'PENDING' | 'ERROR' | 'EMPTY' | 'all' }
+     * @return {Promise<{rows: Array, total: number, offset: number, limit: number, syncStatusCounts: Object, elapsedMs: number}>}
+     */
+    getSourcePage: (offset, limit, filter) =>
+      promisify_('getSourcePage', offset, limit, filter),
+
+    /**
      * searchLocations — Phase 2: ค้นหาพิกัดจากชื่อ/ที่อยู่/เบอร์โทร/รหัสไปรษณีย์
      * @param {string} query - คำค้นหา
      * @param {number} [limit=20] - จำนวนผลลัพธ์สูงสุด

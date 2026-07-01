@@ -1101,6 +1101,132 @@ function getMatchEngineMetrics() {
   };
 }
 
+/**
+ * getSourcePage — Phase 2.4: ดึงรายการจาก SOURCE sheet (SCGนครหลวงJWDภูมิภาค)
+ *   แสดงข้อมูลดิบจาก SCG API + SYNC_STATUS ว่าประมวลผลแล้วหรือยัง
+ *
+ * @param {number} offset - 0-based (หลัง header)
+ * @param {number} limit - rows per page (default 50, max 200)
+ * @param {Object} filter - { syncStatus: 'SUCCESS' | 'PENDING' | 'ERROR' | 'all' }
+ * @return {Object} { rows, total, offset, limit, filter, syncStatusCounts, elapsedMs }
+ */
+function getSourcePage(offset, limit, filter) {
+  if (!isAuthorizedDashboardUser_()) throw new Error('Unauthorized');
+
+  const startTime = Date.now();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET.SOURCE);
+
+  if (!sheet) {
+    return {
+      rows: [],
+      total: 0,
+      offset: 0,
+      limit: limit || 50,
+      filter: filter || {},
+      syncStatusCounts: {},
+      elapsedMs: 0,
+      error: 'ไม่พบ sheet SOURCE',
+    };
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    return {
+      rows: [],
+      total: 0,
+      offset: 0,
+      limit: limit || 50,
+      filter: filter || {},
+      syncStatusCounts: {},
+      elapsedMs: 0,
+    };
+  }
+
+  // อ่านข้อมูลทั้งหมด batch — sheet SOURCE มี 39 columns
+  const lastCol = Math.max(SRC_IDX.DRIVER_VERIFIED_ADDR + 1, sheet.getLastColumn());
+  const data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+  // คำนวณ sync status — bucket เป็น SUCCESS / PENDING / ERROR / EMPTY
+  const bucketSyncStatus_ = function(rawStatus) {
+    const s = String(rawStatus || '').trim().toUpperCase();
+    if (s === SCG_CONFIG.SYNC_DONE_VALUE) return 'SUCCESS';
+    if (s === '') return 'EMPTY';
+    if (s.indexOf('ERROR') !== -1 || s.indexOf('FAIL') !== -1) return 'ERROR';
+    return 'PENDING';
+  };
+
+  // นับ sync status ทั้งหมด
+  const syncStatusCounts = { 'SUCCESS': 0, 'PENDING': 0, 'ERROR': 0, 'EMPTY': 0 };
+  data.forEach(function(row) {
+    const bucket = bucketSyncStatus_(row[SRC_IDX.SYNC_STATUS]);
+    syncStatusCounts[bucket] = (syncStatusCounts[bucket] || 0) + 1;
+  });
+
+  // Filter
+  const filterObj = filter || {};
+  const wantSync = (filterObj.syncStatus || 'all').toUpperCase();
+  let filtered = data;
+  if (wantSync !== 'ALL' && wantSync !== '') {
+    filtered = data.filter(function(row) {
+      return bucketSyncStatus_(row[SRC_IDX.SYNC_STATUS]) === wantSync;
+    });
+  }
+
+  // Pagination
+  const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
+  const safeLimit = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+  const pageRows = filtered.slice(safeOffset, safeOffset + safeLimit);
+
+  // แปลง rows เป็น objects (เลือก field ที่ frontend ใช้)
+  const rows = pageRows.map(function(row, idx) {
+    return {
+      _sheetRow: safeOffset + idx + 2,
+      rowId: Number(row[SRC_IDX.ROW_ID] || 0),
+      sourceId: String(row[SRC_IDX.SOURCE_ID] || ''),
+      deliveryDate: row[SRC_IDX.DELIVERY_DATE] instanceof Date
+        ? row[SRC_IDX.DELIVERY_DATE].toISOString() : String(row[SRC_IDX.DELIVERY_DATE] || ''),
+      deliveryTime: String(row[SRC_IDX.DELIVERY_TIME] || ''),
+      driverName: String(row[SRC_IDX.DRIVER_NAME] || ''),
+      truckLicense: String(row[SRC_IDX.TRUCK_LICENSE] || ''),
+      shipmentNo: String(row[SRC_IDX.SHIPMENT_NO] || ''),
+      invoiceNo: String(row[SRC_IDX.INVOICE_NO] || ''),
+      customerCode: String(row[SRC_IDX.CUSTOMER_CODE] || ''),
+      soldToName: String(row[SRC_IDX.SOLD_TO_NAME] || ''),
+      rawPersonName: String(row[SRC_IDX.RAW_PERSON_NAME] || ''),
+      lat: Number(row[SRC_IDX.LAT] || 0),
+      lng: Number(row[SRC_IDX.LNG] || 0),
+      warehouse: String(row[SRC_IDX.WAREHOUSE] || ''),
+      rawAddress: String(row[SRC_IDX.RAW_ADDRESS] || ''),
+      resolvedAddr: String(row[SRC_IDX.RESOLVED_ADDR] || ''),
+      remark: String(row[SRC_IDX.REMARK] || ''),
+      month: String(row[SRC_IDX.MONTH] || ''),
+      distFromWh: Number(row[SRC_IDX.DIST_FROM_WH] || 0),
+      syncStatus: String(row[SRC_IDX.SYNC_STATUS] || ''),
+      syncStatusBucket: bucketSyncStatus_(row[SRC_IDX.SYNC_STATUS]),
+      driverVerifiedName: String(row[SRC_IDX.DRIVER_VERIFIED_NAME] || ''),
+      driverVerifiedAddr: String(row[SRC_IDX.DRIVER_VERIFIED_ADDR] || ''),
+      qcResult: String(row[SRC_IDX.QC_RESULT] || ''),
+      qcIssue: String(row[SRC_IDX.QC_ISSUE] || ''),
+    };
+  });
+
+  const elapsedMs = Date.now() - startTime;
+  logInfo('WebApp', 'getSourcePage: sync=' + (filterObj.syncStatus || 'all') +
+    ' offset=' + safeOffset + ' limit=' + safeLimit +
+    ' → ' + rows.length + '/' + filtered.length + ' rows in ' + elapsedMs + 'ms');
+
+  return {
+    rows: rows,
+    total: filtered.length,
+    offset: safeOffset,
+    limit: safeLimit,
+    filter: filterObj,
+    syncStatusCounts: syncStatusCounts,
+    elapsedMs: elapsedMs,
+  };
+}
+
 // ============================================================
 // SECTION 6: Search Locations — Phase 2 (Search by name/address/phone)
 // ============================================================

@@ -7,6 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Cycle | Issues |
 |---------|------|-------|--------|
+| 5.5.027 | 2026-07-01 | PHASE 2.4: SOURCE SHEET VIEW | Source Sheet page implementation |
 | 5.5.026 | 2026-07-01 | PHASE 2.3: FACT_DELIVERY VIEW | FACT_DELIVERY page implementation |
 | 5.5.025 | 2026-06-30 | PHASE 2.2: Q_REVIEW DETAIL PANEL | Click row → expand comparison |
 | 5.5.024 | 2026-06-30 | PHASE 2.1: Q_REVIEW VIEW | Q_REVIEW page implementation |
@@ -30,6 +31,79 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 | 5.5.006 | 2026-06-18 | CONSISTENCY SYNC | 28 doc inconsistencies |
 | 5.5.005 | 2026-06-16 | REVIEW SERVICE FIX | (intermediate) |
 | 5.5.004 | 2026-06-15 | INITIAL AUDIT CYCLES | 53 audit issues |
+
+---
+
+## [5.5.027] — 2026-07-01 — PHASE 2.4: SOURCE SHEET VIEW
+
+### New Feature: Source Sheet page (Phase 2.4)
+หน้า Source Sheet ใช้งานได้จริงแล้ว ไม่ใช่ Coming Soon
+แสดงข้อมูลดิบจาก SCG API + SYNC_STATUS ว่าประมวลผลแล้วหรือยัง
+
+**Server-side (22_WebApp.gs)**:
+- `getSourcePage(offset, limit, filter)` — function ใหม่
+  - Server pagination (50 rows/page, max 200)
+  - Filter ตาม sync status bucket: SUCCESS / PENDING / ERROR / EMPTY / all
+  - **`bucketSyncStatus_()` helper** — แปลง raw SYNC_STATUS เป็น bucket ที่อ่านง่าย:
+    - `SUCCESS` ← ค่าตรง `SCG_CONFIG.SYNC_DONE_VALUE` (= 'SUCCESS')
+    - `EMPTY` ← ค่าว่าง
+    - `ERROR` ← มี 'ERROR' หรือ 'FAIL' ใน string
+    - `PENDING` ← ค่าอื่น ๆ (เช่น 'PENDING', 'PENDING_REVIEW')
+  - ส่งกลับ `syncStatusCounts` สำหรับ filter tab badges
+  - อ่าน batch ด้วย `getRange().getValues()` ครั้งเดียว
+
+**Frontend (views/SourceSheet.html)** — view component ใหม่:
+- Filter tabs 5 ตัว:
+  - All (ทั้งหมด)
+  - SUCCESS (ประมวลผลแล้ว) — สีเขียว
+  - PENDING (รอประมวลผล) — สีเหลือง
+  - ERROR (ผิดพลาด) — สีแดง
+  - EMPTY (ยังไม่ได้ตั้ง) — สีเทา
+  - แต่ละ tab มี count badge
+- ตารางรายการ: # / วันที่+เวลา / Invoice / คนขับ+ทะเบียน /
+  ชื่อปลายทาง (ดิบ) / พิกัด / SYNC Status badge
+- **คลิก row → expand detail panel** (inline ไม่ต้อง fetch เพิ่ม):
+  - 🚚 ข้อมูลการจัดส่ง (ดิบ) — 18 fields: Source ID, Row #, Sheet Row, วันที่/เวลา,
+    Invoice, Shipment, คนขับ+ทะเบียน, รหัสลูกค้า, ชื่อเจ้าของสินค้า, ชื่อปลายทางดิบ,
+    ชื่อที่คนขับยืนยัน, ที่อยู่ปลายทางดิบ, ที่อยู่ที่คนขับยืนยัน, ที่อยู่จาก GoogleMap,
+    คลังสินค้า, ระยะจากคลัง, เดือน, หมายเหตุ
+  - 📡 พิกัด + SYNC Status + QC:
+    - SYNC Status badge (bucket)
+    - SYNC Status raw (ค่าจริงใน sheet)
+    - QC Result, QC Issue
+    - พิกัด LAT/LONG + ปุ่ม "🗺️ ดูใน Maps"
+    - **Hint box** สำหรับ row ที่ไม่ใช่ SUCCESS:
+      - PENDING: "💡 รายการนี้ยังไม่ถูกประมวลผล — รอ Daily Job ทำงาน"
+      - ERROR: "⚠️ รายการนี้ประมวลผลผิดพลาด — ตรวจสอบ log ใน SYS_LOG"
+      - EMPTY: "∅ SYNC_STATUS ว่าง — รอ Daily Job ตั้งค่า"
+- Server pagination (50 rows/page) — ปุ่ม ก่อนหน้า/ถัดไป
+- Row click: ปิด row อื่นก่อน (เปิดทีละอัน) เหมือน Q_REVIEW / FACT_DELIVERY
+
+**API (js/Api.html)**:
+- เพิ่ม `api.getSourcePage(offset, limit, filter)`
+
+**Routing (js/App.html)**:
+- route 'source' เรียก `SourceSheetView.render()` แทน `renderComingSoon_()`
+
+**Sidebar (Index.html)**:
+- include `SourceSheet.html` ใน scripts
+- ลบ "soon" badge จาก Source Sheet nav button
+
+### Test (mock server + Playwright)
+10 scenarios:
+1. Navigate → filter tabs 5 ตัว + table 6 rows ✓
+2. ตรวจ 'soon' หายจาก nav ✓
+3. ตรวจ filter tab counts (SUCCESS=2, PENDING=2, ERROR=1, EMPTY=1) ✓
+4. ตรวจ row content ✓
+5. Filter ERROR → 1 row ✓
+6. Filter SUCCESS → 2 rows ✓
+7. Filter All → 6 rows ✓
+8. คลิก row → expand detail (delivery + sync sections) ✓
+9. ตรวจ Google Maps link ✓
+10. คลิก ERROR row → แสดง hint "ประมวลผลผิดพลาด" ✓
+11. คลิก PENDING row → แสดง hint "ยังไม่ถูกประมวลผล" ✓
+12. กลับ Dashboard ไม่มีหน้าขาว ✓
+ไม่มี page errors ตลอดการทดสอบ
 
 ---
 
