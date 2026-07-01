@@ -7,6 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Cycle | Issues |
 |---------|------|-------|--------|
+| 5.5.025 | 2026-06-30 | PHASE 2.2: Q_REVIEW DETAIL PANEL | Click row → expand comparison |
 | 5.5.024 | 2026-06-30 | PHASE 2.1: Q_REVIEW VIEW | Q_REVIEW page implementation |
 | 5.5.023 | 2026-06-30 | WEBAPP WHITE SCREEN v2 FIX | 4 root cause fixes |
 | 5.5.022 | 2026-06-26 | CONSISTENCY SYNC + DEEP DIVE FIX | 9 BUG fixes + 168 doc inconsistencies |
@@ -28,6 +29,64 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 | 5.5.006 | 2026-06-18 | CONSISTENCY SYNC | 28 doc inconsistencies |
 | 5.5.005 | 2026-06-16 | REVIEW SERVICE FIX | (intermediate) |
 | 5.5.004 | 2026-06-15 | INITIAL AUDIT CYCLES | 53 audit issues |
+
+---
+
+## [5.5.025] — 2026-06-30 — PHASE 2.2: Q_REVIEW DETAIL PANEL
+
+### New Feature: Click row → expand detail panel เพื่อเปรียบเทียบข้อมูลก่อนตัดสินใจ
+
+ก่อนหน้านี้ reviewer เห็นเฉพาะข้อมูลในตาราง (Issue, Invoice, ชื่อ, ที่อยู่, พิกัด, Score, Recommend)
+ทำให้ไม่มั่นใจพอที่จะกด Approve/Reject โดยไม่เห็น context เต็ม ๆ
+
+ตอนนี้คลิกแถวไหน → แถวนั้นขยายเป็น panel แสดง 3 ส่วน:
+1. **ข้อมูลดิบ (Source)** — ข้อมูลจริงจาก SOURCE sheet (คนขับ, ทะเบียน, ที่อยู่ดิบ, resolved address,
+   ระยะจากคลัง, ชื่อ/ที่อยู่ที่คนขับยืนยัน, หมายเหตุ)
+2. **ข้อมูลที่ระบบวิเคราะห์** — Issue type, priority, normalized name, พิกัด, match score,
+   recommendation, status + ปุ่มเปิด Google Maps ดูพิกัดจริง
+3. **Candidate เปรียบเทียบ** — แสดง destination/person/place ที่ระบบเจอ:
+   - **Destinations**: lat/lng, route_label, usage_count, last_seen
+     + **ระยะห่างจากพิกัดดิบ (เมตร)** — สีเขียว (<50m), เหลือง (50-100m), แดง (>100m)
+     + ปุ่มเปิด Google Maps ดูพิกัด candidate
+   - **Persons**: canonical_name, phone, usage_count, status, last_seen
+   - **Places**: canonical_name, place_type, sub_district/district/province/postcode, usage_count, status
+
+**Server-side (22_WebApp.gs)**:
+- `getReviewDetail(reviewId)` — ดึงข้อมูลเต็ม:
+  - Review row (ทุก field)
+  - Source row (จาก SOURCE sheet, ใช้ SOURCE_ROW index)
+  - Candidate persons (loop M_PERSON หาตาม candPersonIds)
+  - Candidate places (loop M_PLACE หาตาม candPlaceIds)
+  - Candidate destinations (loop M_DESTINATION หาตาม candDestIds)
+  - คำนวณ `distanceFromRawMeters` ด้วย Haversine formula (เทียบกับ raw_lat/lng)
+- `haversineDistanceMeters_(lat1, lng1, lat2, lng2)` — helper คำนวณระยะทาง (เมตร)
+
+**Frontend (views/QReview.html)**:
+- `buildDetailRowHtml_()` — เพิ่ม expandable row หลังทุก data row (ซ่อนไว้)
+- `toggleDetailRow_(reviewId)` — toggle visibility + lazy-load content (fetch ครั้งเดียว)
+- `loadDetail_(reviewId, container)` — fetch getReviewDetail + render
+- `buildDetailContentHtml_(data)` — grid 2 คอลัมน์: Source | Review Analysis + Candidate comparison
+- `buildSourceDetailHtml_(source)` — dl/dt/dd layout แสดง 16 fields
+- `buildReviewAnalysisHtml_(review)` — dl/dt/dd layout + Google Maps link
+- `buildCandidatesHtml_(candidates, review)` — 3 sections แยกสี (blue/yellow/purple)
+  + distance badge ไล่สีตามระยะทาง
+- Row click handler: ปิด row อื่นที่เปิดอยู่ก่อน (เปิดทีละอัน)
+
+**API (js/Api.html)**:
+- เพิ่ม `api.getReviewDetail(reviewId)`
+
+### Test
+- จำลอง GAS environment ด้วย mock server + Playwright
+- ทดสอบครบ 8 scenarios:
+  1. คลิก row → expand ✓
+  2. ตรวจ 3 sections (Source / Analysis / Candidates) ✓
+  3. RVW001 แสดง destination D001 + distance ✓
+  4. คลิก row อื่น → row เดิม collapse, row ใหม่ expand ✓
+  5. คลิก row เดิมอีกครั้ง → collapse ✓
+  6. RVW003 (ไม่มี candidate) → แสดง "ไม่มี candidate" ✓
+  7. RVW004 (2 persons + 2 destinations) → แสดงครบ ✓
+  8. Google Maps link ถูกต้อง (lat,lng ใน URL) ✓
+- ไม่มี page errors ตลอดการทดสอบ
 
 ---
 

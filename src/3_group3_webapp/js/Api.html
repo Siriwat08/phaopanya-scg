@@ -106,6 +106,15 @@ globalThis.api = (function () {
       promisify_('submitReviewDecision', reviewId, decision, note),
 
     /**
+     * getReviewDetail — Phase 2: ดึงรายละเอียดเต็มของ review item
+     *   รวม source row + candidate persons/places/destinations + distance
+     * @param {string} reviewId
+     * @return {Promise<{ok, review, source, candidates: {persons, places, destinations}}>}
+     */
+    getReviewDetail: (reviewId) =>
+      promisify_('getReviewDetail', reviewId),
+
+    /**
      * getMatchEngineMetrics — Phase 3 (stub)
      */
     getMatchEngineMetrics: () => promisify_('getMatchEngineMetrics'),

@@ -761,6 +761,238 @@ function submitReviewDecision(reviewId, decision, note) {
 }
 
 /**
+ * getReviewDetail — Phase 2: ดึงรายละเอียดเต็มของ review item เพื่อให้ reviewer
+ *   ตัดสินใจได้มั่นใจ ประกอบด้วย:
+ *   - review row เต็ม (รวม note, reviewer, reviewed_at)
+ *   - source row (จาก SOURCE sheet) — ข้อมูลดิบที่ทำให้เกิดการ review
+ *   - candidate persons (จาก M_PERSON) — แสดง name, phone, usage_count, status
+ *   - candidate places (จาก M_PLACE) — แสดง name, address, usage_count
+ *   - candidate destinations (จาก M_DESTINATION) — แสดง lat, lng, route_label
+ *   - distance (เมตร) ระหว่าง raw_lat/lng กับ candidate destination lat/lng
+ *
+ * @param {string} reviewId
+ * @return {Object} { review, source, candidates: { persons: [], places: [], destinations: [] } }
+ */
+function getReviewDetail(reviewId) {
+  if (!isAuthorizedDashboardUser_()) throw new Error('Unauthorized');
+
+  const startTime = Date.now();
+  if (!reviewId) {
+    return { ok: false, message: 'กรุณาระบุ reviewId' };
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // ─── 1. ดึง review row ───
+    const reviewSheet = ss.getSheetByName(SHEET.Q_REVIEW);
+    if (!reviewSheet || reviewSheet.getLastRow() <= 1) {
+      return { ok: false, message: 'ไม่พบ sheet Q_REVIEW หรือว่าง' };
+    }
+
+    const reviewData = reviewSheet.getRange(2, 1, reviewSheet.getLastRow() - 1,
+      SCHEMA[SHEET.Q_REVIEW].length).getValues();
+    let reviewRow = null;
+    let reviewSheetRow = -1;
+    for (let i = 0; i < reviewData.length; i++) {
+      if (String(reviewData[i][REVIEW_IDX.REVIEW_ID]).trim() === reviewId) {
+        reviewRow = reviewData[i];
+        reviewSheetRow = i + 2;
+        break;
+      }
+    }
+    if (!reviewRow) {
+      return { ok: false, message: 'ไม่พบ reviewId: ' + reviewId };
+    }
+
+    const review = {
+      reviewId: String(reviewRow[REVIEW_IDX.REVIEW_ID] || ''),
+      issueType: String(reviewRow[REVIEW_IDX.ISSUE_TYPE] || ''),
+      priority: String(reviewRow[REVIEW_IDX.PRIORITY] || ''),
+      sourceRecId: String(reviewRow[REVIEW_IDX.SOURCE_REC_ID] || ''),
+      sourceRowNumber: Number(reviewRow[REVIEW_IDX.SOURCE_ROW] || 0),
+      invoiceNo: String(reviewRow[REVIEW_IDX.INVOICE_NO] || ''),
+      rawPerson: String(reviewRow[REVIEW_IDX.RAW_PERSON] || ''),
+      rawPlace: String(reviewRow[REVIEW_IDX.RAW_PLACE] || ''),
+      rawAddress: String(reviewRow[REVIEW_IDX.RAW_SYS_ADDR] || ''),
+      rawLat: Number(reviewRow[REVIEW_IDX.RAW_LAT] || 0),
+      rawLng: Number(reviewRow[REVIEW_IDX.RAW_LNG] || 0),
+      matchScore: Number(reviewRow[REVIEW_IDX.MATCH_SCORE] || 0),
+      recommend: String(reviewRow[REVIEW_IDX.RECOMMEND] || ''),
+      status: String(reviewRow[REVIEW_IDX.STATUS] || 'Pending'),
+      reviewer: String(reviewRow[REVIEW_IDX.REVIEWER] || ''),
+      decision: String(reviewRow[REVIEW_IDX.DECISION] || ''),
+      note: String(reviewRow[REVIEW_IDX.NOTE] || ''),
+      _sheetRow: reviewSheetRow,
+    };
+
+    // ─── 2. ดึง source row (ถ้ามี sourceRowNumber) ───
+    let source = null;
+    if (review.sourceRowNumber > 1) {
+      const srcSheet = ss.getSheetByName(SHEET.SOURCE);
+      if (srcSheet && srcSheet.getLastRow() >= review.sourceRowNumber) {
+        const srcData = srcSheet.getRange(review.sourceRowNumber, 1, 1,
+          srcSheet.getLastColumn()).getValues()[0];
+        source = {
+          rowNumber: review.sourceRowNumber,
+          sourceId: String(srcData[SRC_IDX.SOURCE_ID] || ''),
+          deliveryDate: srcData[SRC_IDX.DELIVERY_DATE] instanceof Date
+            ? srcData[SRC_IDX.DELIVERY_DATE].toISOString() : String(srcData[SRC_IDX.DELIVERY_DATE] || ''),
+          deliveryTime: String(srcData[SRC_IDX.DELIVERY_TIME] || ''),
+          driverName: String(srcData[SRC_IDX.DRIVER_NAME] || ''),
+          truckLicense: String(srcData[SRC_IDX.TRUCK_LICENSE] || ''),
+          shipmentNo: String(srcData[SRC_IDX.SHIPMENT_NO] || ''),
+          invoiceNo: String(srcData[SRC_IDX.INVOICE_NO] || ''),
+          customerCode: String(srcData[SRC_IDX.CUSTOMER_CODE] || ''),
+          soldToName: String(srcData[SRC_IDX.SOLD_TO_NAME] || ''),
+          rawPersonName: String(srcData[SRC_IDX.RAW_PERSON_NAME] || ''),
+          lat: Number(srcData[SRC_IDX.LAT] || 0),
+          lng: Number(srcData[SRC_IDX.LNG] || 0),
+          warehouse: String(srcData[SRC_IDX.WAREHOUSE] || ''),
+          rawAddress: String(srcData[SRC_IDX.RAW_ADDRESS] || ''),
+          resolvedAddr: String(srcData[SRC_IDX.RESOLVED_ADDR] || ''),
+          remark: String(srcData[SRC_IDX.REMARK] || ''),
+          distFromWh: Number(srcData[SRC_IDX.DIST_FROM_WH] || 0),
+          driverVerifiedName: String(srcData[SRC_IDX.DRIVER_VERIFIED_NAME] || ''),
+          driverVerifiedAddr: String(srcData[SRC_IDX.DRIVER_VERIFIED_ADDR] || ''),
+        };
+      }
+    }
+
+    // ─── 3. ดึง candidate persons + places + destinations ───
+    const candPersonIds = safeParseJsonArray_(reviewRow[REVIEW_IDX.CAND_PERSONS]);
+    const candPlaceIds = safeParseJsonArray_(reviewRow[REVIEW_IDX.CAND_PLACES]);
+    const candDestIds = safeParseJsonArray_(reviewRow[REVIEW_IDX.CAND_DESTS]);
+
+    const candidates = {
+      persons: [],
+      places: [],
+      destinations: [],
+    };
+
+    // 3a. Candidate persons
+    if (candPersonIds.length > 0) {
+      const personSheet = ss.getSheetByName(SHEET.M_PERSON);
+      if (personSheet && personSheet.getLastRow() > 1) {
+        const persons = personSheet.getRange(2, 1, personSheet.getLastRow() - 1,
+          SCHEMA[SHEET.M_PERSON].length).getValues();
+        persons.forEach(function(row) {
+          const pid = String(row[PERSON_IDX.PERSON_ID] || '');
+          if (candPersonIds.indexOf(pid) !== -1) {
+            candidates.persons.push({
+              personId: pid,
+              canonicalName: String(row[PERSON_IDX.CANONICAL] || ''),
+              phone: String(row[PERSON_IDX.PHONE] || ''),
+              usageCount: Number(row[PERSON_IDX.USAGE_COUNT] || 0),
+              status: String(row[PERSON_IDX.STATUS] || ''),
+              lastSeen: row[PERSON_IDX.LAST_SEEN] instanceof Date
+                ? row[PERSON_IDX.LAST_SEEN].toISOString() : '',
+            });
+          }
+        });
+      }
+    }
+
+    // 3b. Candidate places
+    if (candPlaceIds.length > 0) {
+      const placeSheet = ss.getSheetByName(SHEET.M_PLACE);
+      if (placeSheet && placeSheet.getLastRow() > 1) {
+        const places = placeSheet.getRange(2, 1, placeSheet.getLastRow() - 1,
+          SCHEMA[SHEET.M_PLACE].length).getValues();
+        places.forEach(function(row) {
+          const pid = String(row[PLACE_IDX.PLACE_ID] || '');
+          if (candPlaceIds.indexOf(pid) !== -1) {
+            candidates.places.push({
+              placeId: pid,
+              canonicalName: String(row[PLACE_IDX.CANONICAL] || ''),
+              placeType: String(row[PLACE_IDX.PLACE_TYPE] || ''),
+              subDistrict: String(row[PLACE_IDX.SUB_DISTRICT] || ''),
+              district: String(row[PLACE_IDX.DISTRICT] || ''),
+              province: String(row[PLACE_IDX.PROVINCE] || ''),
+              postcode: String(row[PLACE_IDX.POSTCODE] || ''),
+              usageCount: Number(row[PLACE_IDX.USAGE_COUNT] || 0),
+              status: String(row[PLACE_IDX.STATUS] || ''),
+              lastSeen: row[PLACE_IDX.LAST_SEEN] instanceof Date
+                ? row[PLACE_IDX.LAST_SEEN].toISOString() : '',
+            });
+          }
+        });
+      }
+    }
+
+    // 3c. Candidate destinations (สำคัญที่สุดเพราะมี lat/lng จริง)
+    if (candDestIds.length > 0) {
+      const destSheet = ss.getSheetByName(SHEET.M_DESTINATION);
+      if (destSheet && destSheet.getLastRow() > 1) {
+        const dests = destSheet.getRange(2, 1, destSheet.getLastRow() - 1,
+          SCHEMA[SHEET.M_DESTINATION].length).getValues();
+        dests.forEach(function(row) {
+          const did = String(row[DEST_IDX.DEST_ID] || '');
+          if (candDestIds.indexOf(did) !== -1) {
+            const lat = Number(row[DEST_IDX.LAT] || 0);
+            const lng = Number(row[DEST_IDX.LNG] || 0);
+            const distance = (review.rawLat && review.rawLng && lat && lng)
+              ? haversineDistanceMeters_(review.rawLat, review.rawLng, lat, lng)
+              : null;
+            candidates.destinations.push({
+              destId: did,
+              personId: String(row[DEST_IDX.PERSON_ID] || ''),
+              placeId: String(row[DEST_IDX.PLACE_ID] || ''),
+              lat: lat,
+              lng: lng,
+              routeLabel: String(row[DEST_IDX.ROUTE_LABEL] || ''),
+              usageCount: Number(row[DEST_IDX.USAGE_COUNT] || 0),
+              status: String(row[DEST_IDX.STATUS] || ''),
+              lastSeen: row[DEST_IDX.LAST_SEEN] instanceof Date
+                ? row[DEST_IDX.LAST_SEEN].toISOString() : '',
+              distanceFromRawMeters: distance,
+            });
+          }
+        });
+      }
+    }
+
+    const elapsedMs = Date.now() - startTime;
+    logInfo('WebApp', 'getReviewDetail: ' + reviewId +
+      ' → candidates: ' + candidates.persons.length + 'p/' +
+      candidates.places.length + 'pl/' + candidates.destinations.length + 'd in ' + elapsedMs + 'ms');
+
+    return {
+      ok: true,
+      review: review,
+      source: source,
+      candidates: candidates,
+      elapsedMs: elapsedMs,
+    };
+  } catch (err) {
+    logError('WebApp', 'getReviewDetail ล้มเหลว: ' + err.message, err);
+    return { ok: false, message: err.message || 'Unknown error' };
+  }
+}
+
+/**
+ * haversineDistanceMeters_ — คำนวณระยะทางระหว่าง 2 พิกัด (เมตร)
+ *   ใช้ Haversine formula — คิดว่าโลกกลม
+ * @param {number} lat1
+ * @param {number} lng1
+ * @param {number} lat2
+ * @param {number} lng2
+ * @return {number} ระยะทางในหน่วยเมตร
+ * @private
+ */
+function haversineDistanceMeters_(lat1, lng1, lat2, lng2) {
+  const R = 6371000; // รัศมีโลก (เมตร)
+  const toRad = function(deg) { return deg * Math.PI / 180; };
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+/**
  * getMatchEngineMetrics — Phase 3 (TODO)
  */
 function getMatchEngineMetrics() {
