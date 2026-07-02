@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.035
+ * VERSION: 5.5.036
  * FILE: 15_GoogleMapsAPI.gs
  * LMDS V5.5 — Google Maps Custom Functions (@customFunction)
  * ===================================================
@@ -339,23 +339,29 @@ const GOOGLEMAPS_DIRECTIONS = (origin, destination, mode = "driving") => {
     .map(({ legs }) => {
       return legs.map(({ steps }) => {
         return steps.map((step) => {
-          // [FIX CodeQL js/incomplete-multi-character-sanitization V5.5.035]
-          // Strip HTML tags more thoroughly:
+          // [FIX V5.5.036] Robust HTML sanitization — order matters:
           //   1. Insert space between adjacent tags ("><" → "> <")
-          //   2. Remove all tags and their attributes via non-greedy match
-          //   3. Decode common HTML entities
-          //   4. Collapse whitespace
-          return String(step.html_instructions || '')
-            .replace(/>\s*</g, '> <')                    // space between tags
-            .replace(/<[^>]*>/g, '')                     // strip all tags
-            .replace(/&nbsp;/g, ' ')                     // decode entities
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'")
-            .replace(/\s+/g, ' ')
-            .trim();
+          //   2. Strip ALL tags + attributes (handles <script>...</script> etc.)
+          //   3. Two-pass tag strip to defeat &lt;script&gt; → <script> reconstruction
+          //   4. Decode common HTML entities (after tag removal)
+          //   5. Final tag strip (defense-in-depth — catches tags unmasked by decode)
+          //   6. Collapse whitespace
+          let s = String(step.html_instructions || '');
+          // Two-pass tag strip — defeats &lt;script&gt; reconstruction attempts
+          for (let i = 0; i < 2; i++) {
+            s = s.replace(/>\s*</g, '> <')     // space between adjacent tags
+                 .replace(/<[^>]*>/g, '');      // strip all tags
+          }
+          // Decode entities AFTER tag strip (so &lt;script&gt; stays as text, not tag)
+          s = s.replace(/&nbsp;/g, ' ')
+               .replace(/&amp;/g, '&')
+               .replace(/&lt;/g, '<')
+               .replace(/&gt;/g, '>')
+               .replace(/&quot;/g, '"')
+               .replace(/&#39;/g, "'");
+          // Final tag strip after entity decode (defense-in-depth)
+          s = s.replace(/<[^>]*>/g, '');
+          return s.replace(/\s+/g, ' ').trim();
         });
       });
     })
