@@ -1,0 +1,27 @@
+# Prettier configuration for LMDS V5.5
+# https://prettier.io/docs/en/configuration.html
+
+# ใช้ single quote สำหรับ strings
+singleQuote: true
+
+# ย่อหน้า 2 spaces
+tabWidth: 2
+
+# ไม่ใช้ semicolon ท้ายบรรทัด
+# (แต่ ESLint บังคับ semi: always — prettier จะเพิ่มให้อัตโนมัติ)
+semi: true
+
+# ความกว้างบรรทัดสูงสุด
+printWidth: 120
+
+# ไม่ใส่ trailing comma
+trailingComma: "none"
+
+# ใช้ bracket spacing ใน object literals
+bracketSpacing: true
+
+# ใช้ arrow function parentheses เสมอ
+arrowParens: "always"
+
+# จัดบรรทัด end-of-line แบบ LF (Unix)
+endOfLine: "lf"

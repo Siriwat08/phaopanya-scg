@@ -1,0 +1,66 @@
+# ESLint configuration for LMDS V5.5
+# ใช้สำหรับ linting Google Apps Script (.gs) และ JavaScript files
+# https://eslint.org/docs/latest/use/configure/configuration-files
+
+root: true
+
+env:
+  browser: true
+  es2022: true
+  googleappsscript: true
+
+parserOptions:
+  ecmaVersion: 2022
+  sourceType: script
+
+globals:
+  # Google Apps Script globals
+  SpreadsheetApp: readonly
+  Session: readonly
+  PropertiesService: readonly
+  CacheService: readonly
+  HtmlService: readonly
+  LockService: readonly
+  ScriptApp: readonly
+  DriveApp: readonly
+  MailApp: readonly
+  Utilities: readonly
+  Browser: readonly
+  Charts: readonly
+  ContentService: readonly
+  GmailApp: readonly
+  UrlFetchApp: readonly
+  # LMDS globals
+  APP_VERSION: readonly
+  APP_NAME: readonly
+  SCHEMA_VERSION: readonly
+
+rules:
+  # ─── Errors (บังคับ) ───
+  no-undef: error                    # ห้ามใช้ตัวแปรที่ไม่ได้ประกาศ
+  no-unused-vars: warn               # เตือนถ้ามีตัวแปรไม่ได้ใช้
+  no-redeclare: error                # ห้ามประกาศซ้ำ
+  no-console: off                    # อนุญาต console.log (ใช้ใน GAS)
+  no-empty: warn                     # เตือนถ้ามี empty block
+  no-cond-assign: error              # ห้าม assign ใน condition
+  no-constant-condition: warn        # เตือนถ้า condition เป็นค่าคงที่
+
+  # ─── Best Practices ───
+  no-var: error                      # ห้าม var — ใช้ const/let (Law 1)
+  prefer-const: warn                 # แนะนำ const ถ้าไม่ reassign
+  no-nested-ternary: warn            # ห้าม nested ternary (SonarCloud S3358)
+  no-restricted-syntax:
+    - warn
+    - selector: "EmptyStatement"
+      message: "Empty statement — ลบ semicolon ที่ไม่จำเป็น"
+
+  # ─── Style ───
+  semi: [warn, always]               # ใส่ semicolon ทุกบรรทัด
+  quotes: [warn, single]             # ใช้ single quote
+  indent: [warn, 2]                  # ย่อหน้า 2 spaces
+  no-trailing-spaces: warn           # ไม่มี trailing spaces
+  eol-last: warn                     # ขึ้นบรรทัดใหม่ท้ายไฟล์
+
+  # ─── Disabled (ไม่เหมาะกับ GAS) ───
+  no-implicit-globals: off           # GAS ใช้ global scope โดย design
+  strict: off                        # GAS ไม่รองรับ 'use strict' ในทุก context
