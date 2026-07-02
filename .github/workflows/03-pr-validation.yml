@@ -117,7 +117,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: 💬 ส่ง PR Comment อัตโนมัติ
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const changedFiles = `${{ steps.changes.outputs.files || '' }}`.split('\n').filter(f => f);
@@ -184,7 +184,7 @@ jobs:
           fail-on-error: false
 
       - name: 🏷️ เพิ่ม Label ตาม Title + ขนาด
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const pr = context.payload.pull_request;
