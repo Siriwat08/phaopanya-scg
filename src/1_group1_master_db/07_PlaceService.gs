@@ -85,6 +85,10 @@ function resolvePlace(rawName, rawAddress) {
     return { placeId: null, status: 'LOW_QUALITY', confidence: 0, normResult };
   }
 
+  // [FIX P2] extract province จาก rawAddress เพื่อส่งเข้า scorePlaceCandidate
+  //   ทำให้สามารถลด score ของ candidate ที่จังหวัดไม่ตรงได้
+  const srcProvince = extractProvince_(rawAddress);
+
   const candidates = findPlaceCandidates(cleanPlace, rawAddress);
 
   if (candidates.length === 0) {
@@ -95,7 +99,7 @@ function resolvePlace(rawName, rawAddress) {
   let bestScore = 0;
 
   candidates.forEach(candidate => {
-    const score = scorePlaceCandidate(cleanPlace, candidate);
+    const score = scorePlaceCandidate(cleanPlace, candidate, srcProvince);
     if (score > bestScore) { bestScore = score; bestPlace = candidate; }
   });
 
@@ -568,10 +572,18 @@ function formatEnrichedAddress_(house, sub, dist, prov, post) {
 // ============================================================
 
 /**
- * scorePlaceCandidate
- * [FIX v003] hardcode 55 → AI_CONFIG.PLACE_SCORE_MIN
+ * scorePlaceCandidate — คำนวณความเหมือนระหว่าง queryPlace กับ candidate
+ *   [FIX v003] hardcode 55 → AI_CONFIG.PLACE_SCORE_MIN
+ *   [FIX P2] เพิ่ม province filter — ถ้ารู้ province และ candidate มี province ต่างกัน
+ *   ให้ลด score 15 points (province mismatch penalty)
+ *   ป้องกัน false-positive ข้ามจังหวัด (เช่น "หจก.รุ่งเรือง" มี 2 ที่ คนละจังหวัด)
+ *
+ * @param {string} queryPlace - cleanPlace จาก normalizePlaceName
+ * @param {Object} candidate - place object จาก loadAllPlaces_
+ * @param {string} [srcProvince] - จังหวัดจาก source (optional, จาก extractProvince_)
+ * @return {number} score 0-100
  */
-function scorePlaceCandidate(queryPlace, candidate) {
+function scorePlaceCandidate(queryPlace, candidate, srcProvince) {
   const nameA = normalizeForCompare(queryPlace);
   const nameB = normalizeForCompare(candidate.normalized || candidate.canonical);
   if (!nameA || !nameB) return 0;
@@ -582,7 +594,27 @@ function scorePlaceCandidate(queryPlace, candidate) {
   const diceScore = diceCoefficient(nameA, nameB) * 100;
   const exactScore = nameA === nameB ? 100 : 0;
 
-  const finalScore = exactScore > 0 ? 100 : diceScore * 0.6 + levScore * 0.4;
+  let finalScore = exactScore > 0 ? 100 : diceScore * 0.6 + levScore * 0.4;
+
+  // [FIX P2] Province mismatch penalty — ลด score 15 points ถ้าจังหวัดไม่ตรง
+  //   ใช้ normalizeProvinceForCompare_ (จาก 05_NormalizeService) เพื่อรองรับ alias
+  //   เช่น "กรุงเทพ" vs "กรุงเทพมหานคร" ถือว่าตรงกัน
+  if (srcProvince && srcProvince !== '') {
+    const candidateProvince = candidate.province || '';
+    if (candidateProvince !== '') {
+      // [FIX P2] ใช้ normalizeProvinceForCompare_ เพื่อรองรับ alias
+      //   ถ้า function ยังไม่ถูกโหลด → fallback เทียบ string ตรง
+      const normSrc = (typeof normalizeProvinceForCompare_ === 'function')
+        ? normalizeProvinceForCompare_(srcProvince)
+        : srcProvince;
+      const normCand = (typeof normalizeProvinceForCompare_ === 'function')
+        ? normalizeProvinceForCompare_(candidateProvince)
+        : candidateProvince;
+      if (normSrc !== normCand) {
+        finalScore = Math.max(0, finalScore - 15);
+      }
+    }
+  }
 
   // [FIX v003] ใช้ Config แทน hardcode 55
   return finalScore < AI_CONFIG.PLACE_SCORE_MIN ? 0 : Math.round(finalScore);
