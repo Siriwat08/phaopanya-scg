@@ -1,5 +1,5 @@
 # 🏷️ Auto Labeler Config
-# ใช้กับ actions/labeler@v5 ใน workflow 03-pr-validation.yml
+# ใช้กับ actions/labeler@v6 ใน workflow 03-pr-validation.yml
 
 feature:
   - changed-files:
@@ -38,7 +38,3 @@ performance:
 chore:
   - title:
       - regex: '^chore[:(]|^ci[:(]|^build[:(]'
-
-test:
-  - changed-files:
-      - any-glob-to-any-file: 'tests/**/*'
