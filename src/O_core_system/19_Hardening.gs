@@ -24,7 +24,7 @@
  *     - 07_PlaceService (loadAllPlaces_)
  *     - 08_GeoService (loadAllGeos_)
  *     - 09_DestinationService (loadAllDestinations_)
- *     - 11_TransactionService (loadAllFacts_)
+ *     - 11_TransactionService (findFactRowByInvoice_)
  *     - 05_NormalizeService (normalizeForCompare)
  *     - 14_Utils (generateShortId, normalizeInvoiceNo)
  *   CALLS (Invokes):
