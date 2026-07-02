@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.036
+ * VERSION: 5.5.037
  * FILE: 15_GoogleMapsAPI.gs
  * LMDS V5.5 — Google Maps Custom Functions (@customFunction)
  * ===================================================
@@ -339,27 +339,23 @@ const GOOGLEMAPS_DIRECTIONS = (origin, destination, mode = "driving") => {
     .map(({ legs }) => {
       return legs.map(({ steps }) => {
         return steps.map((step) => {
-          // [FIX V5.5.036] Robust HTML sanitization — order matters:
-          //   1. Insert space between adjacent tags ("><" → "> <")
-          //   2. Strip ALL tags + attributes (handles <script>...</script> etc.)
-          //   3. Two-pass tag strip to defeat &lt;script&gt; → <script> reconstruction
-          //   4. Decode common HTML entities (after tag removal)
-          //   5. Final tag strip (defense-in-depth — catches tags unmasked by decode)
-          //   6. Collapse whitespace
+          // [FIX V5.5.037] HTML sanitization — CodeQL-acceptable approach
+          // Strategy: strip ALL tags aggressively + decode only safe entities
+          //   - DO NOT decode &lt;/&gt; (would re-introduce < > chars CodeQL flags)
+          //   - These entities are rare in Google Maps html_instructions anyway
+          //   - Keep &amp;/&nbsp;/&quot;/&#39; decode (no security risk)
           let s = String(step.html_instructions || '');
-          // Two-pass tag strip — defeats &lt;script&gt; reconstruction attempts
+          // Two-pass tag strip — defeats &lt;script&gt; reconstruction
           for (let i = 0; i < 2; i++) {
             s = s.replace(/>\s*</g, '> <')     // space between adjacent tags
                  .replace(/<[^>]*>/g, '');      // strip all tags
           }
-          // Decode entities AFTER tag strip (so &lt;script&gt; stays as text, not tag)
+          // Decode safe entities only (skip &lt;/&gt; to prevent tag reconstruction)
           s = s.replace(/&nbsp;/g, ' ')
                .replace(/&amp;/g, '&')
-               .replace(/&lt;/g, '<')
-               .replace(/&gt;/g, '>')
                .replace(/&quot;/g, '"')
                .replace(/&#39;/g, "'");
-          // Final tag strip after entity decode (defense-in-depth)
+          // Final tag strip (defense-in-depth — should be no-op now)
           s = s.replace(/<[^>]*>/g, '');
           return s.replace(/\s+/g, ' ').trim();
         });
