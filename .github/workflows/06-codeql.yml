@@ -37,6 +37,8 @@ jobs:
           languages: ${{ matrix.language }}
           # ใช้ security-and-quality query suite เพื่อตรวจหาทั้ง security + code quality
           queries: security-and-quality
+          # ใช้ config file เพื่อข้ามไฟล์ HTML (Apps Script template scriptlets ไม่ใช่ JS มาตรฐาน)
+          config-file: .github/codeql-config.yml
 
       - name: 🏗️ Autobuild
         uses: github/codeql-action/autobuild@v4
