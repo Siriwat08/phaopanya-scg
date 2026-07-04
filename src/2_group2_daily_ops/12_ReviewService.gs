@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.040
+ * VERSION: 5.5.041
  * FILE: 12_ReviewService.gs
  * LMDS V5.5 — Review Queue Service
  * [FIX BUG-B2] v5.4.003: updateReviewRowStatus_() helper — 1 setValues แทน 5× setValue
@@ -297,8 +297,21 @@ function applyAllPendingDecisions() {
     if (pendingFactRows.length > 0) {
       var factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
       if (factSheet) {
-        factSheet.getRange(factSheet.getLastRow() + 1, 1, pendingFactRows.length, pendingFactRows[0].length)
-          .setValues(pendingFactRows);
+        // [FIX BUG-PM-004 V5.5.041] เพิ่ม Math.min guard สำหรับ INSERT path
+        //   mirror BUG-M03 fix ใน 11_TransactionService.upsertFactDelivery (UPDATE path)
+        //   สาเหตุ: pendingFactRows[0].length = SCHEMA.length (34) แต่ถ้าชีตจริงมีคอลัมน์
+        //   น้อยกว่า (เช่น pre-V5.5.014 ที่ยังไม่มี DRIVER_VERIFIED cols) getRange จะ throw
+        //   "The coordinates or dimensions of the range are invalid"
+        //   แนวทาง: ใช้คอลัมน์ที่น้อยกว่า + trim แต่ละ row ให้ตรง
+        const factSchemaLen = SCHEMA[SHEET.FACT_DELIVERY].length;
+        const factSheetCols = Math.min(factSchemaLen, factSheet.getLastColumn());
+        const rowsToWrite = factSheetCols === factSchemaLen
+          ? pendingFactRows
+          : pendingFactRows.map(function(row) {
+              return row.slice(0, factSheetCols);
+            });
+        factSheet.getRange(factSheet.getLastRow() + 1, 1, rowsToWrite.length, factSheetCols)
+          .setValues(rowsToWrite);
         if (typeof invalidateFactInvoiceCache_ === 'function') invalidateFactInvoiceCache_();
         // [FIX v5.5.007 P0 #3] เพิ่ม invalidations ที่ขาดหายไป ให้ตรงกับ persistResult_ ของ MatchEngine
         // เดิมลืม invalidate same-day dest cache และ alias enrichment สำหรับ Review-approved FACT rows
