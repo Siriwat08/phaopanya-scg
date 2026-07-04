@@ -1653,4 +1653,3 @@ function clearReprocessCheckpoint_() {
 
 // [REMOVED V5.5.044] analyzeReviewPatterns — dead code (mark @deprecated ใน V5.5.043, ไม่มี caller ใน .gs ใด)
 //   หากมี external caller ที่ต้องการ restore → ดู git history ของ commit นี้
-

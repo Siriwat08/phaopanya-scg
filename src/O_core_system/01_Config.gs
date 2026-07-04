@@ -65,7 +65,7 @@
 
 const APP_VERSION = '5.5.044';
 const SCHEMA_VERSION = '5.5.044';
-const APP_NAME    = 'LMDS V5.5';
+const APP_NAME = 'LMDS V5.5';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
 let _GLOBAL_GEO_DICT_CACHE = null; // สำหรับ 16_GeoDictionaryBuilder (8 fields: postcode,subDistrict,district,province,searchKey,postalKey,noteType,noteScope)
@@ -95,16 +95,16 @@ function invalidateAllGlobalCaches() {
 
   // [FIX v5.5.007] เรียก invalidate*Cache_* ของทุกโมดูล เพื่อล้างทั้ง RAM และ CacheService
   // แต่ละฟังก์ชันจะล้าง RAM cache ของตัวเอง + invalidate chunked CacheService entries
-  if (typeof invalidateGeoDictCache        === 'function') invalidateGeoDictCache();         // ล้าง _GLOBAL_GEO_DICT_CACHE, _GLOBAL_GEO_DICT_PROVINCE_INDEX, _GLOBAL_GEO_DICT_SEARCH_KEY_INDEX + TH_GEO_* CacheService
-  if (typeof invalidatePersonCache_        === 'function') invalidatePersonCache_();         // ล้าง _PERSON_NOTE_INVERTED_INDEX + M_PERSON_ALL CacheService
-  if (typeof invalidateAliasCache_         === 'function') invalidateAliasCache_();          // ล้าง M_PERSON_ALIAS_ALL CacheService
-  if (typeof invalidatePlaceCache_         === 'function') invalidatePlaceCache_();          // ล้าง _GLOBAL_GEO_DICT_CACHE_PLACE + M_PLACE_ALL CacheService
-  if (typeof invalidatePlaceAliasCache_    === 'function') invalidatePlaceAliasCache_();     // ล้าง M_PLACE_ALIAS_ALL CacheService
-  if (typeof invalidateGeoCache_           === 'function') invalidateGeoCache_();            // ล้าง _GLOBAL_GEO_POINTS_CACHE + M_GEO_ALL CacheService
-  if (typeof invalidateDestCache_          === 'function') invalidateDestCache_();           // ล้าง M_DEST_ALL CacheService
-  if (typeof invalidateSourceCache         === 'function') invalidateSourceCache();          // ล้าง _SOURCE_ROWS_RAM_CACHE + SOURCE_ROWS_V3, PROCESSED_INVOICES_V3 CacheService
-  if (typeof invalidateFactInvoiceCache_   === 'function') invalidateFactInvoiceCache_();    // ล้าง _FACT_INVOICE_RAM_CACHE
-  if (typeof invalidateGeoLatLngCache_     === 'function') invalidateGeoLatLngCache_();      // [P1 #5] ล้าง _GEO_LATLNG_RAM_CACHE
+  if (typeof invalidateGeoDictCache === 'function') invalidateGeoDictCache(); // ล้าง _GLOBAL_GEO_DICT_CACHE, _GLOBAL_GEO_DICT_PROVINCE_INDEX, _GLOBAL_GEO_DICT_SEARCH_KEY_INDEX + TH_GEO_* CacheService
+  if (typeof invalidatePersonCache_ === 'function') invalidatePersonCache_(); // ล้าง _PERSON_NOTE_INVERTED_INDEX + M_PERSON_ALL CacheService
+  if (typeof invalidateAliasCache_ === 'function') invalidateAliasCache_(); // ล้าง M_PERSON_ALIAS_ALL CacheService
+  if (typeof invalidatePlaceCache_ === 'function') invalidatePlaceCache_(); // ล้าง _GLOBAL_GEO_DICT_CACHE_PLACE + M_PLACE_ALL CacheService
+  if (typeof invalidatePlaceAliasCache_ === 'function') invalidatePlaceAliasCache_(); // ล้าง M_PLACE_ALIAS_ALL CacheService
+  if (typeof invalidateGeoCache_ === 'function') invalidateGeoCache_(); // ล้าง _GLOBAL_GEO_POINTS_CACHE + M_GEO_ALL CacheService
+  if (typeof invalidateDestCache_ === 'function') invalidateDestCache_(); // ล้าง M_DEST_ALL CacheService
+  if (typeof invalidateSourceCache === 'function') invalidateSourceCache(); // ล้าง _SOURCE_ROWS_RAM_CACHE + SOURCE_ROWS_V3, PROCESSED_INVOICES_V3 CacheService
+  if (typeof invalidateFactInvoiceCache_ === 'function') invalidateFactInvoiceCache_(); // ล้าง _FACT_INVOICE_RAM_CACHE
+  if (typeof invalidateGeoLatLngCache_ === 'function') invalidateGeoLatLngCache_(); // [P1 #5] ล้าง _GEO_LATLNG_RAM_CACHE
   // [REMOVED V5.5.044] invalidateSameDayDestCache_ — ลบ dead code (ดู comment ใน 10_MatchEngine SECTION 5)
 
   logInfo('System', 'ล้างข้อมูลในความจำ (Cache) ทั้งหมดเรียบร้อยแล้ว — ครอบคลุม 10 RAM caches + 13 CacheService keys');
