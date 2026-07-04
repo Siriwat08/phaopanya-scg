@@ -92,25 +92,25 @@ let _SOURCE_ROWS_RAM_CACHE = null;
  */
 function runLoadSource() {
   try {
-  const ss       = SpreadsheetApp.getActiveSpreadsheet();
-  const srcSheet = ss.getSheetByName(SHEET.SOURCE);
+    const ss       = SpreadsheetApp.getActiveSpreadsheet();
+    const srcSheet = ss.getSheetByName(SHEET.SOURCE);
 
-  if (!srcSheet) {
-    logError('SourceRepo', `ไม่พบชีต: ${SHEET.SOURCE}`, new Error('SHEET_NOT_FOUND'));
-    throw new Error(`ไม่พบชีต "${SHEET.SOURCE}" กรุณาตรวจสอบชื่อชีต`);
-  }
+    if (!srcSheet) {
+      logError('SourceRepo', `ไม่พบชีต: ${SHEET.SOURCE}`, new Error('SHEET_NOT_FOUND'));
+      throw new Error(`ไม่พบชีต "${SHEET.SOURCE}" กรุณาตรวจสอบชื่อชีต`);
+    }
 
-  logInfo('SourceRepo', 'เริ่มโหลด Source (Refreshing Cache)');
-  invalidateSourceCache();
+    logInfo('SourceRepo', 'เริ่มโหลด Source (Refreshing Cache)');
+    invalidateSourceCache();
 
-  const pending = getUnprocessedRows();
-  logInfo('SourceRepo', `ตรวจพบแถวที่ต้องประมวลผล: ${pending.length} แถว`);
-  
-  if (pending.length > 0) {
-    SpreadsheetApp.getActiveSpreadsheet().toast(`🚀 โหลดข้อมูลสำเร็จ: ${pending.length} แถว พร้อมประมวลผล`, APP_NAME);
-  } else {
-    SpreadsheetApp.getActiveSpreadsheet().toast(`✅ ข้อมูลเป็นปัจจุบันอยู่แล้ว`, APP_NAME);
-  }
+    const pending = getUnprocessedRows();
+    logInfo('SourceRepo', `ตรวจพบแถวที่ต้องประมวลผล: ${pending.length} แถว`);
+
+    if (pending.length > 0) {
+      SpreadsheetApp.getActiveSpreadsheet().toast(`🚀 โหลดข้อมูลสำเร็จ: ${pending.length} แถว พร้อมประมวลผล`, APP_NAME);
+    } else {
+      SpreadsheetApp.getActiveSpreadsheet().toast('✅ ข้อมูลเป็นปัจจุบันอยู่แล้ว', APP_NAME);
+    }
   } catch (err) {
     logError('SourceRepo', 'runLoadSource ล้มเหลว: ' + err.message, err);
     // [FIX B2 v5.5.002] เปลี่ยน getUi().alert() → safeUiAlert_() — trigger-safe
@@ -133,43 +133,43 @@ function runLoadSource() {
 function getAllSourceRows() {
   try {
   // [REFACTOR-06] RAM cache ก่อน (เร็วสุด, หายเมื่อ execution จบ)
-  if (_SOURCE_ROWS_RAM_CACHE) return _SOURCE_ROWS_RAM_CACHE;
+    if (_SOURCE_ROWS_RAM_CACHE) return _SOURCE_ROWS_RAM_CACHE;
 
-  const cache  = CacheService.getScriptCache();
-  // ลองอ่านจาก chunked cache
-  const cached = loadSourceRowsFromCache_(cache);
+    const cache  = CacheService.getScriptCache();
+    // ลองอ่านจาก chunked cache
+    const cached = loadSourceRowsFromCache_(cache);
 
-  if (cached) {
-    _SOURCE_ROWS_RAM_CACHE = cached;
-    return cached;
-  }
+    if (cached) {
+      _SOURCE_ROWS_RAM_CACHE = cached;
+      return cached;
+    }
 
-  const ss       = SpreadsheetApp.getActiveSpreadsheet();
-  const srcSheet = ss.getSheetByName(SHEET.SOURCE);
-  if (!srcSheet || srcSheet.getLastRow() < 2) return [];
+    const ss       = SpreadsheetApp.getActiveSpreadsheet();
+    const srcSheet = ss.getSheetByName(SHEET.SOURCE);
+    if (!srcSheet || srcSheet.getLastRow() < 2) return [];
 
-  const colsToRead = Math.min(SRC_READ_COLS, srcSheet.getLastColumn());
-  const totalRows  = srcSheet.getLastRow() - 1;
-  const allData    = srcSheet.getRange(2, 1, totalRows, colsToRead)
-                             .getValues();
+    const colsToRead = Math.min(SRC_READ_COLS, srcSheet.getLastColumn());
+    const totalRows  = srcSheet.getLastRow() - 1;
+    const allData    = srcSheet.getRange(2, 1, totalRows, colsToRead)
+      .getValues();
 
-  const result = allData
-    .map((row, i) => ({ row, sourceRow: i + 2 }))
-    .filter(({ row }) => row[SRC_IDX.INVOICE_NO])
-    .filter(({ row }) => {
-      const sync = String(row[SRC_IDX.SYNC_STATUS] || '').trim();
-      // [FIX CRIT-006] กรองทั้ง SUCCESS และ REVIEW — REVIEW = อยู่ในคิวรอตรวจ ไม่ต้องประมวลผลซ้ำ
-      return sync !== SCG_CONFIG.SYNC_DONE_VALUE && sync !== 'REVIEW';
-    })
-    .map(({ row, sourceRow }) => buildSourceObj_(row, sourceRow));
+    const result = allData
+      .map((row, i) => ({ row, sourceRow: i + 2 }))
+      .filter(({ row }) => row[SRC_IDX.INVOICE_NO])
+      .filter(({ row }) => {
+        const sync = String(row[SRC_IDX.SYNC_STATUS] || '').trim();
+        // [FIX CRIT-006] กรองทั้ง SUCCESS และ REVIEW — REVIEW = อยู่ในคิวรอตรวจ ไม่ต้องประมวลผลซ้ำ
+        return sync !== SCG_CONFIG.SYNC_DONE_VALUE && sync !== 'REVIEW';
+      })
+      .map(({ row, sourceRow }) => buildSourceObj_(row, sourceRow));
 
-  // บันทึกล RAM cache
-  _SOURCE_ROWS_RAM_CACHE = result;
+    // บันทึกล RAM cache
+    _SOURCE_ROWS_RAM_CACHE = result;
 
-  // บันทึกลง CacheService ด้วย (สำหรับ execution ถัดไป)
-  saveSourceRowsToCache_(result);
+    // บันทึกลง CacheService ด้วย (สำหรับ execution ถัดไป)
+    saveSourceRowsToCache_(result);
 
-  return result;
+    return result;
 
   } catch (e) {
     // [FIX R13-07 REVIEW15] Rule 13 + Rule 8: ส่ง e เพื่อ stack trace และแก้ module name ให้สอดคล้องกับที่อื่นในไฟล์ ('SourceRepo')
@@ -184,11 +184,11 @@ function getAllSourceRows() {
 function getUnprocessedRows() {
   const allRows = getAllSourceRows();
   if (allRows.length === 0) return [];
-  
+
   const doneSet = getProcessedInvoiceSet_();
   const unprocessed = [];
   const skipped = [];
-  
+
   allRows.forEach(row => {
     if (doneSet.has(row.invoiceNo)) {
       skipped.push(row);
@@ -196,14 +196,14 @@ function getUnprocessedRows() {
       unprocessed.push(row);
     }
   });
-  
+
   // [UPGRADE v5.2.006] อัปเดตสถานะให้แถวที่เคยทำเสร็จแล้ว (มีใน FACT_DELIVERY) เป็น SUCCESS ทันที
   // เพื่อป้องกันไม่ให้ผู้ใช้สับสนว่าทำไมสถานะในชีต SOURCE ถึงยังว่างอยู่
   if (skipped.length > 0) {
     updateSyncStatus_(skipped, 'SUCCESS');
     logInfo('SourceRepo', `ข้าม ${skipped.length} แถวที่เคยเข้า FACT_DELIVERY ไปแล้ว (ปรับเป็น SUCCESS)`);
   }
-  
+
   return unprocessed;
 }
 
@@ -233,7 +233,7 @@ function getProcessedInvoiceSet_() {
   const numColsToRead = (FACT_IDX.MATCH_STATUS - FACT_IDX.INVOICE_NO) + 1;
   const lastRow       = factSheet.getLastRow() - 1;
   const dataRange     = factSheet.getRange(2, invoiceCol, lastRow, numColsToRead)
-                                  .getValues();
+    .getValues();
   const invoiceIdx    = 0; // relative index within row slice
   const matchStatusIdx = FACT_IDX.MATCH_STATUS - FACT_IDX.INVOICE_NO;
 
@@ -319,7 +319,7 @@ function buildSourceObj_(row, rowNum) {
 
   // [FIX CodeQL js/unused-local-variable V5.5.035] ลบ resolvedAddr + rawAddr ที่ไม่ถูกใช้
   // (ใช้ scgAddr + sysAddr ด้านล่างแทน — เป็นชื่อที่สื่อความหมายกว่า)
-  
+
   // [UPGRADE v5.2.003] ปรับปรุง Mapping ให้ตรงตามความต้องการ Fact-Checking
   // 1. rawPlaceName = RAW_ADDRESS (18) — ข้อมูลมั่วๆ จาก SCG แต่จำเป็นต้องเก็บ
   // 2. resolvedAddr = RESOLVED_ADDR (24) — ข้อมูลที่แปลงจาก LatLong เชื่อถือได้
@@ -446,13 +446,13 @@ function loadSourceRowsFromCache_(cache) {
  */
 function updateSyncStatus_(batchRows, status = 'SUCCESS') {
   if (!batchRows || batchRows.length === 0) return;
-  
+
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET.SOURCE);
   if (!sheet) return;
 
   // [FIX CRIT-006] รองรับ status 'REVIEW' — แถวที่อยู่ในคิวรอตรวจ
-  var statusVal;
+  let statusVal;
   if (status === 'SUCCESS') {
     statusVal = SCG_CONFIG.SYNC_DONE_VALUE;
   } else if (status === 'REVIEW') {
@@ -508,7 +508,7 @@ function updateSyncStatus_(batchRows, status = 'SUCCESS') {
   }
 }
 
-/** 
+/**
  * columnToLetterHelper_ — [REF-019] แปลงเลขคอลัมน์เป็นตัวอักษร (เช่น 1 -> A, 37 -> AK)
  * เพิ่ม _ suffix ตามกฎ Private Function (Rule 8 — ใช้ภายในโมดูลเท่านั้น)
  */

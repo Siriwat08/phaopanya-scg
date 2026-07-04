@@ -111,8 +111,8 @@ function sanitizeCookie_(raw) {
  * @private
  */
 function buildShopKey_(shipmentNo, shipToName) {
-  var sNo = String(shipmentNo || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  var sName = String(shipToName || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const sNo = String(shipmentNo || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const sName = String(shipToName || '').trim().toLowerCase().replace(/\s+/g, ' ');
   return sNo + '|' + sName;
 }
 
@@ -131,7 +131,7 @@ function fetchDataFromSCGJWD() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
     // [FIX R12] เปลี่ยน getUi().alert() → safeUiAlert_() — trigger-safe
-    safeUiAlert_("⚠️ ระบบคิวทำงาน\nมีผู้ใช้งานอื่นกำลังโหลดข้อมูล Shipment อยู่ กรุณารอสักครู่");
+    safeUiAlert_('⚠️ ระบบคิวทำงาน\nมีผู้ใช้งานอื่นกำลังโหลดข้อมูล Shipment อยู่ กรุณารอสักครู่');
     return;
   }
 
@@ -148,16 +148,16 @@ function fetchDataFromSCGJWD() {
     const inputCfg = readInputConfig_(ss);
 
     // Step 2: เรียก API + retry
-    ss.toast("กำลังเชื่อมต่อ SCG Server...", "System", 10);
+    ss.toast('กำลังเชื่อมต่อ SCG Server...', 'System', 10);
     logInfo('ServiceSCG', `Fetching data for ${inputCfg.shipmentString.split(',').length} shipments`);
     const apiResponse = callSCGApi_(inputCfg);
 
     // Step 3: แปลง JSON → flat row array
     // [FIX v5.5.001] callSCGApi_ ตอนนี้คืน parsed object แล้ว ไม่ต้อง JSON.parse ซ้ำ
     const shipments = apiResponse.data || [];
-    if (shipments.length === 0) throw new Error("API Return Success แต่ไม่พบข้อมูล Shipment (Data Empty)");
+    if (shipments.length === 0) throw new Error('API Return Success แต่ไม่พบข้อมูล Shipment (Data Empty)');
 
-    ss.toast("กำลังแปลงข้อมูล " + shipments.length + " Shipments...", "Processing", 5);
+    ss.toast('กำลังแปลงข้อมูล ' + shipments.length + ' Shipments...', 'Processing', 5);
     const allFlatData = flattenShipmentsToRows_(shipments);
 
     // Step 4: คำนวณ aggregate per shop
@@ -205,7 +205,7 @@ function fetchDataFromSCGJWD() {
 function readInputConfig_(ss) {
   const inputSheet = ss.getSheetByName(SCG_CONFIG.SHEET_INPUT);
   const dataSheet  = ss.getSheetByName(SCG_CONFIG.SHEET_DATA);
-  if (!inputSheet || !dataSheet) throw new Error("CRITICAL: ไม่พบชีต Input หรือ Data");
+  if (!inputSheet || !dataSheet) throw new Error('CRITICAL: ไม่พบชีต Input หรือ Data');
 
   // [REVERTED v5.5.022-hotfix] อ่าน Cookie จากเซลล์ B1 ตรงๆ (เหมือน V5.0)
   //   ถ้า B1 ว่าง → ค่อย fallback ไป Script Properties (ยังรองรับ SEC-001 แบบ optional)
@@ -223,22 +223,22 @@ function readInputConfig_(ss) {
     }
   }
   if (!cookie) {
-    throw new Error("❌ กรุณาวาง Cookie ในช่อง " + SCG_CONFIG.COOKIE_CELL +
-                    " ของชีต Input หรือตั้งค่าผ่านเมนู LMDS > ระบบ > ตั้งค่า SCG Cookie");
+    throw new Error('❌ กรุณาวาง Cookie ในช่อง ' + SCG_CONFIG.COOKIE_CELL +
+                    ' ของชีต Input หรือตั้งค่าผ่านเมนู LMDS > ระบบ > ตั้งค่า SCG Cookie');
   }
 
   const lastRow = inputSheet.getLastRow();
-  if (lastRow < SCG_CONFIG.INPUT_START_ROW) throw new Error("ℹ️ ไม่พบเลข Shipment ในชีต Input");
+  if (lastRow < SCG_CONFIG.INPUT_START_ROW) throw new Error('ℹ️ ไม่พบเลข Shipment ในชีต Input');
 
   const shipmentNumbers = inputSheet
     .getRange(SCG_CONFIG.INPUT_START_ROW, 1, lastRow - SCG_CONFIG.INPUT_START_ROW + 1, 1)
     .getValues().flat().map(r => String(r || '').trim()).filter(Boolean);
 
-  if (shipmentNumbers.length === 0) throw new Error("ℹ️ รายการ Shipment ว่างเปล่า");
+  if (shipmentNumbers.length === 0) throw new Error('ℹ️ รายการ Shipment ว่างเปล่า');
 
   // เขียนเลข Shipment ต่อกันคั่นด้วยจุลภาคลงในช่อง B3
   const shipmentString = shipmentNumbers.join(',');
-  inputSheet.getRange(SCG_CONFIG.SHIPMENT_STRING_CELL).setValue(shipmentString).setHorizontalAlignment("left");
+  inputSheet.getRange(SCG_CONFIG.SHIPMENT_STRING_CELL).setValue(shipmentString).setHorizontalAlignment('left');
 
   return { cookie, shipmentString };
 }
@@ -383,7 +383,7 @@ function flattenShipmentsToRows_(shipments) {
   shipments.forEach(shipment => {
     const destSet = new Set();
     (shipment.DeliveryNotes || []).forEach(n => { if (n.ShipToName) destSet.add(n.ShipToName); });
-    const destListStr = Array.from(destSet).join(", ");
+    const destListStr = Array.from(destSet).join(', ');
 
     (shipment.DeliveryNotes || []).forEach(note => {
       (note.Items || []).forEach(item => {
@@ -418,7 +418,7 @@ function buildDailyJobRow_(shipment, note, item, destCount, destListStr, rowNum)
   row[DATA_IDX.SHIP_TO_NAME]    = note.ShipToName || '';
   row[DATA_IDX.SHIP_TO_ADDR]    = note.ShipToAddress || '';
   row[DATA_IDX.LATLNG_SCG]      = (note.ShipToLatitude != null && note.ShipToLongitude != null)
-                                    ? (note.ShipToLatitude + ", " + note.ShipToLongitude) : '';
+    ? (note.ShipToLatitude + ', ' + note.ShipToLongitude) : '';
   row[DATA_IDX.MATERIAL]        = item.MaterialName || '';
   row[DATA_IDX.QTY]             = item.ItemQuantity || 0;
   row[DATA_IDX.QTY_UNIT]        = item.QuantityUnit || '';
@@ -475,7 +475,7 @@ function aggregateShopData_(allFlatData) {
  */
 function writeDailyJobSheet_(ss, allFlatData) {
   const dataSheet = ss.getSheetByName(SCG_CONFIG.SHEET_DATA);
-  if (!dataSheet) throw new Error("CRITICAL: ไม่พบชีต Data");
+  if (!dataSheet) throw new Error('CRITICAL: ไม่พบชีต Data');
 
   const headers = SCHEMA[SHEET.DAILY_JOB];
 
@@ -487,13 +487,13 @@ function writeDailyJobSheet_(ss, allFlatData) {
   if (dataSheet.getLastRow() > 1) {
     dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, dataSheet.getMaxColumns()).setBackground(null);
   }
-  dataSheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight("bold");
+  dataSheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
 
   if (allFlatData.length > 0) {
     dataSheet.getRange(2, 1, allFlatData.length, headers.length).setValues(allFlatData);
-    dataSheet.getRange(2, DATA_IDX.PLAN_DELIVERY + 1, allFlatData.length, 1).setNumberFormat("dd/mm/yyyy");
-    dataSheet.getRange(2, DATA_IDX.INVOICE_NO + 1, allFlatData.length, 1).setNumberFormat("@");
-    dataSheet.getRange(2, DATA_IDX.DELIVERY_NO + 1, allFlatData.length, 1).setNumberFormat("@");
+    dataSheet.getRange(2, DATA_IDX.PLAN_DELIVERY + 1, allFlatData.length, 1).setNumberFormat('dd/mm/yyyy');
+    dataSheet.getRange(2, DATA_IDX.INVOICE_NO + 1, allFlatData.length, 1).setNumberFormat('@');
+    dataSheet.getRange(2, DATA_IDX.DELIVERY_NO + 1, allFlatData.length, 1).setNumberFormat('@');
   }
 }
 
@@ -507,7 +507,7 @@ function fetchWithRetry_(url, options, maxRetries) {
       const response = UrlFetchApp.fetch(url, options);
       if (response.getResponseCode() === 200) return response.getContentText();
       // [FIX v5.5.021 C5] ไม่แสดง HTTP body ในข้อความ Error ป้องกัน API Key/Cookie รั่วไหลลง Stackdriver
-      throw new Error("HTTP " + response.getResponseCode());
+      throw new Error('HTTP ' + response.getResponseCode());
     } catch (e) {
       if (i === maxRetries - 1) throw e;
       Utilities.sleep(1000 * Math.pow(2, i));
@@ -528,8 +528,8 @@ function checkIsEPOD_(ownerName, invoiceNo) {
 
   if (SCG_CONFIG.EPOD_OWNERS.some(w => owner.includes(w.toUpperCase()))) return true;
 
-  if (owner.includes("DENSO") || owner.includes("เด็นโซ่")) {
-    if (inv.includes("_DOC")) return false;
+  if (owner.includes('DENSO') || owner.includes('เด็นโซ่')) {
+    if (inv.includes('_DOC')) return false;
     // [FIX v5.5.021 M6] เปลี่ยน regex capture group เพื่อป้องกัน ReDoS
     if (/^\d+(?:-.*)?$/.test(inv)) return true;
     return false;
@@ -696,14 +696,14 @@ function copyDriverVerifiedToDailyJob_() {
     // สร้าง lookup: "ShipmentNo|ShipToName" → { driverVerifiedName, driverVerifiedAddr }
     const lookup = {};
     srcData.forEach(function(r) {
-      var shipmentNo = String(r[SRC_IDX.SHIPMENT_NO] || '').trim();
-      var shipToName = String(r[SRC_IDX.RAW_PERSON_NAME] || '').trim();
-      var dvName = String(r[SRC_IDX.DRIVER_VERIFIED_NAME] || '').trim();
-      var dvAddr = String(r[SRC_IDX.DRIVER_VERIFIED_ADDR] || '').trim();
+      const shipmentNo = String(r[SRC_IDX.SHIPMENT_NO] || '').trim();
+      const shipToName = String(r[SRC_IDX.RAW_PERSON_NAME] || '').trim();
+      const dvName = String(r[SRC_IDX.DRIVER_VERIFIED_NAME] || '').trim();
+      const dvAddr = String(r[SRC_IDX.DRIVER_VERIFIED_ADDR] || '').trim();
       if (shipmentNo && shipToName) {
         // [FIX BUG-AUDIT-014B V5.5.042] ใช้ buildShopKey_ เพื่อ normalize
         //   ให้ตรงกับฝั่ง buildDailyJobRow_ → กัน join miss แบบเงียบ
-        var key = buildShopKey_(shipmentNo, shipToName);
+        const key = buildShopKey_(shipmentNo, shipToName);
         // [FIX CRIT-003] merge mode — เติม field ที่ว่าง แทน one-shot
         if (!lookup[key]) lookup[key] = { name: '', addr: '' };
         if (dvName && !lookup[key].name) lookup[key].name = dvName;
@@ -717,15 +717,15 @@ function copyDriverVerifiedToDailyJob_() {
     const djCols = SCHEMA[SHEET.DAILY_JOB].length;
     const djData = dailyJobSheet.getRange(2, 1, djLastRow - 1, djCols).getValues();
 
-    var updated = 0;
-    var nameCol = DATA_IDX.DRIVER_VERIFIED_NAME + 1; // 1-based for setValues
-    var addrCol = DATA_IDX.DRIVER_VERIFIED_ADDR + 1;
+    let updated = 0;
+    const nameCol = DATA_IDX.DRIVER_VERIFIED_NAME + 1; // 1-based for setValues
+    const addrCol = DATA_IDX.DRIVER_VERIFIED_ADDR + 1;
 
     djData.forEach(function(r, i) {
-      var shopKey = String(r[DATA_IDX.SHOP_KEY] || '').trim();
-      var dv = lookup[shopKey];
+      const shopKey = String(r[DATA_IDX.SHOP_KEY] || '').trim();
+      const dv = lookup[shopKey];
       if (dv) {
-        var changed = false;
+        let changed = false;
         if (dv.name && !r[DATA_IDX.DRIVER_VERIFIED_NAME]) {
           r[DATA_IDX.DRIVER_VERIFIED_NAME] = dv.name;
           changed = true;
@@ -740,12 +740,12 @@ function copyDriverVerifiedToDailyJob_() {
 
     if (updated > 0) {
       // เขียนเฉพาะ col 29-30 (ไม่เขียนทั้งแถว เพื่อลด API calls)
-      var nameRange = dailyJobSheet.getRange(2, nameCol, djLastRow - 1, 1);
-      var addrRange = dailyJobSheet.getRange(2, addrCol, djLastRow - 1, 1);
-      
+      const nameRange = dailyJobSheet.getRange(2, nameCol, djLastRow - 1, 1);
+      const addrRange = dailyJobSheet.getRange(2, addrCol, djLastRow - 1, 1);
+
       // [FIX v5.5.021 H5] Map ครั้งเดียวลด Overhead
-      var nameValues = [];
-      var addrValues = [];
+      const nameValues = [];
+      const addrValues = [];
       djData.forEach(function(r) {
         nameValues.push([r[DATA_IDX.DRIVER_VERIFIED_NAME] || '']);
         addrValues.push([r[DATA_IDX.DRIVER_VERIFIED_ADDR] || '']);
@@ -767,40 +767,40 @@ function copyDriverVerifiedToDailyJob_() {
 function buildOwnerSummary(optData) {
   // [FIX R12] เพิ่ม try-catch — menu entry point ต้องมี error handling
   try {
-  const ss        = SpreadsheetApp.getActiveSpreadsheet();
-  const dataSheet = ss.getSheetByName(SCG_CONFIG.SHEET_DATA);
-  if (!dataSheet || dataSheet.getLastRow() < 2) return;
+    const ss        = SpreadsheetApp.getActiveSpreadsheet();
+    const dataSheet = ss.getSheetByName(SCG_CONFIG.SHEET_DATA);
+    if (!dataSheet || dataSheet.getLastRow() < 2) return;
 
-  const data = optData || dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, SCHEMA[SHEET.DAILY_JOB].length).getValues();
+    const data = optData || dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, SCHEMA[SHEET.DAILY_JOB].length).getValues();
 
-  // [REF-017] ใช้ buildSummarySheet_() แทน duplicate logic
-  buildSummarySheet_(data, SHEET.OWNER_SUMMARY, ss,
+    // [REF-017] ใช้ buildSummarySheet_() แทน duplicate logic
+    buildSummarySheet_(data, SHEET.OWNER_SUMMARY, ss,
     // groupKeyFn: รวมตาม SoldToName
-    function(r) {
-      const ownerName = r[DATA_IDX.SOLD_TO_NAME];
-      return ownerName || null;
-    },
-    // rowBuildFn: สร้าง row จาก aggregated map entry
-    function(owner, agg, numCols) {
-      const row = new Array(numCols).fill('');
-      row[OWNER_SUM_IDX.SOLD_TO]     = owner;
-      row[OWNER_SUM_IDX.QTY_ALL]     = agg.all.size;
-      row[OWNER_SUM_IDX.QTY_EPOD]    = agg.epod.size;
-      row[OWNER_SUM_IDX.LAST_UPDATE] = new Date();
-      return row;
-    },
-    // formatFn: จัด number format
-    // [FIX v5.5.022-PATCH1] แยก setNumberFormat ทีละคอลัมน์ เพื่อหลีกเลี่ยง GAS error
-    //   "โปรดเลือกภายในคอลัมน์เดียวเพื่อดำเนินการระดับคอลัมน์" เมื่อใช้ range 2 cols กับ format "#,##0"
-    //   ที่ GAS runtime บางครั้งแยกตาม comma เป็น array หลาย format
-    function(summarySheet, rows, numCols) {
-      if (rows.length > 0) {
-        summarySheet.getRange(2, OWNER_SUM_IDX.QTY_ALL + 1, rows.length, 1).setNumberFormat("#,##0");
-        summarySheet.getRange(2, OWNER_SUM_IDX.QTY_EPOD + 1, rows.length, 1).setNumberFormat("#,##0");
-        summarySheet.getRange(2, OWNER_SUM_IDX.LAST_UPDATE + 1, rows.length, 1).setNumberFormat("dd/mm/yyyy HH:mm");
+      function(r) {
+        const ownerName = r[DATA_IDX.SOLD_TO_NAME];
+        return ownerName || null;
+      },
+      // rowBuildFn: สร้าง row จาก aggregated map entry
+      function(owner, agg, numCols) {
+        const row = new Array(numCols).fill('');
+        row[OWNER_SUM_IDX.SOLD_TO]     = owner;
+        row[OWNER_SUM_IDX.QTY_ALL]     = agg.all.size;
+        row[OWNER_SUM_IDX.QTY_EPOD]    = agg.epod.size;
+        row[OWNER_SUM_IDX.LAST_UPDATE] = new Date();
+        return row;
+      },
+      // formatFn: จัด number format
+      // [FIX v5.5.022-PATCH1] แยก setNumberFormat ทีละคอลัมน์ เพื่อหลีกเลี่ยง GAS error
+      //   "โปรดเลือกภายในคอลัมน์เดียวเพื่อดำเนินการระดับคอลัมน์" เมื่อใช้ range 2 cols กับ format "#,##0"
+      //   ที่ GAS runtime บางครั้งแยกตาม comma เป็น array หลาย format
+      function(summarySheet, rows, numCols) {
+        if (rows.length > 0) {
+          summarySheet.getRange(2, OWNER_SUM_IDX.QTY_ALL + 1, rows.length, 1).setNumberFormat('#,##0');
+          summarySheet.getRange(2, OWNER_SUM_IDX.QTY_EPOD + 1, rows.length, 1).setNumberFormat('#,##0');
+          summarySheet.getRange(2, OWNER_SUM_IDX.LAST_UPDATE + 1, rows.length, 1).setNumberFormat('dd/mm/yyyy HH:mm');
+        }
       }
-    }
-  );
+    );
 
   } catch (e) {
     logError('ServiceSCG', 'buildOwnerSummary ล้มเหลว: ' + e.message, e);
@@ -814,48 +814,48 @@ function buildOwnerSummary(optData) {
 function buildShipmentSummary(optData) {
   // [FIX R12] เพิ่ม try-catch — menu entry point ต้องมี error handling
   try {
-  const ss        = SpreadsheetApp.getActiveSpreadsheet();
-  const dataSheet = ss.getSheetByName(SCG_CONFIG.SHEET_DATA);
-  if (!dataSheet || dataSheet.getLastRow() < 2) return;
+    const ss        = SpreadsheetApp.getActiveSpreadsheet();
+    const dataSheet = ss.getSheetByName(SCG_CONFIG.SHEET_DATA);
+    if (!dataSheet || dataSheet.getLastRow() < 2) return;
 
-  const data = optData || dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, SCHEMA[SHEET.DAILY_JOB].length).getValues();
+    const data = optData || dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, SCHEMA[SHEET.DAILY_JOB].length).getValues();
 
-  // [REF-017] ใช้ buildSummarySheet_() แทน duplicate logic
-  buildSummarySheet_(data, SHEET.SHIPMENT_SUM, ss,
+    // [REF-017] ใช้ buildSummarySheet_() แทน duplicate logic
+    buildSummarySheet_(data, SHEET.SHIPMENT_SUM, ss,
     // groupKeyFn: รวมตาม ShipmentNo + TruckLicense
-    function(r) {
-      const shipmentNo = r[DATA_IDX.SHIPMENT_NO];
-      const truckLicense = r[DATA_IDX.TRUCK_LICENSE];
-      if (!shipmentNo || !truckLicense) return null;
-      return shipmentNo + "_" + truckLicense;
-    },
-    // rowBuildFn: สร้าง row จาก aggregated map entry
-    function(key, agg, numCols) {
-      const row = new Array(numCols).fill('');
-      row[SHIPMENT_SUM_IDX.SHIPMENT_KEY] = key;
-      row[SHIPMENT_SUM_IDX.SHIPMENT_NO]  = agg.shipmentNo;
-      row[SHIPMENT_SUM_IDX.TRUCK]        = agg.truck;
-      row[SHIPMENT_SUM_IDX.QTY_ALL]      = agg.all.size;
-      row[SHIPMENT_SUM_IDX.QTY_EPOD]     = agg.epod.size;
-      row[SHIPMENT_SUM_IDX.LAST_UPDATE]  = new Date();
-      return row;
-    },
-    // formatFn: จัด number format
-    // [FIX v5.5.022-PATCH1] แยก setNumberFormat ทีละคอลัมน์ เพื่อหลีกเลี่ยง GAS error
-    //   "โปรดเลือกภายในคอลัมน์เดียวเพื่อดำเนินการระดับคอลัมน์" เมื่อใช้ range 2 cols กับ format "#,##0"
-    //   ที่ GAS runtime บางครั้งแยกตาม comma เป็น array หลาย format
-    function(summarySheet, rows, numCols) {
-      if (rows.length > 0) {
-        summarySheet.getRange(2, SHIPMENT_SUM_IDX.QTY_ALL + 1, rows.length, 1).setNumberFormat("#,##0");
-        summarySheet.getRange(2, SHIPMENT_SUM_IDX.QTY_EPOD + 1, rows.length, 1).setNumberFormat("#,##0");
-        summarySheet.getRange(2, SHIPMENT_SUM_IDX.LAST_UPDATE + 1, rows.length, 1).setNumberFormat("dd/mm/yyyy HH:mm");
+      function(r) {
+        const shipmentNo = r[DATA_IDX.SHIPMENT_NO];
+        const truckLicense = r[DATA_IDX.TRUCK_LICENSE];
+        if (!shipmentNo || !truckLicense) return null;
+        return shipmentNo + '_' + truckLicense;
+      },
+      // rowBuildFn: สร้าง row จาก aggregated map entry
+      function(key, agg, numCols) {
+        const row = new Array(numCols).fill('');
+        row[SHIPMENT_SUM_IDX.SHIPMENT_KEY] = key;
+        row[SHIPMENT_SUM_IDX.SHIPMENT_NO]  = agg.shipmentNo;
+        row[SHIPMENT_SUM_IDX.TRUCK]        = agg.truck;
+        row[SHIPMENT_SUM_IDX.QTY_ALL]      = agg.all.size;
+        row[SHIPMENT_SUM_IDX.QTY_EPOD]     = agg.epod.size;
+        row[SHIPMENT_SUM_IDX.LAST_UPDATE]  = new Date();
+        return row;
+      },
+      // formatFn: จัด number format
+      // [FIX v5.5.022-PATCH1] แยก setNumberFormat ทีละคอลัมน์ เพื่อหลีกเลี่ยง GAS error
+      //   "โปรดเลือกภายในคอลัมน์เดียวเพื่อดำเนินการระดับคอลัมน์" เมื่อใช้ range 2 cols กับ format "#,##0"
+      //   ที่ GAS runtime บางครั้งแยกตาม comma เป็น array หลาย format
+      function(summarySheet, rows, numCols) {
+        if (rows.length > 0) {
+          summarySheet.getRange(2, SHIPMENT_SUM_IDX.QTY_ALL + 1, rows.length, 1).setNumberFormat('#,##0');
+          summarySheet.getRange(2, SHIPMENT_SUM_IDX.QTY_EPOD + 1, rows.length, 1).setNumberFormat('#,##0');
+          summarySheet.getRange(2, SHIPMENT_SUM_IDX.LAST_UPDATE + 1, rows.length, 1).setNumberFormat('dd/mm/yyyy HH:mm');
+        }
+      },
+      // extraInitFn: เพิ่ม extra fields ใน map entry สำหรับ Shipment
+      function(r, key) {
+        return { shipmentNo: r[DATA_IDX.SHIPMENT_NO], truck: r[DATA_IDX.TRUCK_LICENSE], all: new Set(), epod: new Set() };
       }
-    },
-    // extraInitFn: เพิ่ม extra fields ใน map entry สำหรับ Shipment
-    function(r, key) {
-      return { shipmentNo: r[DATA_IDX.SHIPMENT_NO], truck: r[DATA_IDX.TRUCK_LICENSE], all: new Set(), epod: new Set() };
-    }
-  );
+    );
 
   } catch (e) {
     logError('ServiceSCG', 'buildShipmentSummary ล้มเหลว: ' + e.message, e);
@@ -882,7 +882,7 @@ function buildShipmentSummary(optData) {
  */
 function buildSummarySheet_(sourceData, sheetName, ss, groupKeyFn, rowBuildFn, formatFn, extraInitFn) {
   const summarySheet = ss.getSheetByName(sheetName);
-  if (!summarySheet) { safeUiAlert_("❌ ไม่พบชีต " + sheetName); return; }
+  if (!summarySheet) { safeUiAlert_('❌ ไม่พบชีต ' + sheetName); return; }
 
   // Aggregate
   const aggMap = {};
@@ -937,23 +937,23 @@ function clearAllSCGSheets_UI() {
   }
   // [FIX B4 v5.5.002] เพิ่ม try-catch — menu entry point ต้องมี error handling
   try {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  ss.toast('🗑️ กำลังล้างข้อมูลชีตที่เลือก...', APP_NAME, -1);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    ss.toast('🗑️ กำลังล้างข้อมูลชีตที่เลือก...', APP_NAME, -1);
 
-  let   cleared = 0;
+    let   cleared = 0;
 
-  [SHEET.DAILY_JOB, SHEET.OWNER_SUMMARY, SHEET.SHIPMENT_SUM].forEach(name => {
-    const sheet = ss.getSheetByName(name);
-    if (sheet && sheet.getLastRow() > 1) {
+    [SHEET.DAILY_JOB, SHEET.OWNER_SUMMARY, SHEET.SHIPMENT_SUM].forEach(name => {
+      const sheet = ss.getSheetByName(name);
+      if (sheet && sheet.getLastRow() > 1) {
       // [FIX v5.5.021 M5] ใช้ clearContent แทน deleteRows เพื่อความรวดเร็วและไม่กระทบโครงสร้างตาราง
-      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getMaxColumns()).clearContent();
-      cleared++;
-    }
-  });
+        sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getMaxColumns()).clearContent();
+        cleared++;
+      }
+    });
 
-  logInfo('ServiceSCG', `clearAllSCGSheets_UI: ล้าง ${cleared} ชีต`);
-  // [RF-03] เปลี่ยน ui.alert() → safeUiAlert_() — trigger-safe
-  safeUiAlert_(`✅ ล้างข้อมูล ${cleared} ชีตเรียบร้อย`);
+    logInfo('ServiceSCG', `clearAllSCGSheets_UI: ล้าง ${cleared} ชีต`);
+    // [RF-03] เปลี่ยน ui.alert() → safeUiAlert_() — trigger-safe
+    safeUiAlert_(`✅ ล้างข้อมูล ${cleared} ชีตเรียบร้อย`);
 
   } catch (e) {
     logError('ServiceSCG', 'clearAllSCGSheets_UI ล้มเหลว: ' + e.message, e);

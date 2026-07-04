@@ -29,7 +29,7 @@
  *     - fastLookupByShipToName()          → 21_AliasService.gs (Tier 0 Fast Track)
  *     - resolvePerson()                   → 06_PersonService.gs
  *     - getDestsByPersonId()              → 09_DestinationService.gs
- *   EXPORTS TO: 
+ *   EXPORTS TO:
  *     - 18_ServiceSCG.gs      (findBestGeoByPersonPlace, runLookupEnrichment)
  *   SHEETS ACCESSED:
  *     - SHEET.DAILY_JOB       (Read+Write: ShipToName→LatLong_Actual + color coding)
@@ -383,7 +383,7 @@ function runLookupEnrichment() {
   const timeLimit   = AI_CONFIG.TIME_LIMIT_MS || (5 * 60 * 1000);
   const totalRows   = sheet.getLastRow() - 1;
   const schemaLen   = SCHEMA[SHEET.DAILY_JOB].length;
-  
+
   // [FIX v5.5.021 H1] เพิ่ม Chunk Processing ป้องกัน Memory Spike
   const CHUNK_SIZE  = 500;
   let countFound    = 0;
@@ -422,7 +422,7 @@ function runLookupEnrichment() {
   }
 
   const msg =
-    `✅ จับคู่พิกัดเสร็จ\n` +
+    '✅ จับคู่พิกัดเสร็จ\n' +
     `เจอ: ${countFound} | ไม่พบ: ${countNotFound} | ข้าม: ${countSkipped}` +
     (timedOut ? '\n⚠️ หยุดก่อนครบเพราะใกล้ Timeout — รันอีกครั้งเพื่อดำเนินการต่อ' : '');
 
@@ -472,7 +472,7 @@ function lookupEnrichOneRow_(row) {
   if (result.status !== 'NOT_FOUND') {
     logWarn('SearchService', `Unknown status "${result.status}" for "${rawPerson}" — treated as NOT_FOUND`);
   }
-  
+
   return { latActual: [''], bgColor: [APP_CONST.COLOR_NOT_FOUND], found: 0, notFound: 1, skipped: 0 };
 }
 
@@ -500,7 +500,7 @@ function flushLookupResults_(sheet, latActualArr, bgColorArr, schemaLen, startRo
     // Batch Write LatLong_Actual
     const latActualCol = DATA_IDX.LATLNG_ACTUAL + 1;
     sheet.getRange(startRow, latActualCol, processedCount, 1)
-         .setValues(latActualArr.slice(0, processedCount));
+      .setValues(latActualArr.slice(0, processedCount));
 
     // [FIX v5.5.021 C3] Batch setBackgrounds เฉพาะคอลัมน์ LATLNG_ACTUAL เพื่อไม่ให้ทับสีคอลัมน์อื่น
     const targetColors = bgColorArr.slice(0, processedCount).map(row => row[0] ? [row[0]] : [null]);
@@ -526,25 +526,25 @@ function flushLookupResults_(sheet, latActualArr, bgColorArr, schemaLen, startRo
 function lookupSingleRow(rowNumber) {
   // [FIX R12] เพิ่ม try-catch — entry point ต้องมี error handling
   try {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET.DAILY_JOB);
-  if (!sheet || rowNumber < 2) return null;
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.DAILY_JOB);
+    if (!sheet || rowNumber < 2) return null;
 
-  const rowData   = sheet.getRange(rowNumber, 1, 1,
-                     SCHEMA[SHEET.DAILY_JOB].length).getValues()[0];
-  const rawPerson = String(rowData[DATA_IDX.SHIP_TO_NAME] || '').trim();
-  const rawAddress = String(rowData[DATA_IDX.SHIP_TO_ADDR] || '').trim();
-  // [ADD v5.5.022-PATCH1] ส่ง rawAddress เป็น tie-breaker กรณี ShipToName ซ้ำ
+    const rowData   = sheet.getRange(rowNumber, 1, 1,
+      SCHEMA[SHEET.DAILY_JOB].length).getValues()[0];
+    const rawPerson = String(rowData[DATA_IDX.SHIP_TO_NAME] || '').trim();
+    const rawAddress = String(rowData[DATA_IDX.SHIP_TO_ADDR] || '').trim();
+    // [ADD v5.5.022-PATCH1] ส่ง rawAddress เป็น tie-breaker กรณี ShipToName ซ้ำ
 
-  const result = findBestGeoByPersonPlace(rawPerson, rawAddress);
+    const result = findBestGeoByPersonPlace(rawPerson, rawAddress);
 
-  logDebug('SearchService',
-    `Row ${rowNumber} → Status:${result.status} ` +
+    logDebug('SearchService',
+      `Row ${rowNumber} → Status:${result.status} ` +
     `(${result.confidence}%) lat:${result.lat} lng:${result.lng} — ` +
     `Reason: ${result.reason}`
-  );
+    );
 
-  return result;
+    return result;
 
   } catch (e) {
     logError('SearchService', 'lookupSingleRow ล้มเหลว: ' + e.message, e);

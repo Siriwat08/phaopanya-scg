@@ -1230,7 +1230,7 @@ function getMatchEngineMetrics() {
   const data = sheet.getRange(2, startCol, sheet.getLastRow() - 1, numCols).getValues();
 
   // ─── Summary + Status counts ───
-  let total = data.length;
+  const total = data.length;
   let autoMatchedCount = 0;
   let withScoreCount = 0;
   let sumScore = 0;
@@ -1689,7 +1689,7 @@ function buildDestIndexByPlace_(dests) {
 }
 
 function findPersonIdByUuid_(persons, uuid) {
-  for (var i = 0; i < persons.length; i++) {
+  for (let i = 0; i < persons.length; i++) {
     if (String(persons[i][PERSON_IDX.MASTER_UUID] || '') === uuid) {
       return String(persons[i][PERSON_IDX.PERSON_ID] || '');
     }
@@ -1698,7 +1698,7 @@ function findPersonIdByUuid_(persons, uuid) {
 }
 
 function findPlaceIdByUuid_(places, uuid) {
-  for (var i = 0; i < places.length; i++) {
+  for (let i = 0; i < places.length; i++) {
     if (String(places[i][PLACE_IDX.MASTER_UUID] || '') === uuid) {
       return String(places[i][PLACE_IDX.PLACE_ID] || '');
     }

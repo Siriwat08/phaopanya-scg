@@ -78,37 +78,37 @@ function buildFullQualityReport() {
       return;
     }
 
-  // [REF-008] Step 1: Collect all system statistics
-  const stats = collectSystemStats_(ss);
+    // [REF-008] Step 1: Collect all system statistics
+    const stats = collectSystemStats_(ss);
 
-  // [REF-008] Step 2: Compute derived metrics from stats
-  const metrics = computeReportMetrics_(stats);
+    // [REF-008] Step 2: Compute derived metrics from stats
+    const metrics = computeReportMetrics_(stats);
 
-  // [REF-008] Step 3: Write report row to sheet
-  // [FIX B11 v5.5.002] ใช้ getRange+setValues แทน appendRow (consistent batch pattern)
-  const nextRow = rptSheet.getLastRow() + 1;
-  rptSheet.getRange(nextRow, 1, 1, metrics.reportRow.length).setValues([metrics.reportRow]);
+    // [REF-008] Step 3: Write report row to sheet
+    // [FIX B11 v5.5.002] ใช้ getRange+setValues แทน appendRow (consistent batch pattern)
+    const nextRow = rptSheet.getLastRow() + 1;
+    rptSheet.getRange(nextRow, 1, 1, metrics.reportRow.length).setValues([metrics.reportRow]);
 
-  logInfo('ReportService',
-    `Report เสร็จ — Total:${stats.totalFact} Auto:${metrics.autoMatchRate}% ` +
+    logInfo('ReportService',
+      `Report เสร็จ — Total:${stats.totalFact} Auto:${metrics.autoMatchRate}% ` +
     `Processed:${metrics.processedRate}% Q_Pending:${stats.pendingInQueue}`);
 
-  // [FIX v003] guard ui.alert() — ถ้ารันจาก Trigger จะ Error
-  safeUiAlert_(
-    '📊 Data Quality Report\n\n' +
+    // [FIX v003] guard ui.alert() — ถ้ารันจาก Trigger จะ Error
+    safeUiAlert_(
+      '📊 Data Quality Report\n\n' +
     `รวมทั้งหมด (Active):  ${stats.totalFact} รายการ\n` +
     `Auto Match:            ${stats.autoCount} (${metrics.autoMatchRate}%)\n` +
     `สร้างใหม่:            ${stats.newCount}\n` +
     `รอ Review (Q):         ${stats.pendingInQueue}\n` +
     `Error:                 ${stats.errorCount}\n` +
     `Unclassified:          ${stats.unclassifiedCount}\n\n` +
-    `Master Data:\n` +
+    'Master Data:\n' +
     `  Person:  ${stats.personCount}\n` +
     `  Place:   ${stats.placeCount}\n` +
     `  Geo:     ${stats.geoCount}\n` +
     `  Dest:    ${stats.destCount}`
-  );
-} catch (err) {
+    );
+  } catch (err) {
     logError('ReportService', 'buildFullQualityReport: ' + err.message, err);
     safeUiAlert_('❌ สร้างรายงานล้มเหลว: ' + err.message);
   }
@@ -154,25 +154,25 @@ function collectSystemStats_(ss) {
       const matchStatus = String(matchStatusData[i][0] || '').trim();
 
       switch (matchStatus) {
-        case APP_CONST.MATCH_FULL:
-        case APP_CONST.MATCH_GEO:
-        case APP_CONST.MATCH_FUZZY:
-        case 'AUTO_MATCH':
-          autoCount++; break;
-        case APP_CONST.MATCH_NEW:
-        case 'CREATE_NEW':
-          newCount++; break;
-        case APP_CONST.MATCH_REVIEW:
-        case 'REVIEW':
-        case 'NEEDS_REVIEW':
-          reviewCount++; break;
-        case APP_CONST.MATCH_ERROR:
-        case 'ERROR':
-          errorCount++; break;
-        default:
-          // [FIX v003] นับ unclassified
-          if (matchStatus) unclassifiedCount++;
-          break;
+      case APP_CONST.MATCH_FULL:
+      case APP_CONST.MATCH_GEO:
+      case APP_CONST.MATCH_FUZZY:
+      case 'AUTO_MATCH':
+        autoCount++; break;
+      case APP_CONST.MATCH_NEW:
+      case 'CREATE_NEW':
+        newCount++; break;
+      case APP_CONST.MATCH_REVIEW:
+      case 'REVIEW':
+      case 'NEEDS_REVIEW':
+        reviewCount++; break;
+      case APP_CONST.MATCH_ERROR:
+      case 'ERROR':
+        errorCount++; break;
+      default:
+        // [FIX v003] นับ unclassified
+        if (matchStatus) unclassifiedCount++;
+        break;
       }
     }
   }

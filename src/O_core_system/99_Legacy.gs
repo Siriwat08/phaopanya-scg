@@ -57,8 +57,8 @@ function getColIndex(schemaKey, colName) {
   // [REF-012] Log warning เมื่อถูกเรียก — ป้องกันการใช้งานในอนาคต
   if (typeof logWarn === TYPE_OF_FUNCTION) {
     try {
-      var stack = (new Error().stack || '').split('\n');
-      var caller = stack[2] || 'unknown';
+      const stack = (new Error().stack || '').split('\n');
+      const caller = stack[2] || 'unknown';
       logWarn(LEGACY_MODULE_NAME, '[DEPRECATED] getColIndex("' + schemaKey + '", "' + colName + '") — Use *_IDX.* constants instead. Caller: ' + caller.trim());
     } catch (e) { /* ignore log error */ }
   }

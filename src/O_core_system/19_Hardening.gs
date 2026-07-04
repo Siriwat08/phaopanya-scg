@@ -141,25 +141,25 @@ function runPreflightAudit() {
 function fixMissingSyncStatus() {
   // [FIX v5.5.001] เพิ่ม try-catch ครอบทั้งฟังก์ชัน — เช่นเดียวกับ entry-point อื่นๆ
   try {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET.SOURCE);
-  if (!sheet) return;
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return;
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.SOURCE);
+    if (!sheet) return;
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
 
-  const statusCol = SRC_IDX.SYNC_STATUS + 1;
-  const range     = sheet.getRange(2, statusCol, lastRow - 1, 1);
-  const data      = range.getValues();
-  let   fixed     = 0;
+    const statusCol = SRC_IDX.SYNC_STATUS + 1;
+    const range     = sheet.getRange(2, statusCol, lastRow - 1, 1);
+    const data      = range.getValues();
+    let   fixed     = 0;
 
-  for (let i = 0; i < data.length; i++) {
-    if (!data[i][0]) { data[i][0] = 'PENDING'; fixed++; }
-  }
-  if (fixed > 0) {
-    range.setValues(data);
-    SpreadsheetApp.getActiveSpreadsheet()
-      .toast('✅ ซ่อมแซมสถานะ Sync สำเร็จ: ' + fixed + ' แถว', 'Hardening');
-  }
+    for (let i = 0; i < data.length; i++) {
+      if (!data[i][0]) { data[i][0] = 'PENDING'; fixed++; }
+    }
+    if (fixed > 0) {
+      range.setValues(data);
+      SpreadsheetApp.getActiveSpreadsheet()
+        .toast('✅ ซ่อมแซมสถานะ Sync สำเร็จ: ' + fixed + ' แถว', 'Hardening');
+    }
   } catch (e) {
     logError('Hardening', 'fixMissingSyncStatus ล้มเหลว: ' + e.message, e);
     safeUiAlert_('❌ fixMissingSyncStatus ล้มเหลว: ' + e.message);
@@ -297,8 +297,8 @@ function prepareAliasHistoryContext_(ss) {
   //   ถ้ามี checkpoint (จากการ Time Guard หยุดกลางคันรอบก่อน) → เริ่มจาก idx นั้น
   //   ถ้าไม่มี → เริ่มจาก 0
   //   Stale protection: checkpoint เก่ากว่า 24 ชม. → auto clear (กัน garbage)
-  var checkpoint = loadHardeningAliasCheckpoint_();
-  var startIdx = checkpoint.startIdx || 0;
+  const checkpoint = loadHardeningAliasCheckpoint_();
+  const startIdx = checkpoint.startIdx || 0;
 
   if (startIdx > 0) {
     ss.toast('🔄 Resume จากแถว ' + (startIdx + 1) + '...', APP_NAME, 5);
@@ -436,10 +436,10 @@ function saveHardeningAliasCheckpoint_(idx) {
  * @return {{ startIdx: number, timestamp: number }}
  */
 function loadHardeningAliasCheckpoint_() {
-  var raw = PropertiesService.getScriptProperties().getProperty(HARDENING_ALIAS_CHECKPOINT_KEY);
+  const raw = PropertiesService.getScriptProperties().getProperty(HARDENING_ALIAS_CHECKPOINT_KEY);
   if (!raw) return { startIdx: 0 };
   try {
-    var cp = JSON.parse(raw);
+    const cp = JSON.parse(raw);
     // Stale protection: เก่ากว่า 24 ชม. → clear
     if (cp.timestamp && (Date.now() - cp.timestamp) > 24 * 60 * 60 * 1000) {
       clearHardeningAliasCheckpoint_();
@@ -562,13 +562,13 @@ function flushGlobalAliasRows_(ss, rows) {
 
   const newRows = [];
   rows.forEach(function(aliasRow) {
-    var masterUuid   = String(aliasRow[ALIAS_IDX.MASTER_UUID]  || '');
-    var variantName  = String(aliasRow[ALIAS_IDX.VARIANT_NAME] || '');
-    var entityType   = String(aliasRow[ALIAS_IDX.ENTITY_TYPE]  || '');
+    const masterUuid   = String(aliasRow[ALIAS_IDX.MASTER_UUID]  || '');
+    const variantName  = String(aliasRow[ALIAS_IDX.VARIANT_NAME] || '');
+    const entityType   = String(aliasRow[ALIAS_IDX.ENTITY_TYPE]  || '');
     // [FIX CodeQL js/unused-local-variable V5.5.035] confidence + source ไม่ถูกใช้ใน dedup logic — ลบทิ้ง
 
     // Dedup check ใน RAM
-    let norm = normalizeForCompare(variantName);
+    const norm = normalizeForCompare(variantName);
     const dedupKey = entityType + '::' + masterUuid + '::' + norm;
     if (!norm || existingSet.has(dedupKey)) return;
 

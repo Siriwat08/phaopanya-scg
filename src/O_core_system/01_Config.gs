@@ -542,7 +542,7 @@ const SCG_CONFIG = Object.freeze({
   // [ADD v002] Fallback จาก PropertiesService
   get API_URL() {
     return PropertiesService.getScriptProperties()
-                            .getProperty('SCG_API_URL')
+      .getProperty('SCG_API_URL')
            || 'https://fsm.scgjwd.com/Monitor/SearchDelivery';
   },
   INPUT_START_ROW:      4,    // Shipment No เริ่มแถว 4
@@ -552,7 +552,7 @@ const SCG_CONFIG = Object.freeze({
   // ค่า SYNC_STATUS ที่ถือว่าประมวลผลแล้ว
   SYNC_DONE_VALUE:      'SUCCESS',
   // [RF-01] EPOD owner list — ย้ายจาก 18_ServiceSCG.gs module-level
-  EPOD_OWNERS:          Object.freeze(["BETTERBE", "SCG EXPRESS", "เบทเตอร์แลนด์", "JWD TRANSPORT"]),
+  EPOD_OWNERS:          Object.freeze(['BETTERBE', 'SCG EXPRESS', 'เบทเตอร์แลนด์', 'JWD TRANSPORT']),
 });
 
 // ============================================================
@@ -745,7 +745,7 @@ function validateConfig() {
  */
 function getGeminiApiKey() {
   const key = PropertiesService.getScriptProperties()
-                               .getProperty('GEMINI_API_KEY');
+    .getProperty('GEMINI_API_KEY');
   const trimmedKey = key ? String(key).trim() : '';
   // [FIX BUG-PM-002 V5.5.041] รองรับ Gemini API Key ทั้ง 2 รูปแบบ ให้ตรงกับ setupEnvironment()
   //   ใน 00_App.gs — เดิมรับเฉพาะ legacy (AIza...) ทำให้ key รูปแบบใหม่ (AQ....)

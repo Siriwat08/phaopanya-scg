@@ -449,8 +449,8 @@ function validateSheetHeaders(sheet, expected) {
 
   const normalize   = s => String(s).trim().toLowerCase();
   const actual      = sheet.getRange(1, 1, 1, lastCol)
-                           .getValues()[0]
-                           .map(h => String(h).trim());
+    .getValues()[0]
+    .map(h => String(h).trim());
   const actualNorm  = actual.map(normalize);
   const expectNorm  = expected.map(normalize);
 

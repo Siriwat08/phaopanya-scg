@@ -197,8 +197,8 @@ function normalizePersonNameFull(rawName) {
 
   // --- Step 6: ล้างช่องว่างและอักขระพิเศษ ---
   working = working.replace(/\s+/g, ' ')
-                   .replace(/[^\u0E00-\u0E7Fa-zA-Z0-9\s]/g, '')
-                   .trim();
+    .replace(/[^\u0E00-\u0E7Fa-zA-Z0-9\s]/g, '')
+    .trim();
 
   return buildNormResult_(
     original, working, isCompany,
@@ -471,7 +471,7 @@ function escapeRegex_(string) {
  * @private
  */
 function stripCompanySuffixWithBoundary_(working, suffix) {
-  var safeSuffix = escapeRegex_(suffix);
+  const safeSuffix = escapeRegex_(suffix);
   // (?<=...) = lookbehind; (?=...) = lookahead
   //   ก่อน suffix: start-of-string หรือ whitespace, '(', หรือ CJK/Latin letter
   //
@@ -480,11 +480,11 @@ function stripCompanySuffixWithBoundary_(working, suffix) {
   //     → 'บจก.สมชาย' → 'สมชาย' (เพราะปกติเขียนติดกัน ไม่มี space)
   //   - ถ้า suffix ไม่ลงท้ายด้วย '.' (เช่น 'จำกัด') ให้รับเฉพาะ punctuation/whitespace/end
   //     → 'ไม่จำกัดจำนวน' จะไม่ถูกตัด (เพราะ 'จำกัด' อยู่กลางคำ ไม่ใช่ suffix จริง)
-  var endsWithDot = /\.$/.test(suffix);
-  var lookAhead = endsWithDot
+  const endsWithDot = /\.$/.test(suffix);
+  const lookAhead = endsWithDot
     ? '(?=$|[\\s\\)\\.,;:\\u0E00-\\u0E7Fa-zA-Z])'
     : '(?=$|[\\s\\)\\.,;:])';
-  var pattern = '(?<=^|[\\s\\(\\u0E00-\\u0E7Fa-zA-Z])' + safeSuffix + lookAhead;
+  const pattern = '(?<=^|[\\s\\(\\u0E00-\\u0E7Fa-zA-Z])' + safeSuffix + lookAhead;
   return working.replace(new RegExp(pattern, 'gi'), '').replace(/\s+/g, ' ').trim();
 }
 

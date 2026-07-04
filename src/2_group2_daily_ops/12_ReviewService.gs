@@ -39,7 +39,7 @@
  *   applyAllPendingDecisions to enrich M_ALIAS from newly-approved FACTs) [V5.5.007 P0 #3]
  * - maskReviewerEmail_() → Local security helper
  * - logError/logInfo/logWarn/logDebug() → 03_SetupSheets
- * 
+ *
  * NOTE: ไม่เรียก Group 1 CRUD functions โดยตรงอีกต่อไป
  * ใช้ resolveAndPersist_() gateway แทน (REF-001)
  * EXPORTS TO:
@@ -197,9 +197,9 @@ function enqueueReview(srcObj, decision, personResult, placeResult, geoResult) {
 function buildRecommendedAction_(personResult, placeResult, geoResult, decision) {
   try {
     // ดึง ID จาก candidate results
-    var personId = personResult && personResult.personId
+    const personId = personResult && personResult.personId
       ? String(personResult.personId).trim() : '';
-    var placeId = placeResult && placeResult.placeId
+    const placeId = placeResult && placeResult.placeId
       ? String(placeResult.placeId).trim() : '';
 
     // กรณี 1: มี candidate Person → แนะนำ MERGE_TO_CANDIDATE พร้อม Person ID
@@ -295,7 +295,7 @@ function applyAllPendingDecisions() {
 
     // [PERF-002] Flush batch FACT_DELIVERY writes — เขียนทั้งหมดครั้งเดียวหลังลูป
     if (pendingFactRows.length > 0) {
-      var factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
+      const factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
       if (factSheet) {
         // [FIX BUG-PM-004 V5.5.041] เพิ่ม Math.min guard สำหรับ INSERT path
         //   mirror BUG-M03 fix ใน 11_TransactionService.upsertFactDelivery (UPDATE path)
@@ -308,8 +308,8 @@ function applyAllPendingDecisions() {
         const rowsToWrite = factSheetCols === factSchemaLen
           ? pendingFactRows
           : pendingFactRows.map(function(row) {
-              return row.slice(0, factSheetCols);
-            });
+            return row.slice(0, factSheetCols);
+          });
         factSheet.getRange(factSheet.getLastRow() + 1, 1, rowsToWrite.length, factSheetCols)
           .setValues(rowsToWrite);
         if (typeof invalidateFactInvoiceCache_ === 'function') invalidateFactInvoiceCache_();
@@ -391,8 +391,8 @@ function reviewProcessOneRow_(rowData, rowIndex, reviewer, batchNow) {
     } else {
       // CREATE_NEW / MERGE_TO_CANDIDATE — have side effects, call normally
       // [PERF-002] เก็บ factData ที่ส่งคืนมาเพื่อเขียน batch ทีเดียวหลังลูป
-      var reviewResult = applyReviewDecision(reviewId, decision, rowData, rowIndex);
-      var factRow = (reviewResult && reviewResult.factRowData) ? reviewResult.factRowData : null;
+      const reviewResult = applyReviewDecision(reviewId, decision, rowData, rowIndex);
+      const factRow = (reviewResult && reviewResult.factRowData) ? reviewResult.factRowData : null;
       return {
         statusUpdate: null,
         factRow: factRow,
@@ -504,21 +504,21 @@ function applyReviewDecision(reviewId, decisionVal, rowData, optTargetRow) {
     let result = null;
 
     switch (decisionVal) {
-      case 'CREATE_NEW':
-        result = executeReviewCreateNew_(ss, sheet, targetRow, rowArr, reviewer, now, decisionVal);
-        break;
-      case 'MERGE_TO_CANDIDATE':
-        result = executeMergeDecision_(ss, sheet, targetRow, rowArr, reviewer, now, decisionVal);
-        break;
-      case 'ESCALATE':
-        updateReviewRowStatus_(sheet, targetRow, 'Escalated', reviewer, now, decisionVal, '');
-        break;
-      case 'IGNORE':
-        updateReviewRowStatus_(sheet, targetRow, 'Done', reviewer, now, decisionVal, '');
-        break;
-      default:
-        logWarn('ReviewService', 'applyReviewDecision: Unknown decision ' + decisionVal);
-        break;
+    case 'CREATE_NEW':
+      result = executeReviewCreateNew_(ss, sheet, targetRow, rowArr, reviewer, now, decisionVal);
+      break;
+    case 'MERGE_TO_CANDIDATE':
+      result = executeMergeDecision_(ss, sheet, targetRow, rowArr, reviewer, now, decisionVal);
+      break;
+    case 'ESCALATE':
+      updateReviewRowStatus_(sheet, targetRow, 'Escalated', reviewer, now, decisionVal, '');
+      break;
+    case 'IGNORE':
+      updateReviewRowStatus_(sheet, targetRow, 'Done', reviewer, now, decisionVal, '');
+      break;
+    default:
+      logWarn('ReviewService', 'applyReviewDecision: Unknown decision ' + decisionVal);
+      break;
     }
 
     logInfo('ReviewService', 'applyReviewDecision: ' + reviewId + ' → ' + decisionVal + ' โดย ' + reviewer);
@@ -844,10 +844,10 @@ function extractFirstId_(jsonStr) {
   jsonStr = String(jsonStr).trim();
   if (jsonStr === '[]' || jsonStr === '') return null;
   try {
-    var arr = JSON.parse(jsonStr);
+    const arr = JSON.parse(jsonStr);
     if (arr && arr.length > 0) return String(arr[0]).replace(/"/g, '');
   } catch (e) {
-    var m = jsonStr.match(/["']([A-Za-z0-9]+)["']/);
+    const m = jsonStr.match(/["']([A-Za-z0-9]+)["']/);
     if (m) return m[1];
   }
   return null;
@@ -892,22 +892,22 @@ function reprocessReviewQueue() {
   //     - flushLogBuffer_: กัน log entries สูญหายเมื่อ Timeout
 
   // ─── STEP 1: LockService (idiomatic pattern เหมือน applyAllPendingDecisions) ───
-  var lock = LockService.getScriptLock();
+  const lock = LockService.getScriptLock();
   if (!lock.tryLock(APP_CONST.LOCK_TIMEOUT_MS)) {
     safeUiAlert_('⚠️ ระบบกำลังประมวลผล Review อยู่ กรุณารอสักครู่แล้วลองใหม่');
     return;
   }
 
-  var startTime = Date.now();
-  var timeLimit = AI_CONFIG.TIME_LIMIT_MS || (5 * 60 * 1000);
+  const startTime = Date.now();
+  const timeLimit = AI_CONFIG.TIME_LIMIT_MS || (5 * 60 * 1000);
 
   try {
     // PHASE 1+2: Prepare context (read sheets + checkpoint + build RI/FI maps + factLookup)
-    var ctx = reprocPrepareContext_(startTime, timeLimit);
+    const ctx = reprocPrepareContext_(startTime, timeLimit);
     if (!ctx) return;  // empty Q_REVIEW or sheet missing
 
     // PHASE 3: Loop through review rows, dispatch to group handlers
-    var stats = reprocProcessAllRows_(ctx, startTime, timeLimit);
+    const stats = reprocProcessAllRows_(ctx, startTime, timeLimit);
 
     // PHASE 4+5: Batch write + report message + log summary
     reprocBatchWriteAndReport_(ctx, stats, startTime);
@@ -940,20 +940,20 @@ function reprocPrepareContext_(startTime, timeLimit) {
   //   4. buildFactLookup_            — Build source_record_id → factIdx lookup
   //   Preserve Behavior 100% — same validation, same data, same checkpoint, same maps
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // STEP 1: Validate sheets
-  var sheets = validateReprocSheets_(ss);
+  const sheets = validateReprocSheets_(ss);
   if (!sheets) return null;
-  var reviewSheet = sheets.reviewSheet;
-  var factSheet = sheets.factSheet;
+  const reviewSheet = sheets.reviewSheet;
+  const factSheet = sheets.factSheet;
 
   // STEP 2: Read sheet data into memory
-  var sheetData = loadReprocSheetData_(reviewSheet, factSheet);
+  const sheetData = loadReprocSheetData_(reviewSheet, factSheet);
 
   // STEP 3: Load checkpoint
-  var checkpoint = loadReprocessCheckpoint_();
-  var startIdx = checkpoint.startIdx || 0;
+  const checkpoint = loadReprocessCheckpoint_();
+  const startIdx = checkpoint.startIdx || 0;
 
   if (startIdx > 0) {
     ss.toast('🔄 Resume จากแถว ' + (startIdx + 1) + '...', APP_NAME, 5);
@@ -961,10 +961,10 @@ function reprocPrepareContext_(startTime, timeLimit) {
   }
 
   // STEP 4: Build column index maps
-  var maps = buildReprocColumnMaps_();
+  const maps = buildReprocColumnMaps_();
 
   // STEP 5: Build FACT_DELIVERY lookup
-  var factLookup = buildFactLookup_(sheetData.factData, maps.FI);
+  const factLookup = buildFactLookup_(sheetData.factData, maps.FI);
 
   return {
     ss: ss,
@@ -990,8 +990,8 @@ function reprocPrepareContext_(startTime, timeLimit) {
  * @private
  */
 function validateReprocSheets_(ss) {
-  var reviewSheet = ss.getSheetByName(SHEET.Q_REVIEW);
-  var factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
+  const reviewSheet = ss.getSheetByName(SHEET.Q_REVIEW);
+  const factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
 
   if (!reviewSheet || reviewSheet.getLastRow() < 2) {
     safeUiAlert_('Q_REVIEW ว่าง — ไม่มีข้อมูลจัดการ');
@@ -1013,13 +1013,13 @@ function validateReprocSheets_(ss) {
  * @private
  */
 function loadReprocSheetData_(reviewSheet, factSheet) {
-  var reviewLastRow = reviewSheet.getLastRow();
-  var reviewCols = reviewSheet.getLastColumn();
-  var reviewData = reviewSheet.getRange(2, 1, reviewLastRow - 1, reviewCols).getValues();
+  const reviewLastRow = reviewSheet.getLastRow();
+  const reviewCols = reviewSheet.getLastColumn();
+  const reviewData = reviewSheet.getRange(2, 1, reviewLastRow - 1, reviewCols).getValues();
 
-  var factLastRow = factSheet.getLastRow();
-  var factCols = factSheet.getLastColumn();
-  var factData = factLastRow > 1
+  const factLastRow = factSheet.getLastRow();
+  const factCols = factSheet.getLastColumn();
+  const factData = factLastRow > 1
     ? factSheet.getRange(2, 1, factLastRow - 1, factCols).getValues()
     : [];
 
@@ -1040,7 +1040,7 @@ function loadReprocSheetData_(reviewSheet, factSheet) {
  * @private
  */
 function buildReprocColumnMaps_() {
-  var RI = {
+  const RI = {
     issueType:  REVIEW_IDX.ISSUE_TYPE,
     srcRecId:   REVIEW_IDX.SOURCE_REC_ID,
     invoiceNo:  REVIEW_IDX.INVOICE_NO,
@@ -1061,7 +1061,7 @@ function buildReprocColumnMaps_() {
     note:       REVIEW_IDX.NOTE
   };
 
-  var FI = {
+  const FI = {
     srcRecId:        FACT_IDX.SOURCE_REC_ID,
     deliveryDate:    FACT_IDX.DELIVERY_DATE,
     personId:        FACT_IDX.PERSON_ID,
@@ -1090,9 +1090,9 @@ function buildReprocColumnMaps_() {
  * @private
  */
 function buildFactLookup_(factData, FI) {
-  var factLookup = {};
-  for (var fi = 0; fi < factData.length; fi++) {
-    var sid = String(safeExtractArr_(factData[fi], FI.srcRecId)).trim();
+  const factLookup = {};
+  for (let fi = 0; fi < factData.length; fi++) {
+    const sid = String(safeExtractArr_(factData[fi], FI.srcRecId)).trim();
     if (sid) factLookup[sid] = fi;
   }
   return factLookup;
@@ -1111,7 +1111,7 @@ function reprocProcessAllRows_(ctx, startTime, timeLimit) {
   // ═══════════════════════════════════════
   // PHASE 3: ประมวลผลทีละรายการ
   // ═══════════════════════════════════════
-  var stats = {
+  const stats = {
     groupA: 0,       // GEO_NEARBY_YELLOW + name → AUTO_MATCH
     groupB: 0,       // NEW_RECORD_PENDING + geo → CREATE_NEW
     groupC: 0,       // FUZZY_MATCH 85+ → AUTO_MATCH
@@ -1124,19 +1124,19 @@ function reprocProcessAllRows_(ctx, startTime, timeLimit) {
     lastIdx: 0
   };
 
-  var now = new Date();
-  var RI = ctx.RI;
-  var FI = ctx.FI;
-  var reviewData = ctx.reviewData;
-  var factData = ctx.factData;
-  var factLookup = ctx.factLookup;
-  var startIdx = ctx.startIdx;
+  const now = new Date();
+  const RI = ctx.RI;
+  const FI = ctx.FI;
+  const reviewData = ctx.reviewData;
+  const factData = ctx.factData;
+  const factLookup = ctx.factLookup;
+  const startIdx = ctx.startIdx;
 
   // [PERF-001] เริ่มลูปจาก startIdx (จาก checkpoint) แทน 0
   // NOTE: ประกาศ `var i` นอกลูปเพื่อให้ reference ใช้ใน finally/report ได้ (preserves var-scope semantics)
-  var i;
+  let i;
   for (i = startIdx; i < reviewData.length; i++) {
-    var r = reviewData[i];
+    const r = reviewData[i];
 
     // ─── STEP 2: Time Guard ทุก 20 แถว (เหมือน applyAllPendingDecisions) ───
     //   ใช้ hasTimePassed_() จาก 14_Utils.gs — ลดความเสี่ยง GAS Timeout 6 นาที
@@ -1152,27 +1152,27 @@ function reprocProcessAllRows_(ctx, startTime, timeLimit) {
     // Skip non-pending
     if (String(safeExtractArr_(r, RI.status)).trim() !== 'Pending') continue;
 
-    var issueType = String(safeExtractArr_(r, RI.issueType)).trim();
-    var score = parseInt(safeExtractArr_(r, RI.score)) || 0;
-    var srcRecId = String(safeExtractArr_(r, RI.srcRecId)).trim();
-    var rawPerson = String(safeExtractArr_(r, RI.rawPerson)).trim();
-    var rawPlace  = String(safeExtractArr_(r, RI.rawPlace)).trim();
-    var rawAddr   = String(safeExtractArr_(r, RI.rawAddr)).trim();
-    var rawLat    = parseFloat(safeExtractArr_(r, RI.rawLat)) || 0;
-    var rawLng    = parseFloat(safeExtractArr_(r, RI.rawLng)) || 0;
-    var candPerson = String(safeExtractArr_(r, RI.candPerson) || '[]').trim();
-    var candPlace  = String(safeExtractArr_(r, RI.candPlace) || '[]').trim();
-    var candGeo    = String(safeExtractArr_(r, RI.candGeo) || '[]').trim();
+    const issueType = String(safeExtractArr_(r, RI.issueType)).trim();
+    const score = parseInt(safeExtractArr_(r, RI.score)) || 0;
+    const srcRecId = String(safeExtractArr_(r, RI.srcRecId)).trim();
+    const rawPerson = String(safeExtractArr_(r, RI.rawPerson)).trim();
+    const rawPlace  = String(safeExtractArr_(r, RI.rawPlace)).trim();
+    const rawAddr   = String(safeExtractArr_(r, RI.rawAddr)).trim();
+    const rawLat    = parseFloat(safeExtractArr_(r, RI.rawLat)) || 0;
+    const rawLng    = parseFloat(safeExtractArr_(r, RI.rawLng)) || 0;
+    const candPerson = String(safeExtractArr_(r, RI.candPerson) || '[]').trim();
+    const candPlace  = String(safeExtractArr_(r, RI.candPlace) || '[]').trim();
+    const candGeo    = String(safeExtractArr_(r, RI.candGeo) || '[]').trim();
 
     // หา FACT_DELIVERY row
-    var factIdx = factLookup[srcRecId];
+    const factIdx = factLookup[srcRecId];
     if (factIdx === undefined) {
       stats.notFound++;
       continue;
     }
 
     // Package rowData เพื่อส่งให้ group helpers
-    var rowData = {
+    const rowData = {
       issueType: issueType,
       score: score,
       srcRecId: srcRecId,
@@ -1232,7 +1232,7 @@ function reprocProcessAllRows_(ctx, startTime, timeLimit) {
  * @private
  */
 function reprocApplyFactUpdate_(factData, factIdx, FI, fields, now) {
-  var row = factData[factIdx];
+  const row = factData[factIdx];
   if (fields.personId        && FI.personId        >= 0) row[FI.personId]        = fields.personId;
   if (fields.placeId         && FI.placeId         >= 0) row[FI.placeId]         = fields.placeId;
   if (fields.geoId           && FI.geoId           >= 0) row[FI.geoId]           = fields.geoId;
@@ -1278,7 +1278,7 @@ function reprocApplyReviewUpdate_(r, RI, decision, note, now) {
  */
 function reprocCreateDestinationViaGateway_(rowData, personId, placeId, geoId, stats, groupId) {
   if (!((personId || placeId) && geoId)) return null;
-  var result = reprocCreateDestinationForReview_(personId, placeId, geoId, rowData.rawLat, rowData.rawLng);
+  const result = reprocCreateDestinationForReview_(personId, placeId, geoId, rowData.rawLat, rowData.rawLng);
   if (result.destId) {
     stats.destCreated++;
     return result.destId;
@@ -1305,13 +1305,13 @@ function reprocCreateDestinationViaGateway_(rowData, personId, placeId, geoId, s
  */
 function reprocGroupA_YellowWithName_(r, factData, factIdx, rowData, RI, FI, now, stats) {
   try {
-    var personId = extractFirstId_(rowData.candPerson);
-    var placeId  = extractFirstId_(rowData.candPlace);
-    var geoId    = extractFirstId_(rowData.candGeo);
+    const personId = extractFirstId_(rowData.candPerson);
+    const placeId  = extractFirstId_(rowData.candPlace);
+    const geoId    = extractFirstId_(rowData.candGeo);
 
-    var destId = reprocCreateDestinationViaGateway_(rowData, personId, placeId, geoId, stats, 'A');
+    const destId = reprocCreateDestinationViaGateway_(rowData, personId, placeId, geoId, stats, 'A');
 
-    var ev = 'geo_nearby_50_200m';
+    let ev = 'geo_nearby_50_200m';
     if (personId) ev += '|person_match';
     if (placeId) ev += '|place_match';
     ev += '|post_process_v55';
@@ -1341,29 +1341,29 @@ function reprocGroupA_YellowWithName_(r, factData, factIdx, rowData, RI, FI, now
  */
 function reprocGroupB_NewRecordWithGeo_(r, factData, factIdx, rowData, RI, FI, now, stats) {
   try {
-    var geoId = extractFirstId_(rowData.candGeo);
-    var personId = null;
-    var placeId = null;
-    var destId = null;
+    const geoId = extractFirstId_(rowData.candGeo);
+    let personId = null;
+    let placeId = null;
+    let destId = null;
 
     // [REF-001] Person: resolve-or-create via Group 1 public helper (no direct createPerson)
     if (rowData.rawPerson) {
-      var pResult = reprocResolveOrCreatePersonForReview_(rowData.rawPerson);
+      const pResult = reprocResolveOrCreatePersonForReview_(rowData.rawPerson);
       personId = pResult.personId;
       if (pResult.error) stats.errorList.push('Person-B: ' + rowData.srcRecId + ' - ' + pResult.error);
     }
 
     // [REF-001] Place: resolve-or-create via Group 1 public helper (no direct createPlace)
-    var placeInput = rowData.rawPlace || rowData.rawAddr || '';
+    const placeInput = rowData.rawPlace || rowData.rawAddr || '';
     if (placeInput) {
-      var plResult = reprocResolveOrCreatePlaceForReview_(rowData.rawPlace, rowData.rawAddr);
+      const plResult = reprocResolveOrCreatePlaceForReview_(rowData.rawPlace, rowData.rawAddr);
       placeId = plResult.placeId;
       if (plResult.error) stats.errorList.push('Place-B: ' + rowData.srcRecId + ' - ' + plResult.error);
     }
 
     // [REF-001] Destination: create via Group 1 public helper (no direct createDestination)
     if ((personId || placeId) && geoId) {
-      var dResult = reprocCreateDestinationForReview_(personId, placeId, geoId, rowData.rawLat, rowData.rawLng);
+      const dResult = reprocCreateDestinationForReview_(personId, placeId, geoId, rowData.rawLat, rowData.rawLng);
       destId = dResult.destId;
       if (dResult.destId) stats.destCreated++;
       if (dResult.error) stats.errorList.push('Dest-B: ' + rowData.srcRecId + ' - ' + dResult.error);
@@ -1395,13 +1395,13 @@ function reprocGroupB_NewRecordWithGeo_(r, factData, factIdx, rowData, RI, FI, n
  */
 function reprocGroupC_FuzzyHighScore_(r, factData, factIdx, rowData, RI, FI, now, stats) {
   try {
-    var personId = extractFirstId_(rowData.candPerson);
-    var placeId  = extractFirstId_(rowData.candPlace);
-    var geoId    = extractFirstId_(rowData.candGeo);
+    const personId = extractFirstId_(rowData.candPerson);
+    const placeId  = extractFirstId_(rowData.candPlace);
+    const geoId    = extractFirstId_(rowData.candGeo);
 
-    var destId = reprocCreateDestinationViaGateway_(rowData, personId, placeId, geoId, stats, 'C');
+    const destId = reprocCreateDestinationViaGateway_(rowData, personId, placeId, geoId, stats, 'C');
 
-    var ev = 'fuzzy_score_' + rowData.score;
+    let ev = 'fuzzy_score_' + rowData.score;
     if (geoId) ev += '|geo_confirm';
     ev += '|post_process_v55';
 
@@ -1429,14 +1429,14 @@ function reprocGroupC_FuzzyHighScore_(r, factData, factIdx, rowData, RI, FI, now
  * @param {number} startTime - timestamp เริ่มต้น (สำหรับ elapsed calculation)
  */
 function reprocBatchWriteAndReport_(ctx, stats, startTime) {
-  var reviewSheet = ctx.reviewSheet;
-  var factSheet = ctx.factSheet;
-  var reviewData = ctx.reviewData;
-  var factData = ctx.factData;
-  var reviewCols = ctx.reviewCols;
-  var factCols = ctx.factCols;
-  var reviewLastRow = ctx.reviewLastRow;
-  var startIdx = ctx.startIdx;
+  const reviewSheet = ctx.reviewSheet;
+  const factSheet = ctx.factSheet;
+  const reviewData = ctx.reviewData;
+  const factData = ctx.factData;
+  const reviewCols = ctx.reviewCols;
+  const factCols = ctx.factCols;
+  const reviewLastRow = ctx.reviewLastRow;
+  const startIdx = ctx.startIdx;
 
   // ═══════════════════════════════════════
   // PHASE 4: เขียนข้อมูลกลับ (Batch Write)
@@ -1462,11 +1462,11 @@ function reprocBatchWriteAndReport_(ctx, stats, startTime) {
   // ═══════════════════════════════════════
   // PHASE 5: รายงานผล
   // ═══════════════════════════════════════
-  var totalResolved = stats.groupA + stats.groupB + stats.groupC;
-  var elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  var remaining = (reviewLastRow - 1) - totalResolved - startIdx;
+  const totalResolved = stats.groupA + stats.groupB + stats.groupC;
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  const remaining = (reviewLastRow - 1) - totalResolved - startIdx;
 
-  var msg =
+  let msg =
     '✅ Post-Processor ' + (stats.timedOut ? 'หยุดกลางคัน (Time Guard)' : 'เสร็จสมบูรณ์') + ' (' + elapsed + ' วินาที)\n\n' +
     (startIdx > 0 ? '🔄 Resume จากแถว ' + (startIdx + 1) + '\n\n' : '') +
     '━━━ ผลลัพธ์ ━━━\n' +
@@ -1485,7 +1485,7 @@ function reprocBatchWriteAndReport_(ctx, stats, startTime) {
   }
 
   if (stats.errorList.length > 0) {
-    var showErrors = stats.errorList.slice(0, 5);
+    const showErrors = stats.errorList.slice(0, 5);
     msg += '\n\n⚠️ Error ตัวอย่าง:\n' + showErrors.join('\n');
     if (stats.errorList.length > 5) {
       msg += '\n... และอีก ' + (stats.errorList.length - 5) + ' errors (ดูใน SYS_LOG)';
@@ -1524,10 +1524,10 @@ function saveReprocessCheckpoint_(idx) {
  * @return {{ startIdx: number, timestamp: number }}
  */
 function loadReprocessCheckpoint_() {
-  var raw = PropertiesService.getScriptProperties().getProperty(REPROCESS_REVIEW_CHECKPOINT_KEY);
+  const raw = PropertiesService.getScriptProperties().getProperty(REPROCESS_REVIEW_CHECKPOINT_KEY);
   if (!raw) return { startIdx: 0 };
   try {
-    var cp = JSON.parse(raw);
+    const cp = JSON.parse(raw);
     // Stale protection: เก่ากว่า 24 ชม. → clear
     if (cp.timestamp && (Date.now() - cp.timestamp) > 24 * 60 * 60 * 1000) {
       clearReprocessCheckpoint_();

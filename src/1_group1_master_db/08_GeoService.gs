@@ -106,12 +106,12 @@ function resolveGeo(lat, lng) {
 
   let bestGeo = null;
   let minDist = Infinity;
-  let nearbyGeos = []; // เก็บพิกัดทั้งหมดในระยะ 100 เมตร
+  const nearbyGeos = []; // เก็บพิกัดทั้งหมดในระยะ 100 เมตร
 
   candidates.forEach(geo => {
     const distM = haversineDistanceM(numLat, numLng, geo.lat, geo.lng);
     if (distM < minDist) { minDist = distM; bestGeo = geo; }
-    
+
     // [UPGRADE v5.2.005] เก็บผู้ท้าชิงที่อยู่ในระยะ 100 เมตร
     if (distM <= 100) {
       nearbyGeos.push({ id: geo.geoId, dist: distM });
@@ -241,81 +241,81 @@ function buildGridKey_(lat, lng) {
 function createGeoPoint(lat, lng, source, resolvedAddr, province, district, placeId) {
   try {
   // [FIX v003] Validate เป็น Number จริง
-  const numLat = Number(lat);
-  const numLng = Number(lng);
+    const numLat = Number(lat);
+    const numLng = Number(lng);
 
-  if (isNaN(numLat) || isNaN(numLng)) {
-    logError('GeoService', `createGeoPoint: lat/lng ไม่ใช่ตัวเลข (${lat}, ${lng})`, new Error('INVALID_LATLNG'));
-    return null;
-  }
+    if (isNaN(numLat) || isNaN(numLng)) {
+      logError('GeoService', `createGeoPoint: lat/lng ไม่ใช่ตัวเลข (${lat}, ${lng})`, new Error('INVALID_LATLNG'));
+      return null;
+    }
 
-  // [FIX v5.5.001] Validate lat/lng bounds
-  if (numLat < -90 || numLat > 90) {
-    logError('GeoService', `createGeoPoint: lat ออกนอกช่วง [-90, 90] (${numLat})`, new Error('LAT_OUT_OF_RANGE'));
-    return null;
-  }
-  if (numLng < -180 || numLng > 180) {
-    logError('GeoService', `createGeoPoint: lng ออกนอกช่วง [-180, 180] (${numLng})`, new Error('LNG_OUT_OF_RANGE'));
-    return null;
-  }
+    // [FIX v5.5.001] Validate lat/lng bounds
+    if (numLat < -90 || numLat > 90) {
+      logError('GeoService', `createGeoPoint: lat ออกนอกช่วง [-90, 90] (${numLat})`, new Error('LAT_OUT_OF_RANGE'));
+      return null;
+    }
+    if (numLng < -180 || numLng > 180) {
+      logError('GeoService', `createGeoPoint: lng ออกนอกช่วง [-180, 180] (${numLng})`, new Error('LNG_OUT_OF_RANGE'));
+      return null;
+    }
 
-  // [FIX v5.2.008] Fallback Logic: ถ้าข้อมูลพื้นที่ว่าง (มักเกิดจาก Plus Code) ให้ดึงจาก M_PLACE มาเติม
-  let finalProv = province || '';
-  let finalDist = district || '';
-  let extractionMethod = 'google';
+    // [FIX v5.2.008] Fallback Logic: ถ้าข้อมูลพื้นที่ว่าง (มักเกิดจาก Plus Code) ให้ดึงจาก M_PLACE มาเติม
+    let finalProv = province || '';
+    let finalDist = district || '';
+    let extractionMethod = 'google';
 
-  if ((!finalProv || !finalDist) && (resolvedAddr || '').includes('+')) {
-    if (typeof lookupPlaceAdminById_ === 'function') {
-      const fallback = lookupPlaceAdminById_(placeId);
-      if (fallback) {
-        if (!finalProv) finalProv = fallback.province;
-        if (!finalDist) finalDist = fallback.district;
-        extractionMethod = 'place_fallback';
+    if ((!finalProv || !finalDist) && (resolvedAddr || '').includes('+')) {
+      if (typeof lookupPlaceAdminById_ === 'function') {
+        const fallback = lookupPlaceAdminById_(placeId);
+        if (fallback) {
+          if (!finalProv) finalProv = fallback.province;
+          if (!finalDist) finalDist = fallback.district;
+          extractionMethod = 'place_fallback';
+        }
       }
     }
-  }
 
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET.M_GEO_POINT);
-  if (!sheet) {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.M_GEO_POINT);
+    if (!sheet) {
     // [FIX CodeQL js/automatic-semicolon-insertion V5.5.035] เพิ่ม semicolon ที่ขาด
-    logError('GeoService', `ไม่พบชีต ${SHEET.M_GEO_POINT}`, new Error('SHEET_NOT_FOUND'));
-    return null;
-  }
-  const now   = new Date();
-  const newId = generateShortId('G');
+      logError('GeoService', `ไม่พบชีต ${SHEET.M_GEO_POINT}`, new Error('SHEET_NOT_FOUND'));
+      return null;
+    }
+    const now   = new Date();
+    const newId = generateShortId('G');
 
-  // กำหนด default confidence ตาม source
-  let defaultConf = 85;
-  if (source === 'maps')   defaultConf = 90;
-  if (source === 'manual') defaultConf = 75;
-  if (source === 'driver') defaultConf = 80;
+    // กำหนด default confidence ตาม source
+    let defaultConf = 85;
+    if (source === 'maps')   defaultConf = 90;
+    if (source === 'manual') defaultConf = 75;
+    if (source === 'driver') defaultConf = 80;
 
-  const newRow = [
-    newId,
-    numLat,
-    numLng,
-    AI_CONFIG.GEO_RADIUS_M,
-    resolvedAddr || '',
-    finalProv,
-    finalDist,
-    source || 'driver',
-    defaultConf,
-    now, now, 1,
-    APP_CONST.STATUS_ACTIVE,
-    extractionMethod // [NEW v5.2.008] บันทึกแหล่งที่มาเพื่อ Audit
-  ];
+    const newRow = [
+      newId,
+      numLat,
+      numLng,
+      AI_CONFIG.GEO_RADIUS_M,
+      resolvedAddr || '',
+      finalProv,
+      finalDist,
+      source || 'driver',
+      defaultConf,
+      now, now, 1,
+      APP_CONST.STATUS_ACTIVE,
+      extractionMethod // [NEW v5.2.008] บันทึกแหล่งที่มาเพื่อ Audit
+    ];
 
-  // [FIX v5.2.002] ใช้ getRange + setValues แทน appendRow เพื่อความแม่นยำสูง
-  const lastRow = sheet.getLastRow();
-  sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
-  
-  // [FIX Phase-B #11] Defer invalidateGeoCache_() — set dirty flag instead of calling immediately
-  //   Caller (10_MatchEngine.flushBatches_ / finalize) จะเรียก flushGeoCacheIfDirty_() ครั้งเดียว
-  //   ลด API calls จาก N (เท่ากับจำนวน CREATE_NEW) เหลือ 1 ต่อ batch
-  _GEO_CACHE_DIRTY = true;
-  logDebug('GeoService', `createGeoPoint: ${newId} — ${finalProv} ${finalDist} (${extractionMethod})`);
-  return newId;
+    // [FIX v5.2.002] ใช้ getRange + setValues แทน appendRow เพื่อความแม่นยำสูง
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
+
+    // [FIX Phase-B #11] Defer invalidateGeoCache_() — set dirty flag instead of calling immediately
+    //   Caller (10_MatchEngine.flushBatches_ / finalize) จะเรียก flushGeoCacheIfDirty_() ครั้งเดียว
+    //   ลด API calls จาก N (เท่ากับจำนวน CREATE_NEW) เหลือ 1 ต่อ batch
+    _GEO_CACHE_DIRTY = true;
+    logDebug('GeoService', `createGeoPoint: ${newId} — ${finalProv} ${finalDist} (${extractionMethod})`);
+    return newId;
   } catch (err) {
     // [FIX B3 v5.5.002] เพิ่ม try-catch ตาม Rule 12
     logError('GeoService', `createGeoPoint ล้มเหลว: ${err.message}`, err);
@@ -387,7 +387,7 @@ function loadAllGeos_() {
   const cacheKey = 'M_GEO_ALL';
   const cache    = CacheService.getScriptCache();
   // [PERF-004] [REF-010] ใช้ centralized loadChunkedCache_ จาก 14_Utils.gs
-  var cachedData = loadChunkedCache_(cache, cacheKey);
+  const cachedData = loadChunkedCache_(cache, cacheKey);
   if (cachedData) return cachedData;
 
   const ss    = SpreadsheetApp.getActiveSpreadsheet();

@@ -144,42 +144,42 @@ function resetSourceSyncStatus() {
   }
   // [FIX BUG-04 v5.4.003] หุ้ม try-catch ครอบทั้งฟังก์ชัน — ก่อนหน้านี้ ui.alert() นอก try-catch ทำให้ throw ได้
   try {
-  const ui = SpreadsheetApp.getUi();
-  const resp = ui.alert(
-    '🔄 ยืนยันการรีเซ็ตสถานะ?',
-    'ระบบจะล้างค่าในคอลัมน์ SYNC_STATUS ของชีตต้นทางทั้งหมด\n' +
+    const ui = SpreadsheetApp.getUi();
+    const resp = ui.alert(
+      '🔄 ยืนยันการรีเซ็ตสถานะ?',
+      'ระบบจะล้างค่าในคอลัมน์ SYNC_STATUS ของชีตต้นทางทั้งหมด\n' +
     'เพื่อให้ระบบกลับมาประมวลผลแถวเหล่านั้นใหม่อีกครั้งเมื่อกด Run Pipeline\n\n' +
     'ยืนยันการดำเนินการหรือไม่?',
-    ui.ButtonSet.YES_NO
-  );
-  
-  if (resp !== ui.Button.YES) return;
+      ui.ButtonSet.YES_NO
+    );
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET.SOURCE);
-  if (!sheet) {
+    if (resp !== ui.Button.YES) return;
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.SOURCE);
+    if (!sheet) {
     // [FIX BUG-04 v5.5.001] เปลี่ยน ui.alert() เป็น safeUiAlert_()
-    safeUiAlert_('❌ ไม่พบชีตต้นทาง: ' + SHEET.SOURCE);
-    return;
-  }
+      safeUiAlert_('❌ ไม่พบชีตต้นทาง: ' + SHEET.SOURCE);
+      return;
+    }
 
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
     // [FIX BUG-04 v5.5.001] เปลี่ยน ui.alert() เป็น safeUiAlert_()
-    safeUiAlert_('ℹ️ ไม่มีข้อมูลให้รีเซ็ต');
-    return;
-  }
+      safeUiAlert_('ℹ️ ไม่มีข้อมูลให้รีเซ็ต');
+      return;
+    }
 
-  // คอลัมน์ SYNC_STATUS (Index 36 = คอลัมน์ AK)
-  const colIdx = SRC_IDX.SYNC_STATUS + 1; 
-  
-  sheet.getRange(2, colIdx, lastRow - 1, 1).clearContent();
-  // ระบายสีพื้นหลังกลับเป็นปกติ
-  sheet.getRange(2, colIdx, lastRow - 1, 1).setBackground(null);
-  
-  // [FIX BUG-04 v5.5.001] เปลี่ยน ui.alert() เป็น safeUiAlert_()
-  safeUiAlert_('✅ รีเซ็ตสถานะสำเร็จ!\n\nคุณสามารถกดเมนู "Run Full Pipeline" เพื่อเริ่มประมวลผลใหม่ได้เลยครับ');
-  logInfo('Utils', 'รีเซ็ตสถานะ SYNC ในชีตต้นทางเรียบร้อยแล้ว');
+    // คอลัมน์ SYNC_STATUS (Index 36 = คอลัมน์ AK)
+    const colIdx = SRC_IDX.SYNC_STATUS + 1;
+
+    sheet.getRange(2, colIdx, lastRow - 1, 1).clearContent();
+    // ระบายสีพื้นหลังกลับเป็นปกติ
+    sheet.getRange(2, colIdx, lastRow - 1, 1).setBackground(null);
+
+    // [FIX BUG-04 v5.5.001] เปลี่ยน ui.alert() เป็น safeUiAlert_()
+    safeUiAlert_('✅ รีเซ็ตสถานะสำเร็จ!\n\nคุณสามารถกดเมนู "Run Full Pipeline" เพื่อเริ่มประมวลผลใหม่ได้เลยครับ');
+    logInfo('Utils', 'รีเซ็ตสถานะ SYNC ในชีตต้นทางเรียบร้อยแล้ว');
   } catch (err) {
     logError('Utils', 'resetSourceSyncStatus ล้มเหลว: ' + err.message, err);
     safeUiAlert_('❌ เกิดข้อผิดพลาด: ' + err.message);
@@ -211,7 +211,7 @@ function haversineDistanceM(lat1, lng1, lat2, lng2) {
   // [FIX v003] clamp aVal ให้อยู่ใน [0,1] ป้องกัน Floating Point error
   const safeAVal    = Math.min(1, Math.max(0, aVal));
   const centralAngle = 2 * Math.atan2(Math.sqrt(safeAVal),
-                                       Math.sqrt(1 - safeAVal));
+    Math.sqrt(1 - safeAVal));
   return earthRadius * centralAngle;
 }
 
@@ -329,7 +329,7 @@ function callGeminiAPI(prompt, modelName = AI_CONFIG.MODEL) {
   // [SEC-006] เปลี่ยนจาก Query Parameter → x-goog-api-key Header
   // ลดความเสี่ยง API Key รั่วผ่าน Stackdriver Logging
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-  
+
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: {
@@ -408,8 +408,8 @@ function callGeminiAPI(prompt, modelName = AI_CONFIG.MODEL) {
 function cleanAIResponse_(text) {
   if (!text) return '';
   return text.replace(/```json/g, '')
-             .replace(/```/g, '')
-             .trim();
+    .replace(/```/g, '')
+    .trim();
 }
 
 /**
@@ -450,7 +450,7 @@ function callSpreadsheetWithRetry(apiFunc, maxRetries = 3, baseDelayMs = 500) {
 
 /**
  * normalizeInvoiceNo — [NEW v5.2.016] จัดรูปแบบเลขที่ Invoice ให้เป็น String ปกติ
- * ช่วยป้องกันความซ้ำซ้อนและการประมวลผลวนลูปเมื่อ Google อ่านค่า 122,206,552,193,122,000,000,000 
+ * ช่วยป้องกันความซ้ำซ้อนและการประมวลผลวนลูปเมื่อ Google อ่านค่า 122,206,552,193,122,000,000,000
  * เป็น e-notation (เช่น 1.22206552193122e+23) หรือมีลูกน้ำปนเป
  * @param {*} inv - เลขที่ Invoice
  * @return {string}
@@ -536,9 +536,9 @@ function safeUiAlert_(message, title) {
  */
 function withEntryPointGuard_(moduleName, fnName, fn, options) {
   options = options || {};
-  var lock = options.lock;
-  var showAlert = options.showAlert !== false;
-  var errorPrefix = options.errorPrefix || 'ล้มเหลว: ';
+  const lock = options.lock;
+  const showAlert = options.showAlert !== false;
+  const errorPrefix = options.errorPrefix || 'ล้มเหลว: ';
 
   try {
     return fn();
@@ -575,8 +575,8 @@ function withEntryPointGuard_(moduleName, fnName, fn, options) {
  */
 function hasTimePassed_(startTime, limitMs, bufferMs) {
   if (!startTime) return false;
-  var effectiveLimit = limitMs || (typeof AI_CONFIG !== 'undefined' ? AI_CONFIG.TIME_LIMIT_MS : 300000);
-  var effectiveBuffer = (typeof bufferMs === 'number') ? bufferMs : 30000;
+  const effectiveLimit = limitMs || (typeof AI_CONFIG !== 'undefined' ? AI_CONFIG.TIME_LIMIT_MS : 300000);
+  const effectiveBuffer = (typeof bufferMs === 'number') ? bufferMs : 30000;
   return (new Date() - startTime) > (effectiveLimit - effectiveBuffer);
 }
 
@@ -593,8 +593,8 @@ function hasTimePassed_(startTime, limitMs, bufferMs) {
  */
 function convertUuidToPersonId(masterUuid) {
   if (!masterUuid) return null;
-  var allPersons = loadAllPersons_();
-  var hit = allPersons.find(function(p) { return p.masterUuid === masterUuid; });
+  const allPersons = loadAllPersons_();
+  const hit = allPersons.find(function(p) { return p.masterUuid === masterUuid; });
   return hit ? hit.personId : null;
 }
 
@@ -604,8 +604,8 @@ function convertUuidToPersonId(masterUuid) {
  */
 function convertUuidToPlaceId(masterUuid) {
   if (!masterUuid) return null;
-  var allPlaces = loadAllPlaces_();
-  var hit = allPlaces.find(function(p) { return p.masterUuid === masterUuid; });
+  const allPlaces = loadAllPlaces_();
+  const hit = allPlaces.find(function(p) { return p.masterUuid === masterUuid; });
   return hit ? hit.placeId : null;
 }
 
@@ -615,8 +615,8 @@ function convertUuidToPlaceId(masterUuid) {
  */
 function convertPersonIdToUuid(personId) {
   if (!personId) return null;
-  var allPersons = loadAllPersons_();
-  var hit = allPersons.find(function(p) { return p.personId === personId; });
+  const allPersons = loadAllPersons_();
+  const hit = allPersons.find(function(p) { return p.personId === personId; });
   return hit ? hit.masterUuid : null;
 }
 
@@ -626,8 +626,8 @@ function convertPersonIdToUuid(personId) {
  */
 function convertPlaceIdToUuid(placeId) {
   if (!placeId) return null;
-  var allPlaces = loadAllPlaces_();
-  var hit = allPlaces.find(function(p) { return p.placeId === placeId; });
+  const allPlaces = loadAllPlaces_();
+  const hit = allPlaces.find(function(p) { return p.placeId === placeId; });
   return hit ? hit.masterUuid : null;
 }
 
@@ -665,8 +665,8 @@ function isAuthorizedUser_() {
       const maskedNoAdmin = (typeof maskReviewerEmail_ === 'function')
         ? maskReviewerEmail_(email)
         : (email.length > 2
-            ? email[0] + '***' + email[email.length - 1] + '@' + (email.split('@')[1] || 'unknown')
-            : email[0] + '***@' + (email.split('@')[1] || 'unknown'));
+          ? email[0] + '***' + email[email.length - 1] + '@' + (email.split('@')[1] || 'unknown')
+          : email[0] + '***@' + (email.split('@')[1] || 'unknown'));
       logWarn('Security', `[SEC-001] LMDS_ADMINS ยังไม่ได้ตั้ง — ปฏิเสธ: ${maskedNoAdmin}`);
       return false;
     }
@@ -679,8 +679,8 @@ function isAuthorizedUser_() {
       const masked = (typeof maskReviewerEmail_ === 'function')
         ? maskReviewerEmail_(email)
         : (email.length > 2
-            ? email[0] + '***' + email[email.length - 1] + '@' + (email.split('@')[1] || 'unknown')
-            : email[0] + '***@' + (email.split('@')[1] || 'unknown'));
+          ? email[0] + '***' + email[email.length - 1] + '@' + (email.split('@')[1] || 'unknown')
+          : email[0] + '***@' + (email.split('@')[1] || 'unknown'));
       logWarn('Security', `[SEC-002] ปฏิเสธการเข้าถึง: ${masked} ไม่อยู่ในรายชื่อ Admin`);
     }
 
@@ -778,24 +778,24 @@ function setupAdminList_UI() {
  * @param {Function} [extraUpdatesFn] - Optional callback(row, id) for extra field updates
  */
 function batchUpdateEntityStats_(sheetName, idxObj, idColIdx, usageCountIdx, lastSeenIdx, idSet, cacheFn, extraUpdatesFn) {
-  var ids = (idSet instanceof Set) ? Array.from(idSet) : (Array.isArray(idSet) ? idSet : [idSet]);
+  const ids = (idSet instanceof Set) ? Array.from(idSet) : (Array.isArray(idSet) ? idSet : [idSet]);
   if (ids.length === 0) return;
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) return;
-  var lastRow = sheet.getLastRow();
+  const lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
-  var allIdx = Object.keys(idxObj).map(function(k) { return idxObj[k]; });
-  var minCol = Math.min.apply(null, allIdx) + 1;
-  var maxCol = Math.max.apply(null, allIdx) + 1;
-  var numCols = maxCol - minCol + 1;
-  var allData = sheet.getRange(2, minCol, lastRow - 1, numCols).getValues();
-  var idOffset = idColIdx - (minCol - 1);
-  var usageOffset = usageCountIdx - (minCol - 1);
-  var seenOffset = lastSeenIdx - (minCol - 1);
-  var now = new Date();
-  var updated = 0;
+  const allIdx = Object.keys(idxObj).map(function(k) { return idxObj[k]; });
+  const minCol = Math.min.apply(null, allIdx) + 1;
+  const maxCol = Math.max.apply(null, allIdx) + 1;
+  const numCols = maxCol - minCol + 1;
+  const allData = sheet.getRange(2, minCol, lastRow - 1, numCols).getValues();
+  const idOffset = idColIdx - (minCol - 1);
+  const usageOffset = usageCountIdx - (minCol - 1);
+  const seenOffset = lastSeenIdx - (minCol - 1);
+  const now = new Date();
+  let updated = 0;
   ids.forEach(function(id) {
-    for (var i = 0; i < allData.length; i++) {
+    for (let i = 0; i < allData.length; i++) {
       if (String(allData[i][idOffset]) === String(id)) {
         allData[i][usageOffset] = (Number(allData[i][usageOffset]) || 0) + 1;
         allData[i][seenOffset] = now;
@@ -834,28 +834,28 @@ function batchUpdateEntityStats_(sheetName, idxObj, idColIdx, usageCountIdx, las
  */
 function saveChunkedCache_(cache, keyPrefix, data, optChunkSizeKB) {
   // [FIX v5.5.010] ลด chunk size จาก 90KB → 80KB (safety margin สำหรับ JSON overhead)
-  var CHUNK_SIZE_BYTES = (optChunkSizeKB || 80) * 1000; // 80 KB = 80,000 chars
-  var ttl = (typeof AI_CONFIG !== 'undefined' && AI_CONFIG.CACHE_TTL_SEC) ? AI_CONFIG.CACHE_TTL_SEC : 21600;
+  const CHUNK_SIZE_BYTES = (optChunkSizeKB || 80) * 1000; // 80 KB = 80,000 chars
+  const ttl = (typeof AI_CONFIG !== 'undefined' && AI_CONFIG.CACHE_TTL_SEC) ? AI_CONFIG.CACHE_TTL_SEC : 21600;
 
   // [FIX v5.5.010] จำนวน chunks ต่อ putAll batch — 5 chunks × 80KB = 400KB ต่อ call
   // GAS putAll limit ~1MB total payload, ใช้ 400KB เผื่อ safety margin
-  var BATCH_SIZE = 5;
+  const BATCH_SIZE = 5;
 
-  var json = JSON.stringify(data);
+  const json = JSON.stringify(data);
 
   // [FIX v5.5.008 P2 #13] Helper: ล้าง orphaned chunks จาก previous large-cache write
-  var cleanupOrphanedChunks_ = function(currentNumChunks) {
+  const cleanupOrphanedChunks_ = function(currentNumChunks) {
     try {
-      var prevChunksStr = cache.get(keyPrefix + '_CHUNKS');
+      const prevChunksStr = cache.get(keyPrefix + '_CHUNKS');
       if (!prevChunksStr) return;
-      var prevNumChunks = Number(prevChunksStr);
+      const prevNumChunks = Number(prevChunksStr);
       if (isNaN(prevNumChunks)) return;
 
-      var orphanStart = currentNumChunks;
+      const orphanStart = currentNumChunks;
       if (orphanStart >= prevNumChunks) return;
 
-      var orphanKeys = [];
-      for (var i = orphanStart; i < prevNumChunks; i++) {
+      const orphanKeys = [];
+      for (let i = orphanStart; i < prevNumChunks; i++) {
         orphanKeys.push(keyPrefix + '_' + i);
       }
       if (orphanKeys.length > 0) {
@@ -884,16 +884,16 @@ function saveChunkedCache_(cache, keyPrefix, data, optChunkSizeKB) {
   }
 
   // [FIX v5.5.007] แบ่งข้อมูลตามขนาด KB แทนจำนวน items
-  var numChunks = Math.ceil(json.length / CHUNK_SIZE_BYTES);
+  const numChunks = Math.ceil(json.length / CHUNK_SIZE_BYTES);
 
   // [PERF] สร้าง cache entries ทั้งหมดใน RAM ก่อน
-  var cacheEntries = {};
+  const cacheEntries = {};
   cacheEntries[keyPrefix + '_CHUNKS'] = String(numChunks);
 
-  for (var i = 0; i < numChunks; i++) {
-    var start = i * CHUNK_SIZE_BYTES;
-    var end = Math.min(start + CHUNK_SIZE_BYTES, json.length);
-    var chunk = json.substring(start, end);
+  for (let i = 0; i < numChunks; i++) {
+    const start = i * CHUNK_SIZE_BYTES;
+    const end = Math.min(start + CHUNK_SIZE_BYTES, json.length);
+    const chunk = json.substring(start, end);
 
     // [SAFETY] ตรวจสอบขนาด chunk ก่อนเขียน
     if (chunk.length > 95000) {
@@ -908,18 +908,18 @@ function saveChunkedCache_(cache, keyPrefix, data, optChunkSizeKB) {
   // Root cause: GAS putAll มี limit total payload size (~1MB ต่อ call)
   // เมื่อมี 48 chunks × 90KB = 4.3MB → "อาร์กิวเมนต์มากเกินไป: value" error
   // ตอนนี้แบ่งเป็น batch 5 chunks ต่อ putAll (5 × 80KB = 400KB ต่อ call)
-  var allKeys = Object.keys(cacheEntries);
-  var totalBatches = Math.ceil(allKeys.length / BATCH_SIZE);
-  var successBatches = 0;
-  var failedChunks = [];
+  const allKeys = Object.keys(cacheEntries);
+  const totalBatches = Math.ceil(allKeys.length / BATCH_SIZE);
+  let successBatches = 0;
+  const failedChunks = [];
 
-  for (var batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
-    var batchStart = batchIdx * BATCH_SIZE;
-    var batchEnd = Math.min(batchStart + BATCH_SIZE, allKeys.length);
-    var batchEntries = {};
+  for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+    const batchStart = batchIdx * BATCH_SIZE;
+    const batchEnd = Math.min(batchStart + BATCH_SIZE, allKeys.length);
+    const batchEntries = {};
 
-    for (var j = batchStart; j < batchEnd; j++) {
-      var key = allKeys[j];
+    for (let j = batchStart; j < batchEnd; j++) {
+      const key = allKeys[j];
       batchEntries[key] = cacheEntries[key];
     }
 
@@ -931,7 +931,7 @@ function saveChunkedCache_(cache, keyPrefix, data, optChunkSizeKB) {
       logWarn('Utils', 'saveChunkedCache_ putAll batch ' + (batchIdx + 1) + '/' + totalBatches +
               ' ล้มเหลว: ' + batchErr.message + ' — ลองเขียนทีละ chunk');
 
-      for (var k in batchEntries) {
+      for (const k in batchEntries) {
         try {
           cache.put(k, batchEntries[k], ttl);
         } catch (chunkErr) {
@@ -957,65 +957,65 @@ function saveChunkedCache_(cache, keyPrefix, data, optChunkSizeKB) {
 /**
  * loadChunkedCache_ — [REF-010] Centralized chunked cache reader
  * [FIX v5.5.007] ใช้ getAll() สำหรับ batch read — เร็วขึ้น 5-10 เท่า
- * 
+ *
  * @param {CacheService.Cache} cache - CacheService instance
  * @param {string} keyPrefix - Base key prefix for cache entries
  * @return {*|null} Parsed data or null if not found
  */
 function loadChunkedCache_(cache, keyPrefix) {
   // [FAST PATH] ลองอ่านแบบ single key ก่อน
-  var single = cache.get(keyPrefix);
+  const single = cache.get(keyPrefix);
   if (single) {
-    try { 
-      var result = JSON.parse(single);
+    try {
+      const result = JSON.parse(single);
       logDebug('Utils', 'loadChunkedCache_: ' + keyPrefix + ' — single get (' + single.length + ' chars)');
       return result;
-    } catch (e) { 
-      logDebug('Utils', 'loadChunkedCache_ single parse error: ' + e.message); 
+    } catch (e) {
+      logDebug('Utils', 'loadChunkedCache_ single parse error: ' + e.message);
     }
   }
-  
+
   // [CHUNKED PATH] อ่าน chunk count
-  var chunkCountStr = cache.get(keyPrefix + '_CHUNKS');
+  const chunkCountStr = cache.get(keyPrefix + '_CHUNKS');
   if (!chunkCountStr) {
     logDebug('Utils', 'loadChunkedCache_: ' + keyPrefix + ' — ไม่พบ data');
     return null;
   }
-  
-  var totalChunks = Number(chunkCountStr);
+
+  const totalChunks = Number(chunkCountStr);
   if (isNaN(totalChunks) || totalChunks <= 0) {
     logWarn('Utils', 'loadChunkedCache_: ' + keyPrefix + ' — _CHUNKS ไม่ถูกต้อง: ' + chunkCountStr);
     return null;
   }
-  
+
   // [PERF] ใช้ getAll() สำหรับ batch read
-  var keys = [];
-  for (var i = 0; i < totalChunks; i++) {
+  const keys = [];
+  for (let i = 0; i < totalChunks; i++) {
     keys.push(keyPrefix + '_' + i);
   }
-  
-  var chunks;
+
+  let chunks;
   try {
     chunks = cache.getAll(keys);
   } catch (e) {
     logError('Utils', 'loadChunkedCache_ getAll ล้มเหลว: ' + e.message, e);
     return null;
   }
-  
+
   // รวม chunks
-  var jsonStr = '';
-  for (var j = 0; j < totalChunks; j++) {
-    var key = keyPrefix + '_' + j;
-    var chunk = chunks[key];
+  let jsonStr = '';
+  for (let j = 0; j < totalChunks; j++) {
+    const key = keyPrefix + '_' + j;
+    const chunk = chunks[key];
     if (!chunk) {
       logWarn('Utils', 'loadChunkedCache_: ขาด chunk ' + j + ' — cache ไม่สมบูรณ์');
       return null;
     }
     jsonStr += chunk;
   }
-  
+
   try {
-    var parsed = JSON.parse(jsonStr);
+    const parsed = JSON.parse(jsonStr);
     logDebug('Utils', 'loadChunkedCache_: ' + keyPrefix + ' — ' + totalChunks + ' chunks, ' + jsonStr.length + ' chars');
     return parsed;
   } catch (e) {
@@ -1037,12 +1037,12 @@ function loadChunkedCache_(cache, keyPrefix) {
  */
 function invalidateChunkedCache_(cacheKeyPrefix, ramVarResetFn, extraKeys) {
   if (typeof ramVarResetFn === 'function') ramVarResetFn();
-  var cache = CacheService.getScriptCache();
-  var keysToRemove = [cacheKeyPrefix];
-  var chunkCount = cache.get(cacheKeyPrefix + '_CHUNKS');
+  const cache = CacheService.getScriptCache();
+  let keysToRemove = [cacheKeyPrefix];
+  const chunkCount = cache.get(cacheKeyPrefix + '_CHUNKS');
   if (chunkCount) {
     keysToRemove.push(cacheKeyPrefix + '_CHUNKS');
-    for (var i = 0; i < Number(chunkCount); i++) {
+    for (let i = 0; i < Number(chunkCount); i++) {
       keysToRemove.push(cacheKeyPrefix + '_' + i);
     }
   }
@@ -1065,21 +1065,21 @@ function invalidateChunkedCache_(cacheKeyPrefix, ramVarResetFn, extraKeys) {
  * @return {Set<string>}
  */
 function buildGlobalAliasDedupSet_() {
-  var dedupSet = new Set();
+  const dedupSet = new Set();
   try {
-    var ss         = SpreadsheetApp.getActiveSpreadsheet();
-    var mAliasSheet = ss.getSheetByName(SHEET.M_ALIAS);
+    const ss         = SpreadsheetApp.getActiveSpreadsheet();
+    const mAliasSheet = ss.getSheetByName(SHEET.M_ALIAS);
     if (!mAliasSheet || mAliasSheet.getLastRow() < 2) return dedupSet;
 
-    var data = mAliasSheet.getRange(
+    const data = mAliasSheet.getRange(
       2, 1, mAliasSheet.getLastRow() - 1, SCHEMA[SHEET.M_ALIAS].length
     ).getValues();
 
     data.forEach(function(row) {
       if (row[ALIAS_IDX.ACTIVE_FLAG] !== true && String(row[ALIAS_IDX.ACTIVE_FLAG]).toUpperCase() !== 'TRUE') return;
-      var eType = String(row[ALIAS_IDX.ENTITY_TYPE] || '');
-      var mUuid = String(row[ALIAS_IDX.MASTER_UUID]  || '');
-      var norm  = normalizeForCompare(row[ALIAS_IDX.VARIANT_NAME]);
+      const eType = String(row[ALIAS_IDX.ENTITY_TYPE] || '');
+      const mUuid = String(row[ALIAS_IDX.MASTER_UUID]  || '');
+      const norm  = normalizeForCompare(row[ALIAS_IDX.VARIANT_NAME]);
       if (eType && mUuid && norm) {
         dedupSet.add(eType + '::' + mUuid + '::' + norm);
       }

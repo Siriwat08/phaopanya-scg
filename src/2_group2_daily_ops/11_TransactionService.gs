@@ -70,75 +70,75 @@
  */
 function upsertFactDelivery(srcObj, personId, placeId, geoId, destId, decision) {
   try {
-  const ss         = SpreadsheetApp.getActiveSpreadsheet();
-  const factSheet  = ss.getSheetByName(SHEET.FACT_DELIVERY);
-  if (!factSheet) {
-    logError('TransactionService', `ไม่พบชีต ${SHEET.FACT_DELIVERY}`, new Error('SHEET_NOT_FOUND'));
-    return null;
-  }
-
-  const existingRow = findFactRowByInvoice_(factSheet, srcObj.invoiceNo);
-  const now         = new Date();
-
-  // [FIX v003] เรียก getGeoLatLng_ ครั้งเดียว แล้ว destructure
-  // [FIX CRIT-001] เปลี่ยน initialization จาก 0 เป็น null — ป้องกันพิกัดถูกต้องถูกเขียนทับด้วย 0
-  let resolvedLat = null;
-  let resolvedLng = null;
-
-  if (geoId) {
-    const geoLL = getGeoLatLng_(geoId);
-    if (geoLL) {
-      resolvedLat = geoLL.lat;
-      resolvedLng = geoLL.lng;
+    const ss         = SpreadsheetApp.getActiveSpreadsheet();
+    const factSheet  = ss.getSheetByName(SHEET.FACT_DELIVERY);
+    if (!factSheet) {
+      logError('TransactionService', `ไม่พบชีต ${SHEET.FACT_DELIVERY}`, new Error('SHEET_NOT_FOUND'));
+      return null;
     }
-  }
 
-  // [FIX v003] fallback → rawLat/rawLng ถ้า getGeoLatLng_ คืน null
-  // [FIX CRIT-001] เปลี่ยนเงื่อนไขจาก === 0 เป็น === null
-  if (resolvedLat === null || resolvedLng === null) {
-    if (srcObj.rawLat && srcObj.rawLng &&
+    const existingRow = findFactRowByInvoice_(factSheet, srcObj.invoiceNo);
+    const now         = new Date();
+
+    // [FIX v003] เรียก getGeoLatLng_ ครั้งเดียว แล้ว destructure
+    // [FIX CRIT-001] เปลี่ยน initialization จาก 0 เป็น null — ป้องกันพิกัดถูกต้องถูกเขียนทับด้วย 0
+    let resolvedLat = null;
+    let resolvedLng = null;
+
+    if (geoId) {
+      const geoLL = getGeoLatLng_(geoId);
+      if (geoLL) {
+        resolvedLat = geoLL.lat;
+        resolvedLng = geoLL.lng;
+      }
+    }
+
+    // [FIX v003] fallback → rawLat/rawLng ถ้า getGeoLatLng_ คืน null
+    // [FIX CRIT-001] เปลี่ยนเงื่อนไขจาก === 0 เป็น === null
+    if (resolvedLat === null || resolvedLng === null) {
+      if (srcObj.rawLat && srcObj.rawLng &&
         !isNaN(Number(srcObj.rawLat)) && !isNaN(Number(srcObj.rawLng))) {
-      resolvedLat = Number(srcObj.rawLat);
-      resolvedLng = Number(srcObj.rawLng);
+        resolvedLat = Number(srcObj.rawLat);
+        resolvedLng = Number(srcObj.rawLng);
+      }
     }
-  }
 
-  // แยก deliveryDate/deliveryTime
-  let deliveryDateVal = '';
-  let deliveryTimeVal = '';
-  if (srcObj.deliveryTime) {
-    deliveryTimeVal = formatTimeValue_(srcObj.deliveryTime);
-  }
-
-  if (srcObj.deliveryDate) {
-    try {
-      deliveryDateVal = new Date(srcObj.deliveryDate);
-    } catch (e) {
-      deliveryDateVal = srcObj.deliveryDate;
+    // แยก deliveryDate/deliveryTime
+    let deliveryDateVal = '';
+    let deliveryTimeVal = '';
+    if (srcObj.deliveryTime) {
+      deliveryTimeVal = formatTimeValue_(srcObj.deliveryTime);
     }
-  }
 
-  if (existingRow > 0) {
+    if (srcObj.deliveryDate) {
+      try {
+        deliveryDateVal = new Date(srcObj.deliveryDate);
+      } catch (e) {
+        deliveryDateVal = srcObj.deliveryDate;
+      }
+    }
+
+    if (existingRow > 0) {
     // --- UPDATE ---
     // [FIX BUG-M03 V5.5.022] เพิ่ม Math.min guard ป้องกัน Range error
     //   ถ้า FACT_DELIVERY sheet มีคอลัมน์น้อยกว่า SCHEMA (เช่นยังไม่ได้ add คอลัมน์ใหม่)
     //   getRange จะ throw error ทันที — ต่างจาก data loaders อื่นที่มี Math.min guard
-    const schemaLen = SCHEMA[SHEET.FACT_DELIVERY].length;
-    const sheetCols = Math.min(schemaLen, factSheet.getLastColumn());
-    const rowRange = factSheet.getRange(existingRow, 1, 1, sheetCols);
-    const rawRowData = rowRange.getValues()[0];
-    // ถ้าข้อมูลในชีตสั้นกว่า SCHEMA → extend array ให้ครบ ป้องกัน undefined index
-    const rowData = rawRowData.length < schemaLen
-      ? rawRowData.concat(new Array(schemaLen - rawRowData.length).fill(''))
-      : rawRowData;
-    return factUpdateRow_(rowRange, rowData, personId, placeId, geoId, destId,
-                          decision, resolvedLat, resolvedLng, now, srcObj);
+      const schemaLen = SCHEMA[SHEET.FACT_DELIVERY].length;
+      const sheetCols = Math.min(schemaLen, factSheet.getLastColumn());
+      const rowRange = factSheet.getRange(existingRow, 1, 1, sheetCols);
+      const rawRowData = rowRange.getValues()[0];
+      // ถ้าข้อมูลในชีตสั้นกว่า SCHEMA → extend array ให้ครบ ป้องกัน undefined index
+      const rowData = rawRowData.length < schemaLen
+        ? rawRowData.concat(new Array(schemaLen - rawRowData.length).fill(''))
+        : rawRowData;
+      return factUpdateRow_(rowRange, rowData, personId, placeId, geoId, destId,
+        decision, resolvedLat, resolvedLng, now, srcObj);
 
-  } else {
+    } else {
     // --- INSERT ---
-    return factCreateRow_(srcObj, personId, placeId, geoId, destId, decision,
-                          resolvedLat, resolvedLng, deliveryDateVal, deliveryTimeVal, now);
-  }
+      return factCreateRow_(srcObj, personId, placeId, geoId, destId, decision,
+        resolvedLat, resolvedLng, deliveryDateVal, deliveryTimeVal, now);
+    }
 
   } catch (e) {
     // [FIX R13-05 REVIEW15] Rule 13: ส่ง e เพื่อรักษา stack trace ของ error จริง
@@ -343,14 +343,14 @@ function invalidateGeoLatLngCache_() {
  */
 function formatTimeValue_(timeVal) {
   if (!timeVal) return '';
-  
+
   // 1. ถ้าเป็น Date object ให้ Format เป็นเวลาทันที
   if (timeVal instanceof Date) {
     return Utilities.formatDate(timeVal, Session.getScriptTimeZone(), 'HH:mm:ss');
   }
 
   // 2. ถ้าเป็น String ให้ลองเช็คว่ามีรูปแบบวันที่ติดมาไหม
-  let timeStr = String(timeVal).trim();
+  const timeStr = String(timeVal).trim();
   if (timeStr.includes('1899')) {
     // ถ้าเจอปี 1899 ให้พยายามตัดเอาเฉพาะส่วนเวลา (ปกติจะเป็นส่วนท้าย)
     const match = timeStr.match(/\d{2}:\d{2}:\d{2}/);

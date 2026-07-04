@@ -210,35 +210,35 @@ function installSmartNavTrigger() {
   // [FIX S1 v5.5.002] เพิ่ม try-catch ครอบทั้งฟังก์ชัน — Rule 12
   try {
   // ลบ Smart Nav trigger เก่าก่อน (ถ้ามี)
-  const triggers = ScriptApp.getProjectTriggers();
-  let deletedCount = 0;
-  for (const t of triggers) {
-    const handler = t.getHandlerFunction();
-    if (handler === 'handleSelectionChange_' || handler === 'onSelectionChange') {
-      ScriptApp.deleteTrigger(t);
-      deletedCount++;
+    const triggers = ScriptApp.getProjectTriggers();
+    let deletedCount = 0;
+    for (const t of triggers) {
+      const handler = t.getHandlerFunction();
+      if (handler === 'handleSelectionChange_' || handler === 'onSelectionChange') {
+        ScriptApp.deleteTrigger(t);
+        deletedCount++;
+      }
     }
-  }
 
-  // [FIX BUG-SMARTNAV V5.5.022] ใช้ onEdit() แทน onSelectionChange()
-  //   เพราะ Apps Script ไม่มี .onSelectionChange() ใน Trigger Builder API
-  //   onEdit จะถูกเรียกเมื่อ user แก้ไข cell — handleSelectionChange_ จะตรวจ active cell
-  //   และดำเนินการนำทางถ้าอยู่ใน Q_REVIEW sheet
-  ScriptApp.newTrigger('handleSelectionChange_')
-    .forSpreadsheet(SpreadsheetApp.getActive())
-    .onEdit()
-    .create();
+    // [FIX BUG-SMARTNAV V5.5.022] ใช้ onEdit() แทน onSelectionChange()
+    //   เพราะ Apps Script ไม่มี .onSelectionChange() ใน Trigger Builder API
+    //   onEdit จะถูกเรียกเมื่อ user แก้ไข cell — handleSelectionChange_ จะตรวจ active cell
+    //   และดำเนินการนำทางถ้าอยู่ใน Q_REVIEW sheet
+    ScriptApp.newTrigger('handleSelectionChange_')
+      .forSpreadsheet(SpreadsheetApp.getActive())
+      .onEdit()
+      .create();
 
-  // [FIX BUG-04 v5.5.001] เปลี่ยน getUi().alert() เป็น safeUiAlert_() — trigger-safe
-  safeUiAlert_(
-    '✅ ติดตั้ง Smart Navigation สำเร็จ!\n\n' +
+    // [FIX BUG-04 v5.5.001] เปลี่ยน getUi().alert() เป็น safeUiAlert_() — trigger-safe
+    safeUiAlert_(
+      '✅ ติดตั้ง Smart Navigation สำเร็จ!\n\n' +
     (deletedCount > 0 ? `(ลบ Trigger เก่า ${deletedCount} ตัว)\n\n` : '') +
     'วิธีใช้: ไปที่ชีต Q_REVIEW แล้วคลิก (หรือกด Enter) ที่:\n' +
     '  • คอลัมน์ Candidate ID (L-O) — นำทางไป Master/FACT ของ candidate นั้น\n' +
     '  • คอลัมน์ recommended_action (P) — นำทางตามที่ระบบแนะนำ [V5.5.011]\n\n' +
     'หมายเหตุ: ใช้ onEdit trigger (ต้องแก้ไข cell หรือกด Enter บน cell ที่ต้องการ)' +
     'เพราะ Apps Script ไม่รองรับ installable onSelectionChange trigger'
-  );
+    );
   } catch (err) {
     logError('App', 'installSmartNavTrigger: ' + err.message, err);
     safeUiAlert_('❌ ติดตั้ง Smart Navigation ล้มเหลว: ' + err.message);
@@ -572,7 +572,7 @@ function navigateToMasterOrFact_(ss, targetId, targetSheet, targetRowIndex, fact
   const msg = `ต้องการให้ระบบนำทางไปยังส่วนใดสำหรับ ID: ${targetId} ?\n\n` +
     `👉 [YES] ไปยังหน้าข้อมูลหลัก Master (${targetSheetName} แถวที่ ${targetRowIndex})\n` +
     `👉 [NO] ไปยังหน้าประวัติการส่งสินค้าจริง (FACT_DELIVERY ${factRowIndex !== -1 ? 'แถวที่ ' + factRowIndex : '- ไม่พบประวัติ'})\n` +
-    `👉 [CANCEL] ยกเลิกการนำทาง`;
+    '👉 [CANCEL] ยกเลิกการนำทาง';
 
   const response = ui.alert('🚀 Smart Navigation', msg, ui.ButtonSet.YES_NO_CANCEL);
   if (response === ui.Button.YES) {
@@ -743,15 +743,15 @@ function getPipelineDiagnosticSummary_() {
 function openReviewQueue() {
   // [FIX S1 v5.5.002] เพิ่ม try-catch ครอบทั้งฟังก์ชัน — Rule 12
   try {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
-  if (sheet) {
-    ss.setActiveSheet(sheet);
-    ss.toast('กำลังแสดง Review Queue', APP_NAME, 3);
-  } else {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
+    if (sheet) {
+      ss.setActiveSheet(sheet);
+      ss.toast('กำลังแสดง Review Queue', APP_NAME, 3);
+    } else {
     // [FIX BUG-04 v5.5.001] เปลี่ยน getUi().alert() เป็น safeUiAlert_()
-    safeUiAlert_('❌ ไม่พบชีต Q_REVIEW\nกรุณารัน "สร้างชีตทั้งหมด" ก่อน');
-  }
+      safeUiAlert_('❌ ไม่พบชีต Q_REVIEW\nกรุณารัน "สร้างชีตทั้งหมด" ก่อน');
+    }
   } catch (err) {
     logError('App', 'openReviewQueue: ' + err.message, err);
     safeUiAlert_('❌ เปิด Review Queue ล้มเหลว: ' + err.message);
@@ -856,7 +856,7 @@ function setupEnvironment() {
     }
 
     PropertiesService.getScriptProperties()
-                     .setProperty('GEMINI_API_KEY', inputKey);
+      .setProperty('GEMINI_API_KEY', inputKey);
     logInfo('App', 'ตั้งค่า GEMINI_API_KEY สำเร็จ (รูปแบบ: ' + (inputKey.startsWith('AQ.') ? 'v2' : 'v1') + ')');
     // [FIX BUG-04 v5.5.001] เปลี่ยน ui.alert() เป็น safeUiAlert_()
     safeUiAlert_('✅ บันทึก API Key เรียบร้อยแล้วครับ!');
@@ -885,33 +885,33 @@ function showVersionInfo() {
     `🚚 ${APP_NAME}\n` +
     `Version: ${APP_VERSION}\n` +
     `Schema: v${SCHEMA_VERSION}\n` +
-    `Audit Cycles: 18 (CRITICAL → PERF → SECURITY → REVIEW15 → REFACTOR → SYNC → CACHE-FIX → CACHE-CLEANUP → DOC-SYNC → GOOGLE-MAPS-REFACTOR → DRIVER-VERIFIED → CRITICAL-FIX → PERFORMANCE-FIX → SECURITY-POSTFIX → REVIEW15-CLEAN-CODE-FIX → REFACTOR_CYCLE6 → REFACTOR_CYCLE6_RESIDUAL → DEEP-DIVE-AUDIT → CONSISTENCY-SYNC)\n\n` +
-    `📦 Modules (22 files):\n` +
-    `  00_App.gs                v5.5.022\n` +
-    `  01_Config.gs             v5.5.022\n` +
-    `  02_Schema.gs             v5.5.022\n` +
-    `  03_SetupSheets.gs        v5.5.022\n` +
-    `  04_SourceRepository.gs   v5.5.022\n` +
-    `  05_NormalizeService.gs   v5.5.022\n` +
-    `  06_PersonService.gs      v5.5.022\n` +
-    `  07_PlaceService.gs       v5.5.022\n` +
-    `  08_GeoService.gs         v5.5.022\n` +
-    `  09_DestinationService.gs v5.5.022\n` +
-    `  10_MatchEngine.gs        v5.5.022\n` +
-    `  11_TransactionService.gs v5.5.022\n` +
-    `  12_ReviewService.gs      v5.5.022\n` +
-    `  13_ReportService.gs      v5.5.022\n` +
-    `  14_Utils.gs              v5.5.022\n` +
-    `  15_GoogleMapsAPI.gs      v5.5.022\n` +
-    `  16_GeoDictionaryBuilder.gs     v5.5.022\n` +
-    `  17_SearchService.gs      v5.5.022\n` +
-    `  18_ServiceSCG.gs         v5.5.022\n` +
-    `  19_Hardening.gs          v5.5.022\n` +
-    `  20_ThGeoService.gs       v5.5.022\n` +
-    `  21_AliasService.gs       v5.5.022\n\n` +
-    `⚙️ Core System (Group 0): App, Config, Schema, Setup, Utils, Hardening\n` +
-    `🟩 Group 1 — Master DB: Normalize, Person, Place, Geo, Dest, Match, GeoDict, ThGeo, Alias\n` +
-    `🟦 Group 2 — Daily Ops: SourceRepo, Transaction, Review, Report, Maps, Search, SCG`;
+    'Audit Cycles: 18 (CRITICAL → PERF → SECURITY → REVIEW15 → REFACTOR → SYNC → CACHE-FIX → CACHE-CLEANUP → DOC-SYNC → GOOGLE-MAPS-REFACTOR → DRIVER-VERIFIED → CRITICAL-FIX → PERFORMANCE-FIX → SECURITY-POSTFIX → REVIEW15-CLEAN-CODE-FIX → REFACTOR_CYCLE6 → REFACTOR_CYCLE6_RESIDUAL → DEEP-DIVE-AUDIT → CONSISTENCY-SYNC)\n\n' +
+    '📦 Modules (22 files):\n' +
+    '  00_App.gs                v5.5.022\n' +
+    '  01_Config.gs             v5.5.022\n' +
+    '  02_Schema.gs             v5.5.022\n' +
+    '  03_SetupSheets.gs        v5.5.022\n' +
+    '  04_SourceRepository.gs   v5.5.022\n' +
+    '  05_NormalizeService.gs   v5.5.022\n' +
+    '  06_PersonService.gs      v5.5.022\n' +
+    '  07_PlaceService.gs       v5.5.022\n' +
+    '  08_GeoService.gs         v5.5.022\n' +
+    '  09_DestinationService.gs v5.5.022\n' +
+    '  10_MatchEngine.gs        v5.5.022\n' +
+    '  11_TransactionService.gs v5.5.022\n' +
+    '  12_ReviewService.gs      v5.5.022\n' +
+    '  13_ReportService.gs      v5.5.022\n' +
+    '  14_Utils.gs              v5.5.022\n' +
+    '  15_GoogleMapsAPI.gs      v5.5.022\n' +
+    '  16_GeoDictionaryBuilder.gs     v5.5.022\n' +
+    '  17_SearchService.gs      v5.5.022\n' +
+    '  18_ServiceSCG.gs         v5.5.022\n' +
+    '  19_Hardening.gs          v5.5.022\n' +
+    '  20_ThGeoService.gs       v5.5.022\n' +
+    '  21_AliasService.gs       v5.5.022\n\n' +
+    '⚙️ Core System (Group 0): App, Config, Schema, Setup, Utils, Hardening\n' +
+    '🟩 Group 1 — Master DB: Normalize, Person, Place, Geo, Dest, Match, GeoDict, ThGeo, Alias\n' +
+    '🟦 Group 2 — Daily Ops: SourceRepo, Transaction, Review, Report, Maps, Search, SCG';
 
   // [FIX BUG-04 v5.5.001] เปลี่ยน ui.alert() เป็น safeUiAlert_()
   safeUiAlert_(msg);
@@ -1036,7 +1036,7 @@ function diagnoseSourceData_(ss, lines, fixes) {
     const pendingCount = srcTotal - doneCount;
     lines.push(`  SYNC_STATUS: ประมวลผลแล้ว=${doneCount} ค้างอยู่=${pendingCount}`);
     if (pendingCount === 0) {
-      lines.push(`  ⚠️ ทุกแถวถูกประมวลผลแล้ว — Pipeline จะไม่สร้างข้อมูลใหม่`);
+      lines.push('  ⚠️ ทุกแถวถูกประมวลผลแล้ว — Pipeline จะไม่สร้างข้อมูลใหม่');
       fixes.push('รีเซ็ต SYNC_STATUS — รัน "รีเซ็ตสถานะ SYNC (เพื่อรันใหม่)"');
     }
   } else {
@@ -1060,7 +1060,7 @@ function diagnoseSourceData_(ss, lines, fixes) {
     const hasGeoCount = latLngData.filter(r => Number(r[0]) !== 0 && Number(r[1]) !== 0 && !isNaN(Number(r[0])) && !isNaN(Number(r[1]))).length;
     lines.push(`  LAT/LNG: ${hasGeoCount}/${sampleMax} แถวมีพิกัด`);
     if (hasGeoCount === 0) {
-      lines.push(`  ⚠️ ไม่มีพิกัดเลย — ทุกแถวจะเข้า REVIEW (INVALID_LATLNG)`);
+      lines.push('  ⚠️ ไม่มีพิกัดเลย — ทุกแถวจะเข้า REVIEW (INVALID_LATLNG)');
       fixes.push('ข้อมูล Source ไม่มีพิกัด — ตรวจสอบคอลัมน์ LAT/LNG');
     }
   }

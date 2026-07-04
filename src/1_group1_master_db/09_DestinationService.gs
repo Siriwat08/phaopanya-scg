@@ -105,48 +105,48 @@ function resolveDestination(personId, placeId, geoId) {
  */
 function createDestination(personId, placeId, geoId, lat, lng, deliveryDate) {
   try {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET.M_DESTINATION);
-  const now   = new Date();
-  const newId = generateShortId('D');
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.M_DESTINATION);
+    const now   = new Date();
+    const newId = generateShortId('D');
 
-  // [FIX v003] Validate lat/lng เป็น Number
-  const numLat = Number(lat);
-  const numLng = Number(lng);
-  // [FIX v5.5.001] เก็บ '' แทน 0,0 เมื่อพิกัดไม่ถูกต้อง — 0,0 เป็นพิกัดที่ทำให้เสียใจ
-  const safeLat = !isNaN(numLat) && numLat !== 0 ? numLat : '';
-  const safeLng = !isNaN(numLng) && numLng !== 0 ? numLng : '';
+    // [FIX v003] Validate lat/lng เป็น Number
+    const numLat = Number(lat);
+    const numLng = Number(lng);
+    // [FIX v5.5.001] เก็บ '' แทน 0,0 เมื่อพิกัดไม่ถูกต้อง — 0,0 เป็นพิกัดที่ทำให้เสียใจ
+    const safeLat = !isNaN(numLat) && numLat !== 0 ? numLat : '';
+    const safeLng = !isNaN(numLng) && numLng !== 0 ? numLng : '';
 
-  // [FIX v003] deliveryDate instanceof Date check แทน || now
-  let safeDate = now;
-  if (deliveryDate instanceof Date && !isNaN(deliveryDate.getTime())) {
-    safeDate = deliveryDate;
-  } else if (deliveryDate) {
-    const parsed = new Date(deliveryDate);
-    safeDate = !isNaN(parsed.getTime()) ? parsed : now;
-  }
+    // [FIX v003] deliveryDate instanceof Date check แทน || now
+    let safeDate = now;
+    if (deliveryDate instanceof Date && !isNaN(deliveryDate.getTime())) {
+      safeDate = deliveryDate;
+    } else if (deliveryDate) {
+      const parsed = new Date(deliveryDate);
+      safeDate = !isNaN(parsed.getTime()) ? parsed : now;
+    }
 
-  const newRow = [
-    newId,
-    personId  || '',
-    placeId   || '',
-    geoId     || '',
-    safeLat,
-    safeLng,
-    '',
-    safeDate,
-    1,
-    now,
-    APP_CONST.STATUS_ACTIVE,
-  ];
+    const newRow = [
+      newId,
+      personId  || '',
+      placeId   || '',
+      geoId     || '',
+      safeLat,
+      safeLng,
+      '',
+      safeDate,
+      1,
+      now,
+      APP_CONST.STATUS_ACTIVE,
+    ];
 
-  // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
-  const lastRow = sheet.getLastRow();
-  sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
-  invalidateDestCache_();
-  logDebug('DestinationService',
-    `createDestination: ${newId} P:${personId} PL:${placeId} G:${geoId}`);
-  return newId;
+    // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
+    invalidateDestCache_();
+    logDebug('DestinationService',
+      `createDestination: ${newId} P:${personId} PL:${placeId} G:${geoId}`);
+    return newId;
   } catch (err) {
     // [FIX B3 v5.5.002] เพิ่ม try-catch ตาม Rule 12
     logError('DestinationService', `createDestination ล้มเหลว: ${err.message}`, err);
@@ -254,7 +254,7 @@ function loadAllDestinations_() {
   const cacheKey = 'M_DEST_ALL';
   const cache    = CacheService.getScriptCache();
   // [PERF-004] [REF-010] ใช้ centralized loadChunkedCache_ จาก 14_Utils.gs
-  var cachedData = loadChunkedCache_(cache, cacheKey);
+  const cachedData = loadChunkedCache_(cache, cacheKey);
   if (cachedData) return cachedData;
 
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
@@ -305,25 +305,25 @@ function loadAllDestinations_() {
 function batchUpdateDestinationStats_(destStatsQueue) {
   if (!destStatsQueue || destStatsQueue.length === 0) return;
   try {
-    var ss      = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet   = ss.getSheetByName(SHEET.M_DESTINATION);
-    var lastRow = sheet.getLastRow();
+    const ss      = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet   = ss.getSheetByName(SHEET.M_DESTINATION);
+    const lastRow = sheet.getLastRow();
     if (lastRow < 2) return;
 
-    var idCol         = DEST_IDX.DEST_ID        + 1;
-    var lastSeenCol   = DEST_IDX.LAST_SEEN      + 1;
-    var usageCountCol = DEST_IDX.USAGE_COUNT    + 1;
-    var delivDateCol  = DEST_IDX.DELIVERY_DATE  + 1;
-    var minCol = Math.min(idCol, lastSeenCol, usageCountCol, delivDateCol);
-    var maxCol = Math.max(idCol, lastSeenCol, usageCountCol, delivDateCol);
-    var numCols = maxCol - minCol + 1;
+    const idCol         = DEST_IDX.DEST_ID        + 1;
+    const lastSeenCol   = DEST_IDX.LAST_SEEN      + 1;
+    const usageCountCol = DEST_IDX.USAGE_COUNT    + 1;
+    const delivDateCol  = DEST_IDX.DELIVERY_DATE  + 1;
+    const minCol = Math.min(idCol, lastSeenCol, usageCountCol, delivDateCol);
+    const maxCol = Math.max(idCol, lastSeenCol, usageCountCol, delivDateCol);
+    const numCols = maxCol - minCol + 1;
 
-    var allData = sheet.getRange(2, minCol, lastRow - 1, numCols).getValues();
+    const allData = sheet.getRange(2, minCol, lastRow - 1, numCols).getValues();
 
     // Build a map from destId to {index, deliveryDate} for efficient lookup
-    var destIdMap = {};
+    const destIdMap = {};
     destStatsQueue.forEach(function(item) {
-      var did = String(item.destId || '').trim();
+      const did = String(item.destId || '').trim();
       if (did) {
         // Keep the latest deliveryDate per destId
         if (!destIdMap[did]) {
@@ -333,17 +333,17 @@ function batchUpdateDestinationStats_(destStatsQueue) {
       }
     });
 
-    var now = new Date();
-    var updated = 0;
+    const now = new Date();
+    let updated = 0;
 
-    for (var i = 0; i < allData.length; i++) {
-      var did = String(allData[i][idCol - minCol] || '').trim();
+    for (let i = 0; i < allData.length; i++) {
+      const did = String(allData[i][idCol - minCol] || '').trim();
       if (destIdMap[did]) {
         allData[i][lastSeenCol - minCol] = now;
-        var currCount = Number(allData[i][usageCountCol - minCol]) || 0;
+        const currCount = Number(allData[i][usageCountCol - minCol]) || 0;
         allData[i][usageCountCol - minCol] = currCount + destIdMap[did].count;
         if (destIdMap[did].deliveryDate) {
-          var safeDate = destIdMap[did].deliveryDate instanceof Date
+          const safeDate = destIdMap[did].deliveryDate instanceof Date
             ? destIdMap[did].deliveryDate
             : new Date(destIdMap[did].deliveryDate);
           if (!isNaN(safeDate.getTime())) {
