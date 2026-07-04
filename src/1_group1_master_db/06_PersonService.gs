@@ -56,11 +56,11 @@
  */
 
 // [PERF-010] Note Inverted Index — Map: word → Set<personId> สำหรับค้นหา Note แบบ O(1)
-var _PERSON_NOTE_INVERTED_INDEX = null;
+let _PERSON_NOTE_INVERTED_INDEX = null;
 
 // [PERF-009] Alias Inverted Index — Map<normalized_alias, Set<personId>>
 //   Build ครั้งเดียวใน loadAllAliases_ — ลด findByAlias_ จาก O(A) scan → O(1) lookup
-var _PERSON_ALIAS_INVERTED_INDEX = null;
+let _PERSON_ALIAS_INVERTED_INDEX = null;
 
 // ============================================================
 // SECTION 1: resolvePerson
@@ -75,7 +75,7 @@ var _PERSON_ALIAS_INVERTED_INDEX = null;
 function resolvePerson(rawName, preNormResult) {
   // [FIX v5.5.012] ใช้ preNormResult ถ้ามี — หลีกเลี่ยง double normalization
   const normResult = preNormResult || normalizePersonNameFull(rawName);
-  const cleanName  = normResult.cleanName;
+  const cleanName = normResult.cleanName;
 
   if (!cleanName || cleanName.length < 2) {
     return { personId: null, status: 'LOW_QUALITY', confidence: 0, normResult };
@@ -88,24 +88,22 @@ function resolvePerson(rawName, preNormResult) {
   }
 
   let bestPerson = null;
-  let bestScore  = 0;
+  let bestScore = 0;
 
-  candidates.forEach(candidate => {
+  candidates.forEach((candidate) => {
     // [UPGRADE v5.1.001] ส่งข้อมูลว่า match ด้วยเบอร์โทรหรือไม่
     const score = scorePersonCandidate(cleanName, candidate, normResult.extractedPhone);
     if (score > bestScore) {
-      bestScore  = score;
+      bestScore = score;
       bestPerson = candidate;
     }
   });
 
   if (bestScore >= AI_CONFIG.THRESHOLD_AUTO) {
-    return { personId: bestPerson.personId, status: 'FOUND',
-             confidence: bestScore, normResult };
+    return { personId: bestPerson.personId, status: 'FOUND', confidence: bestScore, normResult };
   }
   if (bestScore >= AI_CONFIG.THRESHOLD_REVIEW) {
-    return { personId: bestPerson.personId, status: 'NEEDS_REVIEW',
-             confidence: bestScore, normResult };
+    return { personId: bestPerson.personId, status: 'NEEDS_REVIEW', confidence: bestScore, normResult };
   }
   return { personId: null, status: 'NOT_FOUND', confidence: bestScore, normResult };
 }
@@ -130,17 +128,17 @@ function findPersonCandidates(cleanName, phone) {
   //   Preserve Behavior 100% — same strategy order, same early returns, same mutation pattern
 
   const allPersons = loadAllPersons_();
-  const results    = [];
+  const results = [];
   // [PERF-004] ใช้ Set<string> สำหรับ O(1) dedup lookup แทน results.some() O(K)
   //   ลดจาก 1M × O(K) → 1M × O(1) ใน Pipeline 1,000 source rows × M_PERSON 1,000
   const existingIds = new Set();
 
   // Strategy 1: M_ALIAS Fast Path — early return
-  var fastPath = findCandidatesByAliasFastPath_(cleanName, allPersons);
+  const fastPath = findCandidatesByAliasFastPath_(cleanName, allPersons);
   if (fastPath) return fastPath;
 
   // Strategy 2: Phone Match — early return if exactly 1, accumulate if >1
-  var phoneResult = findCandidatesByPhone_(phone, allPersons, results, existingIds);
+  const phoneResult = findCandidatesByPhone_(phone, allPersons, results, existingIds);
   if (phoneResult) return phoneResult;
 
   // Strategy 3: Alias Match — accumulate
@@ -166,10 +164,11 @@ function findPersonCandidates(cleanName, phone) {
  * @private
  */
 function findCandidatesByAliasFastPath_(cleanName, allPersons) {
-  const aliasResolve = typeof resolveMasterUuidViaGlobalAlias === 'function' ? resolveMasterUuidViaGlobalAlias(cleanName, 'PERSON') : null;
+  const aliasResolve =
+    typeof resolveMasterUuidViaGlobalAlias === 'function' ? resolveMasterUuidViaGlobalAlias(cleanName, 'PERSON') : null;
   if (aliasResolve && aliasResolve.masterUuid && aliasResolve.score >= 95) {
     const ownerId = convertUuidToPersonId(aliasResolve.masterUuid);
-    const perfect = allPersons.find(p => p.personId === ownerId);
+    const perfect = allPersons.find((p) => p.personId === ownerId);
     if (perfect) return [perfect];
   }
   return null;
@@ -189,7 +188,7 @@ function findCandidatesByAliasFastPath_(cleanName, allPersons) {
 function findCandidatesByPhone_(phone, allPersons, results, existingIds) {
   if (!phone) return null;
   const cleanPhone = phone.replace(/[^0-9]/g, '');
-  const byPhone    = allPersons.filter(p => {
+  const byPhone = allPersons.filter((p) => {
     const stored = String(p.phone || '').replace(/[^0-9]/g, '');
     return stored === cleanPhone && stored.length >= 9;
   });
@@ -200,7 +199,7 @@ function findCandidatesByPhone_(phone, allPersons, results, existingIds) {
   }
   if (byPhone.length > 1) {
     // [FIX v003] เจอหลายคน → เพิ่มเข้า results แล้วไปต่อ scoring
-    byPhone.forEach(p => {
+    byPhone.forEach((p) => {
       // [PERF-004] sync existingIds Set ด้วย (กัน Phone Match path ตกหล่น)
       if (!existingIds.has(p.personId)) {
         results.push(p);
@@ -222,8 +221,8 @@ function findCandidatesByPhone_(phone, allPersons, results, existingIds) {
  */
 function accumulateByAliasMatch_(cleanName, allPersons, results, existingIds) {
   const aliasMatches = findByAlias_(cleanName);
-  aliasMatches.forEach(personId => {
-    const found = allPersons.find(p => p.personId === personId);
+  aliasMatches.forEach((personId) => {
+    const found = allPersons.find((p) => p.personId === personId);
     // [PERF-004] O(1) Set lookup แทน results.some() O(K)
     if (found && !existingIds.has(found.personId)) {
       results.push(found);
@@ -249,7 +248,7 @@ function accumulateByPhoneticMatch_(cleanName, allPersons, results, existingIds)
   const normA = normalizeForCompare(cleanName);
   const normAPrefix3 = normA.length >= 3 ? normA.substring(0, 3) : '';
 
-  allPersons.forEach(person => {
+  allPersons.forEach((person) => {
     // [PERF-004] O(1) Set lookup แทน results.some() O(K)
     if (existingIds.has(person.personId)) return;
     const personKey = buildThaiPhoneticKey(person.normalized);
@@ -277,19 +276,25 @@ function accumulateByPhoneticMatch_(cleanName, allPersons, results, existingIds)
  * @private
  */
 function accumulateByNoteSearch_(cleanName, allPersons, results, existingIds) {
-  var queryParts = cleanName.split(/\s+/).filter(function(p) { return p.length >= 2; });
+  const queryParts = cleanName.split(/\s+/).filter(function (p) {
+    return p.length >= 2;
+  });
   // ใช้ _PERSON_NOTE_INVERTED_INDEX ถ้ามี — ลดจาก O(N×M) เหลือ O(M)
   if (_PERSON_NOTE_INVERTED_INDEX && Object.keys(_PERSON_NOTE_INVERTED_INDEX).length > 0) {
-    var matchingPersonIds = new Set();
-    queryParts.forEach(function(part) {
-      var key = part.toLowerCase();
-      var personIdSet = _PERSON_NOTE_INVERTED_INDEX[key];
+    const matchingPersonIds = new Set();
+    queryParts.forEach(function (part) {
+      const key = part.toLowerCase();
+      const personIdSet = _PERSON_NOTE_INVERTED_INDEX[key];
       if (personIdSet) {
-        personIdSet.forEach(function(pid) { matchingPersonIds.add(pid); });
+        personIdSet.forEach(function (pid) {
+          matchingPersonIds.add(pid);
+        });
       }
     });
-    matchingPersonIds.forEach(function(pid) {
-      var found = allPersons.find(function(p) { return p.personId === pid; });
+    matchingPersonIds.forEach(function (pid) {
+      const found = allPersons.find(function (p) {
+        return p.personId === pid;
+      });
       // [PERF-004] sync existingIds Set
       if (found && !existingIds.has(found.personId)) {
         results.push(found);
@@ -298,11 +303,13 @@ function accumulateByNoteSearch_(cleanName, allPersons, results, existingIds) {
     });
   } else {
     // Fallback: ถ้ายังไม่มี index ใช้วิธีเดิม
-    allPersons.forEach(function(person) {
+    allPersons.forEach(function (person) {
       if (existingIds.has(person.personId)) return;
-      var noteStr = String(person.note || '');
+      const noteStr = String(person.note || '');
       if (!noteStr) return;
-      var isMatch = queryParts.some(function(part) { return noteStr.includes(part); });
+      const isMatch = queryParts.some(function (part) {
+        return noteStr.includes(part);
+      });
       if (isMatch) {
         results.push(person);
         existingIds.add(person.personId);
@@ -335,9 +342,9 @@ function findByAlias_(cleanName) {
 
   // Fallback (defensive — ถ้า index build ล้มเหลว): legacy O(A) scan
   const allAliases = loadAllAliases_();
-  const foundSet   = new Set();
+  const foundSet = new Set();
 
-  allAliases.forEach(alias => {
+  allAliases.forEach((alias) => {
     if (!alias[PERSON_ALIAS_IDX.ACTIVE_FLAG]) return;
     const aliasNorm = normalizeForCompare(alias[PERSON_ALIAS_IDX.ALIAS_NAME]);
     if (aliasNorm === targetNorm && aliasNorm.length > 0) {
@@ -379,13 +386,20 @@ function scorePersonCandidate(queryName, candidate, queryPhone) {
     const p2 = String(candidate.phone).replace(/[^0-9]/g, '');
     if (p1 === p2 && p1.length >= 9) {
       if (nameScore >= AI_CONFIG.SCORE_MIN_THRESHOLD) {
-        return 95;  // phone + name ตรง → AUTO_MATCH
+        return 95; // phone + name ตรง → AUTO_MATCH
       }
       // phone ตรงแต่ชื่อไม่ตรง → คืน nameScore (อาจ < 70 → REVIEW หรือ < 50 → reject)
       //   ไม่ return 95 เพื่อป้องกัน AUTO_MATCH ผิดจากเบอร์บ้าน/บริษัทใช้ร่วมกัน
-      logInfo('PersonService',
-        'Phone match but name mismatch: phone=' + queryPhone +
-        ', nameScore=' + nameScore + ' (threshold=' + AI_CONFIG.SCORE_MIN_THRESHOLD + ')');
+      logInfo(
+        'PersonService',
+        'Phone match but name mismatch: phone=' +
+          queryPhone +
+          ', nameScore=' +
+          nameScore +
+          ' (threshold=' +
+          AI_CONFIG.SCORE_MIN_THRESHOLD +
+          ')'
+      );
       return nameScore;
     }
   }
@@ -413,12 +427,18 @@ function scorePersonCandidate(queryName, candidate, queryPhone) {
  * @private
  */
 function calculateNameScore_(nameA, nameB) {
-  const levDist    = levenshteinDistance(nameA, nameB);
-  const maxLen     = Math.max(nameA.length, nameB.length);
-  const levScore   = maxLen > 0 ? Math.max(0, (1 - levDist / maxLen) * 100) : 0;
-  const diceScore  = diceCoefficient(nameA, nameB) * 100;
-  const ratioScore = nameA === nameB ? 100 :
-    (nameA.includes(nameB) || nameB.includes(nameA)) ? 80 : 0;
+  const levDist = levenshteinDistance(nameA, nameB);
+  const maxLen = Math.max(nameA.length, nameB.length);
+  const levScore = maxLen > 0 ? Math.max(0, (1 - levDist / maxLen) * 100) : 0;
+  const diceScore = diceCoefficient(nameA, nameB) * 100;
+
+  // แก้ไขบรรทัดที่ 434 จาก nested ternary เป็น logic ที่อ่านง่ายขึ้น:
+  let ratioScore = 0;
+  if (nameA === nameB) {
+    ratioScore = 100;
+  } else if (nameA.includes(nameB) || nameB.includes(nameA)) {
+    ratioScore = 80;
+  }
 
   let finalScore;
   if (nameA.length < 4) {
@@ -438,40 +458,44 @@ function calculateNameScore_(nameA, nameB) {
  */
 function createPerson(normResult) {
   try {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET.M_PERSON);
-  const now   = new Date();
-  const newId = generateShortId('P');
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.M_PERSON);
+    const now = new Date();
+    const newId = generateShortId('P');
 
-  const phoneStr = normResult.extractedPhone
-    ? "'" + normResult.extractedPhone : '';
+    const phoneStr = normResult.extractedPhone ? "'" + normResult.extractedPhone : '';
 
-  // [FIX v5.2.002] รวบรวม Note ทั้งหมด (Phone, Doc, Prefix)
-  const allNotes = normResult.deliveryNotes || [];
+    // [FIX v5.2.002] รวบรวม Note ทั้งหมด (Phone, Doc, Prefix)
+    const allNotes = normResult.deliveryNotes || [];
 
-  const universalMasterId = typeof generateUUID === 'function' ? generateUUID() : generateShortId('UID');
+    const universalMasterId = typeof generateUUID === 'function' ? generateUUID() : generateShortId('UID');
 
-  const newRow = [
-    newId,
-    normResult.cleanName,
-    normalizeForCompare(normResult.cleanName),
-    phoneStr,
-    now, now, 1,
-    APP_CONST.STATUS_ACTIVE,
-    allNotes.join(','),
-    universalMasterId,
-  ];
+    const newRow = [
+      newId,
+      normResult.cleanName,
+      normalizeForCompare(normResult.cleanName),
+      phoneStr,
+      now,
+      now,
+      1,
+      APP_CONST.STATUS_ACTIVE,
+      allNotes.join(','),
+      universalMasterId
+    ];
 
-  // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
-  const lastRow = sheet.getLastRow();
-  sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
-  invalidatePersonCache_();
-  logDebug('PersonService', `createPerson: ${newId} (name hash: ${generateMd5Hash(String(normResult.cleanName || '')).substring(0, 8)})`);
+    // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
+    invalidatePersonCache_();
+    logDebug(
+      'PersonService',
+      `createPerson: ${newId} (name hash: ${generateMd5Hash(String(normResult.cleanName || '')).substring(0, 8)})`
+    );
 
-  // [REMOVED v5.4.001] ไม่เรียก createGlobalAlias() — M_ALIAS เขียนที่ autoEnrich เท่านั้น (Single Writer)
-  // autoEnrichAliasesFromFactBatch_() จะเขียน canonical+variant เข้า M_ALIAS เอง
+    // [REMOVED v5.4.001] ไม่เรียก createGlobalAlias() — M_ALIAS เขียนที่ autoEnrich เท่านั้น (Single Writer)
+    // autoEnrichAliasesFromFactBatch_() จะเขียน canonical+variant เข้า M_ALIAS เอง
 
-  return newId;
+    return newId;
   } catch (err) {
     // [FIX B3 v5.5.002] เพิ่ม try-catch ตาม Rule 12
     logError('PersonService', `createPerson ล้มเหลว: ${err.message}`, err);
@@ -484,18 +508,21 @@ function createPerson(normResult) {
  */
 function createPersonAlias(personId, aliasName, matchScore) {
   try {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET.M_PERSON_ALIAS);
-  const newId = generateShortId('PA');
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.M_PERSON_ALIAS);
+    const newId = generateShortId('PA');
 
-  // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow
-  const aliasRow = [newId, personId, aliasName, matchScore || 0, new Date(), true];
-  const aliasLastRow = sheet.getLastRow();
-  sheet.getRange(aliasLastRow + 1, 1, 1, aliasRow.length).setValues([aliasRow]);
-  invalidateAliasCache_();
-  logDebug('PersonService', `createPersonAlias: ${personId} (alias hash: ${generateMd5Hash(String(aliasName || '')).substring(0, 8)})`);
+    // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow
+    const aliasRow = [newId, personId, aliasName, matchScore || 0, new Date(), true];
+    const aliasLastRow = sheet.getLastRow();
+    sheet.getRange(aliasLastRow + 1, 1, 1, aliasRow.length).setValues([aliasRow]);
+    invalidateAliasCache_();
+    logDebug(
+      'PersonService',
+      `createPersonAlias: ${personId} (alias hash: ${generateMd5Hash(String(aliasName || '')).substring(0, 8)})`
+    );
 
-  // [REMOVED v5.4.001] ไม่เรียก createGlobalAlias() — M_ALIAS เขียนที่ autoEnrich เท่านั้น (Single Writer)
+    // [REMOVED v5.4.001] ไม่เรียก createGlobalAlias() — M_ALIAS เขียนที่ autoEnrich เท่านั้น (Single Writer)
   } catch (err) {
     // [FIX B3 v5.5.002] เพิ่ม try-catch ตาม Rule 12
     logError('PersonService', `createPersonAlias ล้มเหลว: ${err.message}`, err);
@@ -509,15 +536,15 @@ function createPersonAlias(personId, aliasName, matchScore) {
 function updatePersonStats(personId) {
   if (!personId) return;
   try {
-    const ss      = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet   = ss.getSheetByName(SHEET.M_PERSON);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.M_PERSON);
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return;
 
     // [FIX v003] โหลดเฉพาะคอลัมน์ person_id (col 1) แทนทั้งชีต
-    const idCol      = PERSON_IDX.PERSON_ID + 1;
-    const idData     = sheet.getRange(2, idCol, lastRow - 1, 1).getValues();
-    let targetRow    = -1;
+    const idCol = PERSON_IDX.PERSON_ID + 1;
+    const idData = sheet.getRange(2, idCol, lastRow - 1, 1).getValues();
+    let targetRow = -1;
 
     for (let i = 0; i < idData.length; i++) {
       if (String(idData[i][0]).trim() === personId) {
@@ -537,13 +564,12 @@ function updatePersonStats(personId) {
     // [FIX v5.4.003] Batch write: อ่านทั้ง 2 คอลัมน์ → แก้ใน RAM → เขียนทีเดียว
     // ลดจาก 3 API calls เหลือ 1+1 = 2 API calls
     const statsRange = sheet.getRange(targetRow, lastSeenCol, 1, 2);
-    const statsVals  = statsRange.getValues();
-    const currCount  = Number(statsVals[0][1]) || 0;
+    const statsVals = statsRange.getValues();
+    const currCount = Number(statsVals[0][1]) || 0;
     statsVals[0][0] = new Date();
     statsVals[0][1] = currCount + 1;
     statsRange.setValues(statsVals);
     invalidatePersonCache_();
-
   } catch (err) {
     // [FIX LAW-13 v5.4.003] ส่ง err object เพื่อให้ stack trace เข้า SYS_LOG
     logError('PersonService', `updatePersonStats ล้มเหลว: ${err.message}`, err);
@@ -558,16 +584,16 @@ function updatePersonStats(personId) {
  */
 function mergePersonRecords(sourceId, targetId) {
   try {
-    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET.M_PERSON);
     // [FIX B1 v5.5.002] Math.min guard: ป้องกัน Range error ถ้า sheet มีคอลัมน์น้อยกว่า SCHEMA
     const colsToRead = Math.min(SCHEMA[SHEET.M_PERSON].length, sheet.getLastColumn());
-    const data  = sheet.getRange(1, 1, sheet.getLastRow(), colsToRead).getValues();
+    const data = sheet.getRange(1, 1, sheet.getLastRow(), colsToRead).getValues();
     // [FIX v5.5.001] Use PERSON_IDX constants consistently instead of headers.indexOf()
-    const idCol   = PERSON_IDX.PERSON_ID;
+    const idCol = PERSON_IDX.PERSON_ID;
     const statCol = PERSON_IDX.STATUS;
     // [FIX CodeQL js/unused-local-variable V5.5.035] noteCol ไม่ถูกใช้ — ลบทิ้ง
-    const canCol  = PERSON_IDX.CANONICAL;
+    const canCol = PERSON_IDX.CANONICAL;
 
     let sourceCanonical = sourceId; // fallback
     let targetMasterUuid = '';
@@ -601,7 +627,6 @@ function mergePersonRecords(sourceId, targetId) {
     }
     invalidatePersonCache_();
     logInfo('PersonService', `mergePersonRecords: ${sourceId} → ${targetId}`);
-
   } catch (err) {
     logError('PersonService', `mergePersonRecords ล้มเหลว: ${err.message}`, err);
     throw err;
@@ -614,12 +639,12 @@ function mergePersonRecords(sourceId, targetId) {
 
 function loadAllPersons_() {
   const cacheKey = 'M_PERSON_ALL';
-  const cache    = CacheService.getScriptCache();
+  const cache = CacheService.getScriptCache();
   // [PERF-004] ลองอ่าน chunked cache ก่อน
   const cachedData = loadChunkedCache_(cache, cacheKey);
   if (cachedData) return cachedData;
 
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET.M_PERSON);
   if (!sheet || sheet.getLastRow() < 2) return [];
 
@@ -629,28 +654,31 @@ function loadAllPersons_() {
   const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, colsToRead).getValues();
 
   const result = rows
-    .filter(r => r[PERSON_IDX.PERSON_ID])
-    .filter(r => r[PERSON_IDX.STATUS] !== APP_CONST.STATUS_ARCHIVED &&
-                 r[PERSON_IDX.STATUS] !== APP_CONST.STATUS_MERGED)
-    .map(r => ({
-      personId:   String(r[PERSON_IDX.PERSON_ID]),
-      canonical:  String(r[PERSON_IDX.CANONICAL]  || ''),
+    .filter((r) => r[PERSON_IDX.PERSON_ID])
+    .filter(
+      (r) => r[PERSON_IDX.STATUS] !== APP_CONST.STATUS_ARCHIVED && r[PERSON_IDX.STATUS] !== APP_CONST.STATUS_MERGED
+    )
+    .map((r) => ({
+      personId: String(r[PERSON_IDX.PERSON_ID]),
+      canonical: String(r[PERSON_IDX.CANONICAL] || ''),
       normalized: String(r[PERSON_IDX.NORMALIZED] || ''),
-      phone:      String(r[PERSON_IDX.PHONE]       || '').replace(/^'/, ''),
+      phone: String(r[PERSON_IDX.PHONE] || '').replace(/^'/, ''),
       usageCount: Number(r[PERSON_IDX.USAGE_COUNT] || 0),
       note: String(r[PERSON_IDX.NOTE] || ''),
-      masterUuid: String(r[PERSON_IDX.MASTER_UUID] || ''),
+      masterUuid: String(r[PERSON_IDX.MASTER_UUID] || '')
     }));
 
   // [PERF-010] สร้าง Note Inverted Index — Map: word → Set<personId>
-  var noteIndex = {};
-  result.forEach(function(p) {
-    var noteStr = String(p.note || '').trim();
+  const noteIndex = {};
+  result.forEach(function (p) {
+    const noteStr = String(p.note || '').trim();
     if (!noteStr) return;
     // แยกคำจาก note โดยใช้ whitespace + common delimiters
-    var words = noteStr.split(/[\s,;|\/\-]+/).filter(function(w) { return w.length >= 2; });
-    words.forEach(function(word) {
-      var key = word.toLowerCase();
+    const words = noteStr.split(/[\s,;|\/\-]+/).filter(function (w) {
+      return w.length >= 2;
+    });
+    words.forEach(function (word) {
+      const key = word.toLowerCase();
       if (!noteIndex[key]) noteIndex[key] = new Set();
       noteIndex[key].add(p.personId);
     });
@@ -664,7 +692,7 @@ function loadAllPersons_() {
 
 function loadAllAliases_() {
   const cacheKey = 'M_PERSON_ALIAS_ALL';
-  const cache    = CacheService.getScriptCache();
+  const cache = CacheService.getScriptCache();
   // [PERF-004] ลองอ่าน chunked cache ก่อน
   const cachedData = loadChunkedCache_(cache, cacheKey);
   if (cachedData) {
@@ -673,7 +701,7 @@ function loadAllAliases_() {
     return cachedData;
   }
 
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET.M_PERSON_ALIAS);
   if (!sheet || sheet.getLastRow() < 2) return [];
 
@@ -695,15 +723,15 @@ function loadAllAliases_() {
  * @private
  */
 function _buildPersonAliasInvertedIndex_(allAliases) {
-  if (_PERSON_ALIAS_INVERTED_INDEX) return;  // already built
+  if (_PERSON_ALIAS_INVERTED_INDEX) return; // already built
   _PERSON_ALIAS_INVERTED_INDEX = new Map();
   if (!allAliases || allAliases.length === 0) return;
 
-  allAliases.forEach(function(alias) {
+  allAliases.forEach(function (alias) {
     if (!alias[PERSON_ALIAS_IDX.ACTIVE_FLAG]) return;
-    var aliasNorm = normalizeForCompare(alias[PERSON_ALIAS_IDX.ALIAS_NAME]);
+    const aliasNorm = normalizeForCompare(alias[PERSON_ALIAS_IDX.ALIAS_NAME]);
     if (!aliasNorm) return;
-    var personId = String(alias[PERSON_ALIAS_IDX.PERSON_ID]);
+    const personId = String(alias[PERSON_ALIAS_IDX.PERSON_ID]);
     if (!_PERSON_ALIAS_INVERTED_INDEX.has(aliasNorm)) {
       _PERSON_ALIAS_INVERTED_INDEX.set(aliasNorm, new Set());
     }
@@ -717,14 +745,24 @@ function _buildPersonAliasInvertedIndex_(allAliases) {
  * @param {Set<string>} personIds - Set of person IDs to update
  */
 function batchUpdatePersonStats_(personIds) {
-  batchUpdateEntityStats_(SHEET.M_PERSON, PERSON_IDX, PERSON_IDX.PERSON_ID, PERSON_IDX.USAGE_COUNT, PERSON_IDX.LAST_SEEN, personIds, invalidatePersonCache_);
+  batchUpdateEntityStats_(
+    SHEET.M_PERSON,
+    PERSON_IDX,
+    PERSON_IDX.PERSON_ID,
+    PERSON_IDX.USAGE_COUNT,
+    PERSON_IDX.LAST_SEEN,
+    personIds,
+    invalidatePersonCache_
+  );
 }
 
 /**
  * invalidatePersonCache_ — [REF-011] Uses centralized invalidateChunkedCache_
  */
 function invalidatePersonCache_() {
-  invalidateChunkedCache_('M_PERSON_ALL', function() { _PERSON_NOTE_INVERTED_INDEX = null; });
+  invalidateChunkedCache_('M_PERSON_ALL', function () {
+    _PERSON_NOTE_INVERTED_INDEX = null;
+  });
 }
 /**
  * invalidateAliasCache_ — [REF-011] Uses centralized invalidateChunkedCache_
@@ -732,7 +770,7 @@ function invalidatePersonCache_() {
  *   (createPersonAlias, autoEnrichAliasesFromFactBatch_, MIGRATION Step 2)
  */
 function invalidateAliasCache_() {
-  _PERSON_ALIAS_INVERTED_INDEX = null;  // [PERF-009] clear inverted index → rebuild on next loadAllAliases_
+  _PERSON_ALIAS_INVERTED_INDEX = null; // [PERF-009] clear inverted index → rebuild on next loadAllAliases_
   invalidateChunkedCache_('M_PERSON_ALIAS_ALL');
 }
 
