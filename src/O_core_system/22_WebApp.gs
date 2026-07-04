@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.040
+ * VERSION: 5.5.041
  * FILE: 22_WebApp.gs
  * LMDS V5.5 — Web App Server (Dashboard)
  * ===================================================
@@ -164,8 +164,15 @@ function isAuthorizedDashboardUser_() {
     logInfo('WebApp', '[Auth DEBUG] effectiveUser="' + email + '"');
 
     if (!email) {
-      logWarn('WebApp', '[Auth] ไม่สามารถอ่าน Email ได้ — ปล่อยผ่าน (preview mode)');
-      return true;
+      // [FIX BUG-PM-003 V5.5.041] เปลี่ยนเป็น Deny-by-default
+      //   สาเหตุ: เดิมปล่อยผ่านเป็น "preview mode" เมื่อ email ว่าง ซึ่งเสี่ยงถ้า
+      //   Web App deploy ผิด config (เช่น access=ANYONE โดยไม่มี executeAs=USER_DEPLOYING)
+      //   → ผู้ใช้นิรนามจะเข้าถึง Dashboard ได้โดยไม่ต้อง auth
+      //   ปลอดภัยกว่าคือ deny แล้วให้ผู้ดูแลตรวจสอบการ deploy
+      logError('WebApp',
+        '[Auth] ไม่สามารถอ่าน Email ได้ — ปฏิเสธการเข้าถึง (ตรวจสอบ Web App config: ' +
+        'access + executeAs=USER_DEPLOYING และ Script Properties DASHBOARD_USERS/LMDS_ADMINS)');
+      return false;
     }
 
     // อ่าน whitelist สำหรับ Dashboard (แยกจาก LMDS_ADMINS)

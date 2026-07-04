@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.040
+ * VERSION: 5.5.041
  * FILE: 24_PipelineManager.gs
  * LMDS V5.5 — Pipeline Manager (Standalone Module)
  * ===================================================
@@ -568,6 +568,22 @@ function getPipelineTriggerCount_() {
  */
 function runPipelineBatch() {
   const batchStart = new Date();
+
+  // [FIX BUG-PM-005 V5.5.041] Enforce BATCH_RUN_END_HOUR at runtime
+  //   สาเหตุ: GAS .everyHours(1).atHour(8) จะ trigger ทุกชม ไม่หยุดที่ 22:00
+  //   → ถ้า quota ถูกรีเซ็ตที่ 00:05 แล้ว trigger 01:15, 02:15, ... จะรันต่อ
+  //   แม้ quota cap (15 runs/day) จะช่วยกัน cross-day run แต่ก็ยังมี window
+  //   23:15 ที่รันได้ (หลัง 22:00) ก่อน reset 00:05
+  //   ป้องกันโดยตรวจชั่วโมงปัจจุบันที่ runtime — ถ้านอกช่วง 08:00-22:59 ให้ SKIP
+  const currentHour = batchStart.getHours();
+  if (currentHour < PIPELINE_CONFIG.BATCH_RUN_START_HOUR ||
+      currentHour > PIPELINE_CONFIG.BATCH_RUN_END_HOUR) {
+    logPipeline_('info', 'Outside business hours (' + currentHour +
+      ':00) — skip (window: ' + PIPELINE_CONFIG.BATCH_RUN_START_HOUR +
+      ':00-' + PIPELINE_CONFIG.BATCH_RUN_END_HOUR + ':59)');
+    return { action: 'SKIP', reason: 'OUTSIDE_BUSINESS_HOURS' };
+  }
+
   logPipeline_('info', '=== Pipeline Batch START ===');
 
   // ─── Step 1: ตรวจ state ───
@@ -658,7 +674,12 @@ function runPipelineBatch() {
     removeMatchEngineAutoResumeTriggers_();
 
     // ─── Step 9: ตรวจผล ───
-    if (batchError !== null) {
+    // [FIX BUG-PM-001 V5.5.041] เปลี่ยนจาก !== null เป็น truthy check
+    //   สาเหตุ: V5.5.035 ลบ `let batchError = null;` ออกตามคำแนะนำ CodeQL
+    //   js/useless-assignment-to-local ทำให้ batchError เริ่มเป็น undefined
+    //   แต่ check `!== null` ของ undefined คืน true → เรียก recordBatchError_
+    //   ทุกครั้งที่ batch สำเร็จ → TypeError ใน logs + state machine พัง
+    if (batchError) {
       const tripped = recordBatchError_(batchError.message);
       if (tripped) {
         setPipelineState_(PIPELINE_STATES.PAUSED_ERRORS, 'Circuit breaker tripped');

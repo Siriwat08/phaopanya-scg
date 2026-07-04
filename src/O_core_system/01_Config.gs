@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.040
+ * VERSION: 5.5.041
  * FILE: 01_Config.gs
  * LMDS V5.5 — System Configuration & Constants
  * ===================================================
@@ -63,8 +63,8 @@
  * ===================================================
  */
 
-const APP_VERSION = '5.5.040';
-const SCHEMA_VERSION = '5.5.040';
+const APP_VERSION = '5.5.041';
+const SCHEMA_VERSION = '5.5.041';
 const APP_NAME    = 'LMDS V5.5';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
@@ -744,11 +744,19 @@ function validateConfig() {
 function getGeminiApiKey() {
   const key = PropertiesService.getScriptProperties()
                                .getProperty('GEMINI_API_KEY');
-  if (!key || !/^AIza[0-9A-Za-z\-_]{35}$/.test(String(key).trim())) {
+  const trimmedKey = key ? String(key).trim() : '';
+  // [FIX BUG-PM-002 V5.5.041] รองรับ Gemini API Key ทั้ง 2 รูปแบบ ให้ตรงกับ setupEnvironment()
+  //   ใน 00_App.gs — เดิมรับเฉพาะ legacy (AIza...) ทำให้ key รูปแบบใหม่ (AQ....)
+  //   ที่ตั้งผ่าน setupEnvironment ถูกปฏิเสธที่นี่ และ throw ผิดพลาด
+  // - Legacy (v1): ขึ้นต้นด้วย "AIza" + 35 ตัวอักษร (รวม 39 ตัว)
+  // - New (v2):    ขึ้นต้นด้วย "AQ."   + Base64URL chars (30-80 ตัว, รวม 33-83 ตัว)
+  const legacyPattern = /^AIza[0-9A-Za-z\-_]{35}$/;
+  const newPattern    = /^AQ\.[0-9A-Za-z\-_]{30,80}$/;
+  if (!trimmedKey || (!legacyPattern.test(trimmedKey) && !newPattern.test(trimmedKey))) {
     throw new Error(
       'GEMINI_API_KEY ยังไม่ได้ตั้งค่าหรือรูปแบบไม่ถูกต้อง\n' +
       'กรุณารัน เมนู LMDS > ระบบ > ตั้งค่า API Key ก่อน'
     );
   }
-  return key;
+  return trimmedKey;
 }
