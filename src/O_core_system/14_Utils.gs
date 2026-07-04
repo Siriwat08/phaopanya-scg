@@ -499,7 +499,9 @@ function safeUiAlert_(message, title) {
     // รันจาก Trigger ไม่มี UI context → log เงียบๆ
     try {
       logInfo('System', `[UI Message] ${String(message).substring(0, 200)}`);
-    } catch (_) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   }
 }
 
@@ -661,6 +663,20 @@ function convertPlaceIdToUuid(placeId) {
  * [SEC-007 FIX] Mask email ก่อน log เพื่อป้องกัน PII leakage ลง SYS_LOG
  * @return {boolean}
  */
+/**
+ * ฟังก์ชันช่วยสำหรับ mask email
+ */
+function getMaskedEmail_(email) {
+  if (typeof maskReviewerEmail_ === 'function') {
+    return maskReviewerEmail_(email);
+  }
+  const domain = email.split('@')[1] || 'unknown';
+  if (email.length > 2) {
+    return email[0] + '***' + email[email.length - 1] + '@' + domain;
+  }
+  return email[0] + '***@' + domain;
+}
+
 function isAuthorizedUser_() {
   try {
     const email = String(Session.getActiveUser().getEmail() || '')
@@ -674,22 +690,14 @@ function isAuthorizedUser_() {
     const adminsStr = String(PropertiesService.getScriptProperties().getProperty('LMDS_ADMINS') || '').trim();
 
     if (!adminsStr) {
-      // [SEC-001 FIX] Deny-by-default: ปล่อยผ่านเฉพาะ Script Owner เท่านั้น
       const ownerEmail = String(Session.getEffectiveUser().getEmail() || '')
         .trim()
         .toLowerCase();
       if (email === ownerEmail) {
-        logWarn('Security', '[SEC-001] LMDS_ADMINS ยังไม่ได้ตั้ง — Script Owner ผ่าน (ควรตั้ง Admin List โดยเร็ว)');
+        logWarn('Security', '[SEC-001] LMDS_ADMINS ยังไม่ได้ตั้ง — Script Owner ผ่าน');
         return true;
       }
-      // [SEC-007 FIX] Mask email ก่อน log
-      const maskedNoAdmin =
-        typeof maskReviewerEmail_ === 'function'
-          ? maskReviewerEmail_(email)
-          : email.length > 2
-            ? email[0] + '***' + email[email.length - 1] + '@' + (email.split('@')[1] || 'unknown')
-            : email[0] + '***@' + (email.split('@')[1] || 'unknown');
-      logWarn('Security', `[SEC-001] LMDS_ADMINS ยังไม่ได้ตั้ง — ปฏิเสธ: ${maskedNoAdmin}`);
+      logWarn('Security', `[SEC-001] LMDS_ADMINS ยังไม่ได้ตั้ง — ปฏิเสธ: ${getMaskedEmail_(email)}`);
       return false;
     }
 
@@ -700,14 +708,7 @@ function isAuthorizedUser_() {
     const isAuthorized = admins.includes(email);
 
     if (!isAuthorized) {
-      // [SEC-007 FIX] Mask email ก่อน log
-      const masked =
-        typeof maskReviewerEmail_ === 'function'
-          ? maskReviewerEmail_(email)
-          : email.length > 2
-            ? email[0] + '***' + email[email.length - 1] + '@' + (email.split('@')[1] || 'unknown')
-            : email[0] + '***@' + (email.split('@')[1] || 'unknown');
-      logWarn('Security', `[SEC-002] ปฏิเสธการเข้าถึง: ${masked} ไม่อยู่ในรายชื่อ Admin`);
+      logWarn('Security', `[SEC-002] ปฏิเสธการเข้าถึง: ${getMaskedEmail_(email)} ไม่อยู่ในรายชื่อ Admin`);
     }
 
     return isAuthorized;
@@ -814,7 +815,15 @@ function batchUpdateEntityStats_(
   cacheFn,
   extraUpdatesFn
 ) {
-  const ids = idSet instanceof Set ? Array.from(idSet) : Array.isArray(idSet) ? idSet : [idSet];
+  let ids;
+  if (idSet instanceof Set) {
+    ids = Array.from(idSet);
+  } else if (Array.isArray(idSet)) {
+    ids = idSet;
+  } else {
+    ids = [idSet];
+  }
+
   if (ids.length === 0) return;
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) return;

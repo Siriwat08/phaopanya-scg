@@ -1068,7 +1068,7 @@ function migrateEntityAliasToGlobalBatch_(
 /**
  * ALIAS_ENRICH_CHECKPOINT_KEY — [REF-003] PropertiesService key prefix for alias enrichment checkpoint
  */
-let ALIAS_ENRICH_CHECKPOINT_KEY = 'ALIAS_ENRICH_CHECKPOINT';
+const ALIAS_ENRICH_CHECKPOINT_KEY = 'ALIAS_ENRICH_CHECKPOINT';
 
 /**
  * saveAliasEnrichCheckpoint_ — [REF-003] Save progress สำหรับ populateAliasFromSCGRawData_ / populateAliasFromFactDelivery_

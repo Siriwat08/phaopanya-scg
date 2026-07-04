@@ -646,11 +646,11 @@ function applySheetProtection_UI() {
     const adminsStr = String(PropertiesService.getScriptProperties().getProperty('LMDS_ADMINS') || '').trim();
     const adminEmails = adminsStr
       ? adminsStr
-          .split(',')
-          .map(function (e) {
-            return e.trim();
-          })
-          .filter(Boolean)
+        .split(',')
+        .map(function (e) {
+          return e.trim();
+        })
+        .filter(Boolean)
       : [];
 
     // === 1. Protected Ranges: ชีตที่มี PII ===
@@ -713,26 +713,34 @@ function applySheetLevelProtection_(ss, config, me, adminEmails) {
   editors.forEach((editor) => {
     try {
       protection.removeEditor(editor.getEmail());
-    } catch (e) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   });
   // [SEC-009 FIX] เพิ่ม Script Owner
   if (me) {
     try {
       protection.addEditor(me);
-    } catch (e) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   }
   // [SEC-009 FIX] เพิ่ม Admin ทั้งหมดจาก LMDS_ADMINS
   adminEmails.forEach((email) => {
     try {
       protection.addEditor(email);
-    } catch (e) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   });
 
   // Hidden Sheet (ถ้ากำหนด)
   if (config.hide) {
     try {
       sheet.hideSheet();
-    } catch (e) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   }
 
   return `✅ ${config.name}: Protected${config.hide ? ' + Hidden' : ''}`;
@@ -767,17 +775,23 @@ function applyReviewRangeProtection_(ss, me, adminEmails) {
   reviewEditors.forEach((editor) => {
     try {
       rangeProtection.removeEditor(editor.getEmail());
-    } catch (e) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   });
   if (me) {
     try {
       rangeProtection.addEditor(me);
-    } catch (e) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   }
   adminEmails.forEach((email) => {
     try {
       rangeProtection.addEditor(email);
-    } catch (e) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   });
   return '✅ Q_REVIEW: Range Protected (A1:Q — reviewer แก้ R-V ได้)';
 }
@@ -801,18 +815,24 @@ function applyGeoPointProtection_(ss, me, adminEmails) {
   geoEditors.forEach((editor) => {
     try {
       geoProtection.removeEditor(editor.getEmail());
-    } catch (e) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   });
   if (me) {
     try {
       geoProtection.addEditor(me);
-    } catch (e) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   }
   // [SEC-009 FIX] เพิ่ม admin สำหรับ M_GEO_POINT ด้วย
   adminEmails.forEach((email) => {
     try {
       geoProtection.addEditor(email);
-    } catch (e) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   });
   return '✅ M_GEO_POINT: Protected';
 }

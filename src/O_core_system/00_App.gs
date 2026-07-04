@@ -331,7 +331,9 @@ function handleSelectionChange_(e) {
   } catch (err) {
     try {
       logError('SmartNav', err.message, err);
-    } catch (_) {}
+    } catch (e) {
+      // Ignored error (Trigger context)
+    }
   }
 }
 

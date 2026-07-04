@@ -431,7 +431,14 @@ function calculateNameScore_(nameA, nameB) {
   const maxLen = Math.max(nameA.length, nameB.length);
   const levScore = maxLen > 0 ? Math.max(0, (1 - levDist / maxLen) * 100) : 0;
   const diceScore = diceCoefficient(nameA, nameB) * 100;
-  const ratioScore = nameA === nameB ? 100 : nameA.includes(nameB) || nameB.includes(nameA) ? 80 : 0;
+
+  // แก้ไขบรรทัดที่ 434 จาก nested ternary เป็น logic ที่อ่านง่ายขึ้น:
+  let ratioScore = 0;
+  if (nameA === nameB) {
+    ratioScore = 100;
+  } else if (nameA.includes(nameB) || nameB.includes(nameA)) {
+    ratioScore = 80;
+  }
 
   let finalScore;
   if (nameA.length < 4) {
@@ -456,7 +463,7 @@ function createPerson(normResult) {
     const now = new Date();
     const newId = generateShortId('P');
 
-    const phoneStr = normResult.extractedPhone ? "'" + normResult.extractedPhone : '';
+    const phoneStr = normResult.extractedPhone ? '\'' + normResult.extractedPhone : '';
 
     // [FIX v5.2.002] รวบรวม Note ทั้งหมด (Phone, Doc, Prefix)
     const allNotes = normResult.deliveryNotes || [];
