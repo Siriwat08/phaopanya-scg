@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.045
+ * VERSION: 5.5.046
  * FILE: 21_AliasService.gs
  * LMDS V5.5 — Hybrid Alias Architecture (Global M_ALIAS + Entity-Specific Views)
  * ===================================================
@@ -240,6 +240,37 @@ function loadGlobalAliasesMap_() {
   // [FIX CRIT-001] ใช้ chunked cache saver แทน cache.put ตรง — ป้อนกัน 100KB limit
   saveAliasCacheChunked_(cacheKey, resultObj);
   return resultObj;
+}
+
+/**
+ * getPersonMasterUuid_ — [NEW v5.5.046] แปลง personId → masterUuid สำหรับสร้าง Global Alias
+ *   ใช้ใน Self-Healing Alias flow (Issue #30 Phase 3) — เมื่อ Admin กด MERGE_TO_CANDIDATE
+ *   เราต้องการสร้าง alias จาก rawPersonName → masterUuid ของ candidate ที่ Admin เลือก
+ *
+ * @param {string} personId - รหัส person ที่ต้องการดู masterUuid
+ * @return {string|null} masterUuid หรือ null ถ้าไม่พบ
+ * @private
+ */
+function getPersonMasterUuid_(personId) {
+  if (!personId) return null;
+  const all = loadAllPersons_();
+  const found = all.find((p) => p.personId === personId);
+  return found && found.masterUuid ? found.masterUuid : null;
+}
+
+/**
+ * getPlaceMasterUuid_ — [NEW v5.5.046] แปลง placeId → masterUuid สำหรับสร้าง Global Alias
+ *   ใช้ใน Self-Healing Alias flow (Issue #30 Phase 3) — เมื่อ Admin กด MERGE_TO_CANDIDATE
+ *
+ * @param {string} placeId - รหัส place ที่ต้องการดู masterUuid
+ * @return {string|null} masterUuid หรือ null ถ้าไม่พบ
+ * @private
+ */
+function getPlaceMasterUuid_(placeId) {
+  if (!placeId) return null;
+  const all = loadAllPlaces_();
+  const found = all.find((p) => p.placeId === placeId);
+  return found && found.masterUuid ? found.masterUuid : null;
 }
 
 /**

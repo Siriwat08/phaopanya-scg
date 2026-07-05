@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.045
+ * VERSION: 5.5.046
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -1058,7 +1058,13 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
 
   // Rule 4: พบครบทั้ง 3 อย่างใน Master -> AUTO_MATCH (Full)
   if (isGeoInMaster && isPersonInMaster && isPlaceInMaster) {
-    const confidence = matchCalcFullScore_(geoResult.confidence, personResult.confidence, placeResult.confidence);
+    const confidence = matchCalcFullScore_(
+      geoResult.confidence,
+      personResult.confidence,
+      placeResult.confidence,
+      srcObj,
+      personResult
+    );
     return {
       action: 'AUTO_MATCH',
       reason: APP_CONST.MATCH_FULL,
@@ -1117,15 +1123,53 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
 }
 
 /**
+ * calcDynamicWeights_ — [NEW v5.5.046 Dynamic Weighting 2.2]
+ * ปรับน้ำหนัก geo/person/place ตามความสมบูรณ์ของข้อมูล
+ *   - ที่อยู่ดิบสั้นมาก (< 10 ตัวอักษร = สัญญาณรบกวนสูง) → ลด weight place, เพิ่ม weight person
+ *   - เบอร์โทรตรงเป๊ะ (personResult.confidence >= 95) → เพิ่ม weight person อีกเล็กน้อย
+ * Backward compatible: ไม่ส่ง srcObj มา → คืน baseWeights เดิมทุกประการ
+ * @param {{geo:number, person:number, place:number}} baseWeights
+ * @param {Object} [srcObj] - source row object (optional — backward compatible)
+ * @param {Object} [personResult] - resolvePerson result (optional)
+ * @return {{geo:number, person:number, place:number}}
+ * @private
+ */
+function calcDynamicWeights_(baseWeights, srcObj, personResult) {
+  const geo = baseWeights.geo;
+  let person = baseWeights.person;
+  let place = baseWeights.place;
+  if (!srcObj) return { geo, person, place };
+
+  const SHIFT = 0.08;
+  const rawAddrLen = String(srcObj.rawAddress || '').trim().length;
+  const addressIsThin = rawAddrLen > 0 && rawAddrLen < 10;
+  const personIsStrongPhoneMatch = !!(personResult && personResult.confidence >= 95);
+
+  if (addressIsThin && place > SHIFT) {
+    place -= SHIFT;
+    person += SHIFT;
+  } else if (personIsStrongPhoneMatch && place > SHIFT / 2) {
+    const bump = SHIFT / 2;
+    place -= bump;
+    person += bump;
+  }
+  return { geo, person, place };
+}
+
+/**
  * matchCalcFullScore_ — [F-8] Confidence for Rule 4 (Full Match: geo + person + place)
- * Weight: geo=0.5, person=0.3, place=0.2
+ * [UPGRADE v5.5.046] รับ srcObj/personResult เพิ่มเติมเพื่อ Dynamic Weighting (2.2) — optional, backward compatible
+ * Base Weight: geo=0.5, person=0.3, place=0.2
  * @param {number} geoConf - geoResult.confidence
  * @param {number} personConf - personResult.confidence
  * @param {number} placeConf - placeResult.confidence
+ * @param {Object} [srcObj] - source row (optional — for dynamic weighting)
+ * @param {Object} [personResult] - resolvePerson result (optional)
  * @returns {number} confidence (0-100)
  */
-function matchCalcFullScore_(geoConf, personConf, placeConf) {
-  return Math.round(geoConf * 0.5 + personConf * 0.3 + placeConf * 0.2);
+function matchCalcFullScore_(geoConf, personConf, placeConf, srcObj, personResult) {
+  const w = calcDynamicWeights_({ geo: 0.5, person: 0.3, place: 0.2 }, srcObj, personResult);
+  return Math.round(geoConf * w.geo + personConf * w.person + placeConf * w.place);
 }
 
 /**
@@ -1575,6 +1619,34 @@ function resolveAndPersistMerge_(srcObj, candidates) {
 
   const targetPlaceId =
     candidates && candidates.candPlaceIds && candidates.candPlaceIds.length > 0 ? candidates.candPlaceIds[0] : null;
+
+  // [NEW v5.5.046 — Self-Healing Alias 3.1]
+  //   Admin ยืนยัน MERGE_TO_CANDIDATE = Human-in-the-loop ที่แม่นยำที่สุด
+  //   เรียนรู้ typo pattern โดยสร้าง Global Alias จากชื่อดิบ → masterUuid ทันที
+  //   รอบ Match Engine ถัดไปจะจับคู่ได้เองโดยไม่ต้องเข้า Q_REVIEW ซ้ำ
+  //   [Rule 12] ห้ามให้ alias-learning ทำให้ MERGE decision ล้มเหลว
+  try {
+    if (targetPersonId && srcObj.rawPersonName) {
+      const personUuid = getPersonMasterUuid_(targetPersonId);
+      if (personUuid) {
+        const newAliasId = createGlobalAlias(personUuid, srcObj.rawPersonName, 'PERSON', 100, 'HUMAN');
+        if (newAliasId) {
+          logInfo('MatchEngine', 'Self-Healing Alias: PERSON "' + srcObj.rawPersonName + '" → ' + targetPersonId);
+        }
+      }
+    }
+    if (targetPlaceId && srcObj.rawPlaceName) {
+      const placeUuid = getPlaceMasterUuid_(targetPlaceId);
+      if (placeUuid) {
+        const newAliasId = createGlobalAlias(placeUuid, srcObj.rawPlaceName, 'PLACE', 100, 'HUMAN');
+        if (newAliasId) {
+          logInfo('MatchEngine', 'Self-Healing Alias: PLACE "' + srcObj.rawPlaceName + '" → ' + targetPlaceId);
+        }
+      }
+    }
+  } catch (aliasErr) {
+    logError('MatchEngine', 'Self-Healing Alias ล้มเหลว (ไม่กระทบ MERGE): ' + aliasErr.message, aliasErr);
+  }
 
   // Geo + Dest resolution
   let targetGeoId = null;
