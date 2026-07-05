@@ -57,9 +57,9 @@ rules:
       message: 'Empty statement — ลบ semicolon ที่ไม่จำเป็น'
 
   # ─── Style ───
+  # NOTE: indent + quotes ปิดไว้ เพราะ Prettier จัดการให้แล้ว (เลี่ยง conflict)
+  # Reference: https://prettier.io/docs/en/integrating-with-linters.html
   semi: [warn, always] # ใส่ semicolon ทุกบรรทัด
-  quotes: [warn, single] # ใช้ single quote
-  indent: [warn, 2] # ย่อหน้า 2 spaces
   no-trailing-spaces: warn # ไม่มี trailing spaces
   eol-last: warn # ขึ้นบรรทัดใหม่ท้ายไฟล์
 
