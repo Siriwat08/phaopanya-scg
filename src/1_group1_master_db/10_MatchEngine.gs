@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.044
+ * VERSION: 5.5.045
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -1714,8 +1714,14 @@ function reprocResolveOrCreatePersonForReview_(rawPerson) {
 /**
  * reprocResolveOrCreatePlaceForReview_ — [REF-001] Resolve-or-create Place สำหรับ reproc flow
  *   Behavior mirror ของ Group B inline logic (12_ReviewService.gs:1374-1386)
+ *
+ *   [FIX V5.5.045 Issue #26] เพิ่ม geo enrichment ก่อน createPlace
+ *     เดิมส่ง '' ทั้ง 4 fields → place ใหม่ไม่มี province/district/postcode
+ *     ทำให้ Match Engine Rule 3 (GEO_PROVINCE_CONFLICT) ไม่ทำงาน + reporting ไม่ครบ
+ *     ตอนนี้ใช้ getEnrichedGeoData() เหมือน flow หลัก (executeDecision บรรทัด 1193)
+ *
  * @param {string} rawPlace - raw place name
- * @param {string} rawAddr - raw address (fallback)
+ * @param {string} rawAddr - raw address (fallback, ใช้สำหรับ geo enrichment)
  * @return {{placeId: string|null, error: string|null}}
  */
 function reprocResolveOrCreatePlaceForReview_(rawPlace, rawAddr) {
@@ -1731,7 +1737,38 @@ function reprocResolveOrCreatePlaceForReview_(rawPlace, rawAddr) {
       return { placeId: plRes.placeId, error: null };
     }
     if (plRes && plRes.normResult) {
-      const newPlaceId = createPlace(plRes.normResult, '', '', '', '');
+      // [FIX V5.5.045 Issue #26] เพิ่ม geo enrichment เหมือน flow หลัก (executeDecision)
+      //   เดิม: createPlace(plRes.normResult, '', '', '', '') → place ใหม่ไม่มี province/district/postcode
+      //   ใหม่: ดึง enrichment จาก rawAddr ผ่าน getEnrichedGeoData() (ใช้ RAM cache)
+      //   Trade-off: +50-100ms per call (acceptable เพราะใช้ loadCachedGeoRowsForPlace_ cache)
+      //   Fallback: ถ้า getEnrichedGeoData fail → ใช้ค่าว่าง (preserve old behavior) + log warn
+      const geoEnrich = { province: '', district: '', subDistrict: '', postcode: '' };
+      if (typeof getEnrichedGeoData === 'function' && rawAddr) {
+        try {
+          const enrichResult = getEnrichedGeoData(rawAddr);
+          if (enrichResult) {
+            geoEnrich.province = enrichResult.province || '';
+            geoEnrich.district = enrichResult.district || '';
+            geoEnrich.subDistrict = enrichResult.subDistrict || '';
+            geoEnrich.postcode = enrichResult.postcode || '';
+          }
+        } catch (enrichErr) {
+          // ไม่ block flow — ใช้ค่าว่าง + log warn เพื่อให้วินิจฉัยได้
+          logWarn(
+            'MatchEngine',
+            'reprocResolveOrCreatePlaceForReview_: getEnrichedGeoData failed - ' +
+              enrichErr.message +
+              ' (continuing with empty geoEnrich)'
+          );
+        }
+      }
+      const newPlaceId = createPlace(
+        plRes.normResult,
+        geoEnrich.province,
+        geoEnrich.district,
+        geoEnrich.subDistrict,
+        geoEnrich.postcode
+      );
       return { placeId: newPlaceId, error: null };
     }
     return { placeId: null, error: null };
