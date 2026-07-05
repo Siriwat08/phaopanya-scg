@@ -1,5 +1,10 @@
 /**
- * INVESTIGATE_Issue26 — Script สำหรับ investigate Issue #26
+ * VERSION: 5.5.045
+ * FILE: INVESTIGATE_Issue26.gs
+ * LMDS V5.5 — Investigation Script for Issue #26
+ * ===================================================
+ * PURPOSE:
+ *   Script สำหรับ investigate Issue #26 (createPlace empty fields bug)
  *   รันใน Apps Script Editor → Execute → ดูผลใน Stackdriver Logs (View → Logs)
  *
  *   Investigate เรื่อง:
@@ -8,6 +13,21 @@
  *
  *   รันครั้งเดียว — output ไป Stackdriver Logs
  *   ไม่แก้ไขข้อมูล — read-only investigation
+ * ===================================================
+ * DEPENDENCIES:
+ *   REQUIRES (Load Order):
+ *     - 01_Config.gs (SHEET.M_PLACE, SHEET.FACT_DELIVERY, FACT_IDX)
+ *   CALLS (Invokes):
+ *     - None (read-only script)
+ *   EXPORTS TO:
+ *     - Stackdriver Logs (console.log)
+ *   SHEETS ACCESSED (Read-only):
+ *     - SHEET.M_PLACE
+ *     - SHEET.FACT_DELIVERY
+ * ===================================================
+ * CHANGELOG:
+ *   V5.5.045 (2026-07-05) — Initial creation for Issue #26 investigation
+ * ===================================================
  */
 function INVESTIGATE_Issue26() {
   console.log('=== INVESTIGATE Issue #26: createPlace empty fields ===');
@@ -19,14 +39,14 @@ function INVESTIGATE_Issue26() {
   // ============================================================
   console.log('--- PHASE 1: M_PLACE Data Quality Scan ---');
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var placeSheet = ss.getSheetByName(SHEET.M_PLACE);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const placeSheet = ss.getSheetByName(SHEET.M_PLACE);
   if (!placeSheet) {
     console.log('❌ M_PLACE sheet not found');
     return;
   }
 
-  var placeLastRow = placeSheet.getLastRow();
+  const placeLastRow = placeSheet.getLastRow();
   if (placeLastRow < 2) {
     console.log('⚠️ M_PLACE empty');
     return;
@@ -36,25 +56,25 @@ function INVESTIGATE_Issue26() {
   //          district, province, postcode, first_seen, last_seen, usage_count,
   //          record_status, note, master_uuid
   // Indices: 0=place_id, 4=sub_district, 5=district, 6=province, 7=postcode
-  var placeData = placeSheet.getRange(2, 1, placeLastRow - 1, 14).getValues();
+  const placeData = placeSheet.getRange(2, 1, placeLastRow - 1, 14).getValues();
 
-  var totalPlaces = placeData.length;
-  var emptyProvince = 0;
-  var emptyDistrict = 0;
-  var emptyPostcode = 0;
-  var emptyAllFour = 0;
-  var emptyProvinceSamples = [];
+  const totalPlaces = placeData.length;
+  const emptyProvince = 0;
+  const emptyDistrict = 0;
+  const emptyPostcode = 0;
+  const emptyAllFour = 0;
+  const emptyProvinceSamples = [];
 
-  for (var i = 0; i < placeData.length; i++) {
-    var row = placeData[i];
-    var province = String(row[6] || '').trim();
-    var district = String(row[5] || '').trim();
-    var subDistrict = String(row[4] || '').trim();
-    var postcode = String(row[7] || '').trim();
+  for (const i = 0; i < placeData.length; i++) {
+    const row = placeData[i];
+    const province = String(row[6] || '').trim();
+    const district = String(row[5] || '').trim();
+    const subDistrict = String(row[4] || '').trim();
+    const postcode = String(row[7] || '').trim();
 
-    var hasEmptyProvince = province === '';
-    var hasEmptyDistrict = district === '';
-    var hasEmptyPostcode = postcode === '';
+    const hasEmptyProvince = province === '';
+    const hasEmptyDistrict = district === '';
+    const hasEmptyPostcode = postcode === '';
 
     if (hasEmptyProvince) emptyProvince++;
     if (hasEmptyDistrict) emptyDistrict++;
@@ -98,8 +118,8 @@ function INVESTIGATE_Issue26() {
 
   if (emptyProvinceSamples.length > 0) {
     console.log('Sample places with empty province (first 10):');
-    for (var s = 0; s < emptyProvinceSamples.length; s++) {
-      var sample = emptyProvinceSamples[s];
+    for (const s = 0; s < emptyProvinceSamples.length; s++) {
+      const sample = emptyProvinceSamples[s];
       console.log(
         '  ' +
           (s + 1) +
@@ -123,13 +143,13 @@ function INVESTIGATE_Issue26() {
   // ============================================================
   console.log('--- PHASE 2: Reprocess Flow Usage (FACT_DELIVERY) ---');
 
-  var factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
+  const factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
   if (!factSheet) {
     console.log('❌ FACT_DELIVERY sheet not found');
     return;
   }
 
-  var factLastRow = factSheet.getLastRow();
+  const factLastRow = factSheet.getLastRow();
   if (factLastRow < 2) {
     console.log('⚠️ FACT_DELIVERY empty');
     return;
@@ -138,17 +158,17 @@ function INVESTIGATE_Issue26() {
   // FACT_IDX.MATCH_REASON = 24, FACT_IDX.PERSON_ID = 15, FACT_IDX.PLACE_ID = 16
   // FACT_IDX.DELIVERY_DATE = 4, FACT_IDX.MATCH_STATUS = 22
   // อ่านเฉพาะคอลัมน์ที่จำเป็น (cols 5-25, 1-based)
-  var factCols = factSheet.getLastColumn();
-  var factData = factSheet.getRange(2, 1, factLastRow - 1, Math.min(factCols, 34)).getValues();
+  const factCols = factSheet.getLastColumn();
+  const factData = factSheet.getRange(2, 1, factLastRow - 1, Math.min(factCols, 34)).getValues();
 
-  var totalFacts = factData.length;
-  var reprocessedFacts = 0;
-  var reprocessedSamples = [];
+  const totalFacts = factData.length;
+  const reprocessedFacts = 0;
+  const reprocessedSamples = [];
 
-  for (var j = 0; j < factData.length; j++) {
-    var frow = factData[j];
-    var matchReason = String(frow[24] || ''); // MATCH_REASON
-    var matchStatus = String(frow[22] || ''); // MATCH_STATUS
+  for (const j = 0; j < factData.length; j++) {
+    const frow = factData[j];
+    const matchReason = String(frow[24] || ''); // MATCH_REASON
+    const matchStatus = String(frow[22] || ''); // MATCH_STATUS
 
     // ตรวจหา evidence ที่บอกว่ามาจาก reprocess flow
     if (matchReason.indexOf('post_process_v55') !== -1 || matchReason.indexOf('GEO_ANCHOR_NEW') !== -1) {
@@ -180,8 +200,8 @@ function INVESTIGATE_Issue26() {
 
   if (reprocessedSamples.length > 0) {
     console.log('Sample reprocessed facts (first 5):');
-    for (var r = 0; r < reprocessedSamples.length; r++) {
-      var rs = reprocessedSamples[r];
+    for (const r = 0; r < reprocessedSamples.length; r++) {
+      const rs = reprocessedSamples[r];
       console.log(
         '  ' +
           (r + 1) +
@@ -223,21 +243,21 @@ function INVESTIGATE_Issue26() {
   }
 
   // Build placeId → place map for quick lookup
-  var placeMap = {};
-  for (var p = 0; p < placeData.length; p++) {
-    var pid = placeData[p][0];
+  const placeMap = {};
+  for (const p = 0; p < placeData.length; p++) {
+    const pid = placeData[p][0];
     if (pid) placeMap[pid] = placeData[p];
   }
 
   // Check each reprocessed sample's placeId
-  var reprocessedPlaceWithEmptyProvince = 0;
-  for (var k = 0; k < reprocessedSamples.length; k++) {
-    var samplePlaceId = reprocessedSamples[k].placeId;
+  const reprocessedPlaceWithEmptyProvince = 0;
+  for (const k = 0; k < reprocessedSamples.length; k++) {
+    const samplePlaceId = reprocessedSamples[k].placeId;
     if (samplePlaceId && placeMap[samplePlaceId]) {
-      var placeRow = placeMap[samplePlaceId];
-      var placeProvince = String(placeRow[6] || '').trim();
-      var placeDistrict = String(placeRow[5] || '').trim();
-      var placePostcode = String(placeRow[7] || '').trim();
+      const placeRow = placeMap[samplePlaceId];
+      const placeProvince = String(placeRow[6] || '').trim();
+      const placeDistrict = String(placeRow[5] || '').trim();
+      const placePostcode = String(placeRow[7] || '').trim();
 
       console.log('  Place ' + samplePlaceId + ' (from reprocessed fact):');
       console.log('    Province: "' + placeProvince + '"');
@@ -298,8 +318,8 @@ function INVESTIGATE_Issue26_DryRun() {
   console.log('');
 
   // Simulate what reprocResolveOrCreatePlaceForReview_ does
-  var testRawPlace = 'ร้านสมชาย';
-  var testRawAddr = '123 ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110';
+  const testRawPlace = 'ร้านสมชาย';
+  const testRawAddr = '123 ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110';
 
   console.log('Test inputs:');
   console.log('  rawPlace: "' + testRawPlace + '"');
