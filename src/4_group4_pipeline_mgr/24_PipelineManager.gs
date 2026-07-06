@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.004
+ * VERSION: 6.0.005
  * FILE: 24_PipelineManager.gs
  * LMDS V5.5 — Pipeline Manager (Standalone Module)
  * ===================================================
