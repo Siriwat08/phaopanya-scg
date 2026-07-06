@@ -578,7 +578,19 @@ function formatEnrichedAddress_(house, sub, dist, prov, post) {
   if (dist) parts.push(dist);
   if (prov) parts.push(prov);
   if (post) parts.push(post);
-  return parts.join(' ').trim();
+  // [FIX V6.0.005 BUG-DUPLICATE-PLACE] ลบคำซ้ำ "เขตเขต" → "เขต"
+  //   สาเหตุ: subDistrict และ district อาจขึ้นต้นด้วย "เขต" ทั้งคู่
+  //   เช่น sub="เขตบางเขน" + dist="เขตบางเขน" → "เขตบางเขน เขตบางเขน"
+  //   หรือ sub="แขวง..." + dist="เขต..." ที่ซ้ำกัน
+  let result = parts.join(' ').trim();
+  // ลบคำที่ซ้ำกันติดๆ (เช่น "เขตเขต" → "เขต", "บางเขน บางเขน" → "บางเขน")
+  result = result.replace(/\b(\S+)\s+\1\b/g, '$1');
+  // ลบคำนำหน้าซ้ำ (เช่น "เขต เขตบางเขน" → "เขตบางเขน")
+  result = result.replace(/เขต\s+เขต/g, 'เขต');
+  result = result.replace(/แขวง\s+แขวง/g, 'แขวง');
+  result = result.replace(/อำเภอ\s+อำเภอ/g, 'อำเภอ');
+  result = result.replace(/ตำบล\s+ตำบล/g, 'ตำบล');
+  return result.trim();
 }
 
 // [REMOVED REV1-001] extractTextPriority_() and fuzzyMatchAddress() removed — deprecated v5.5.001,
@@ -686,9 +698,28 @@ function createPlace(normResult, province, district, subDistrict, postcode) {
         ? buildThaiDoubleMetaphone(normResult.cleanPlace)
         : { primary: '', secondary: '' };
 
+    // [FIX V6.0.005 BUG-DUPLICATE-PLACE] ใช้ cleanPlace เป็น canonical ถ้า fullAddress
+    //   เป็นเพียงชื่อเขต/จังหวัด (ไม่มีชื่อสถานที่เฉพาะ)
+    //   สาเหตุ: fullAddress จาก geo enrichment อาจเป็น "เขตบางเขน กรุงเทพมหานคร"
+    //   ทำให้ place นี้ match กับทุกที่อยู่ในเขตบางเขน → false match
+    //   วิธีแก้: ถ้า fullAddress ขึ้นต้นด้วย เขต/อำเภอ/ตำบล/แขวง หรือสั้นกว่า 15 ตัวอักษร
+    //   → ใช้ cleanPlace แทน (เพราะ cleanPlace มาจาก rawPlace ที่มีชื่อสถานที่เฉพาะ)
+    let canonicalName = normResult.fullAddress || normResult.cleanPlace;
+    const checkFull = String(canonicalName || '').trim();
+    const isDistrictLevel =
+      checkFull.startsWith('เขต') ||
+      checkFull.startsWith('อำเภอ') ||
+      checkFull.startsWith('ตำบล') ||
+      checkFull.startsWith('แขวง');
+    const isProvinceOnly =
+      checkFull.length <= 15 && (checkFull.indexOf('จังหวัด') === 0 || checkFull.indexOf('กรุงเทพ') === 0);
+    if ((isDistrictLevel || isProvinceOnly) && normResult.cleanPlace) {
+      canonicalName = normResult.cleanPlace;
+    }
+
     const newRow = [
       newId,
-      normResult.fullAddress || normResult.cleanPlace, // [FIX v008] ใช้ที่อยู่ที่ซ่อมแล้วเป็นชื่อหลัก (Canonical)
+      canonicalName, // [FIX V6.0.005] canonical name — ใช้ cleanPlace ถ้า fullAddress เป็นชื่อเขต/จังหวัด
       normResult.cleanPlace, // Normalized
       normResult.placeType || 'other',
       subDistrict || '',
