@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.004
+ * VERSION: 6.0.005
  * FILE: 12_ReviewService.gs
  * LMDS V5.5 — Review Queue Service
  * [FIX BUG-B2] v5.4.003: updateReviewRowStatus_() helper — 1 setValues แทน 5× setValue
@@ -1728,3 +1728,72 @@ function clearReprocessCheckpoint_() {
 
 // [REMOVED V5.5.044] analyzeReviewPatterns — dead code (mark @deprecated ใน V5.5.043, ไม่มี caller ใน .gs ใด)
 //   หากมี external caller ที่ต้องการ restore → ดู git history ของ commit นี้
+
+// ============================================================
+// SECTION 7: [V6.0.005] Q_REVIEW Cleanup
+// ============================================================
+
+/**
+ * clearDoneReviews_UI — [V6.0.005] ลบแถวที่ status=Done หรือ Escalated ออกจาก Q_REVIEW
+ *   ใช้หลังจาก Admin อนุมัติ/ปฏิเสธครบแล้ว — ลบเพื่อให้เหลือเฉพาะ Pending
+ *   ข้อมูลที่ถูกประมวลผลแล้วจะอยู่ใน FACT_DELIVERY (audit trail ครบ)
+ */
+function clearDoneReviews_UI() {
+  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+    safeUiAlert_('🔒 คุณไม่มีสิทธิ์ล้าง Q_REVIEW\nกรุณาติดต่อ Admin');
+    return;
+  }
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
+    if (!sheet || sheet.getLastRow() < 2) {
+      safeUiAlert_('Q_REVIEW ว่าง — ไม่มีข้อมูลจัดการ');
+      return;
+    }
+
+    const totalRows = sheet.getLastRow() - 1;
+    const allData = sheet.getRange(2, 1, totalRows, SCHEMA[SHEET.Q_REVIEW].length).getValues();
+
+    // แยกแถวที่จะเก็บ (Pending) กับแถวที่จะลบ (Done/Escalated)
+    const keepRows = [];
+    let removedCount = 0;
+
+    for (let i = 0; i < allData.length; i++) {
+      const status = String(allData[i][REVIEW_IDX.STATUS] || '').trim();
+      if (status === 'Done' || status === 'Escalated') {
+        removedCount++;
+      } else {
+        keepRows.push(allData[i]);
+      }
+    }
+
+    if (removedCount === 0) {
+      safeUiAlert_('ไม่มีแถวที่ Done/Escalated ให้ลบ — ทุกแถวยังเป็น Pending');
+      return;
+    }
+
+    // ล้างข้อมูลเดิมทั้งหมด แล้วเขียนเฉพาะที่จะเก็บ
+    sheet.getRange(2, 1, totalRows, SCHEMA[SHEET.Q_REVIEW].length).clearContent();
+    if (keepRows.length > 0) {
+      sheet.getRange(2, 1, keepRows.length, SCHEMA[SHEET.Q_REVIEW].length).setValues(keepRows);
+    }
+
+    logInfo(
+      'ReviewService',
+      'clearDoneReviews_UI: ลบ ' + removedCount + ' แถว (Done/Escalated), เหลือ ' + keepRows.length + ' แถว (Pending)'
+    );
+    safeUiAlert_(
+      '✅ ล้าง Q_REVIEW เรียบร้อย\n\n' +
+        'ลบ: ' +
+        removedCount +
+        ' แถว (Done/Escalated)\n' +
+        'เหลือ: ' +
+        keepRows.length +
+        ' แถว (Pending)\n\n' +
+        'หมายเหตุ: ข้อมูลที่ประมวลผลแล้วยังอยู่ใน FACT_DELIVERY'
+    );
+  } catch (e) {
+    logError('ReviewService', 'clearDoneReviews_UI ล้มเหลว: ' + e.message, e);
+    safeUiAlert_('❌ ล้มเหลว: ' + e.message);
+  }
+}

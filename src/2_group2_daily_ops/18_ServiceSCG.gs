@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.004
+ * VERSION: 6.0.005
  * FILE: 18_ServiceSCG.gs
  * LMDS V5.5 — SCG API Service (Group 2 Commander)
  * ===================================================
@@ -1015,12 +1015,22 @@ function clearAllSCGSheets_UI() {
 
     let cleared = 0;
 
-    [SHEET.DAILY_JOB, SHEET.OWNER_SUMMARY, SHEET.SHIPMENT_SUM].forEach((name) => {
+    // [FIX V6.0.005] เพิ่ม SHEET.INPUT ในรายการชีตที่ต้องล้าง
+    const sheetsToClear = [SHEET.DAILY_JOB, SHEET.OWNER_SUMMARY, SHEET.SHIPMENT_SUM, SHEET.INPUT];
+    sheetsToClear.forEach((name) => {
       const sheet = ss.getSheetByName(name);
       if (sheet && sheet.getLastRow() > 1) {
         // [FIX v5.5.021 M5] ใช้ clearContent แทน deleteRows เพื่อความรวดเร็วและไม่กระทบโครงสร้างตาราง
         sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getMaxColumns()).clearContent();
         cleared++;
+      } else if (sheet && name === SHEET.INPUT) {
+        // Input sheet อาจมีข้อมูลใน B1 (COOKIE) และ B3 (ShipmentNos) ไม่ได้อยู่ใน row 2+
+        // ล้างเฉพาะข้อมูลในคอลัมน์ B (ไม่ล้าก label ในคอลัมน์ A)
+        const lastRow = sheet.getLastRow();
+        if (lastRow >= 1) {
+          sheet.getRange(1, 2, lastRow, 1).clearContent();
+          cleared++;
+        }
       }
     });
 

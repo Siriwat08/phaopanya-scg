@@ -36,7 +36,7 @@
             '<div class="flex items-center justify-center h-full text-gray-400 text-sm">กำลังโหลดข้อมูล...</div>';
 
           try {
-            const days = parseInt(daysSelect.value, 10) || 30;
+            const days = Number.parseInt(daysSelect.value, 10) || 30;
             const points = await globalThis.api.getMapAnalyticsData(days, '');
 
             if (!points || points.length === 0) {

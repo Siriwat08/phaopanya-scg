@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.004
+ * VERSION: 6.0.005
  * FILE: 07_PlaceService.gs
  * LMDS V5.5 — Place Master Service
  * ===================================================
@@ -640,6 +640,24 @@ function scorePlaceCandidate(queryPlace, candidate, srcProvince) {
   //   (primary=100 → +2, cross=90 → +1, secondary=80 → +0).
   if (candidate._phoneticScore) {
     returnScore += Math.round((candidate._phoneticScore - 80) * 0.1);
+  }
+
+  // [FIX V6.0.005 BUG-DUPLICATE-PLACE] ลด score สำหรับ place names ที่เป็นชื่อเขต/จังหวัด
+  //   ปัญหา: place ที่มีชื่อ "เขตเขตบางเขน กรุงเทพมหานคร" match กับทุกที่อยู่ในกรุงเทพฯ
+  //   แก้: ถ้าชื่อ place เริ่มต้นด้วย "เขต" หรือเป็นเพียงชื่อจังหวัด → ลด score ลง 30 points
+  //   นี่จะทำให้ place ที่มีชื่อเฉพาะ (เช่น "ร้าน ABC", "บริษัท XYZ") ได้ score สูงกว่า
+  const checkName = String(candidate.normalized || candidate.canonical || '').trim();
+  if (checkName) {
+    const isDistrictLevel =
+      checkName.startsWith('เขต') ||
+      checkName.startsWith('อำเภอ') ||
+      checkName.startsWith('ตำบล') ||
+      checkName.startsWith('แขวง');
+    const isProvinceOnly =
+      checkName.length <= 15 && (checkName.indexOf('จังหวัด') === 0 || checkName.indexOf('กรุงเทพ') === 0);
+    if (isDistrictLevel || isProvinceOnly) {
+      returnScore = Math.max(0, returnScore - 30);
+    }
   }
 
   return returnScore;

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.004
+ * VERSION: 6.0.005
  * FILE: 00_App.gs
  * LMDS V5.5 — Application Entry Point & Menu Controller
  * ===================================================
@@ -88,6 +88,7 @@ function onOpen() {
         .addSeparator()
         .addItem('📋 เปิด Review Queue', 'openReviewQueue')
         .addItem('▶️ รันคำสั่งที่เลือกไว้ทั้งหมด', 'applyAllPendingDecisions')
+        .addItem('🧹 [V6] ล้างแถวที่ Done/Escalated', 'clearDoneReviews_UI')
         .addItem('📊 รายงาน Data Quality', 'buildFullQualityReport')
     )
 
