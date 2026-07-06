@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.047
+ * VERSION: 5.5.048
  * FILE: 00_App.gs
  * LMDS V5.5 — Application Entry Point & Menu Controller
  * ===================================================
@@ -35,14 +35,14 @@
  *     - SHEET.DAILY_JOB     (Read+Write: SCG Daily Operations)
  *     - SHEET.Q_REVIEW      (Read+Write: Review Queue, onEdit trigger)
  *   TRIGGERS:
- *     - onOpen()     → เรียก createMenu_() ทุกครั้งที่เปิด Spreadsheet
+ *     - onOpen()     → สร้าง Custom Menu inline ทุกครั้งที่เปิด Spreadsheet (ไม่มี helper createMenu_)
  *     - onEdit()     → ดักจับการแก้ไขใน Q_REVIEW
  *     - installSmartNavTrigger() → ติดตั้ง Smart Navigation (Installable)
  * ===================================================
  * ARCHITECTURE:
  *   ┌─────────────────────────────────────────────────────────────┐
  *   │  00_App.gs (Entry Point / Gateway)                         │
- *   │  ├── onOpen() → createMenu_()                               │
+ *   │  ├── onOpen() → builds Custom Menu inline (no createMenu_ helper) │
  *   │  └── Custom Menu → Pipeline Actions                         │
  *   │      ├── "Run Full Pipeline" → runFullPipeline()           │
  *   │      ├── "🟩 กลุ่ม 1" → runMatchEngine()                  │
@@ -693,6 +693,13 @@ function runFullPipeline() {
       // [FIX BUG-04 v5.5.001] เปลี่ยน ui.alert() เป็น safeUiAlert_()
       safeUiAlert_(alertMsg);
     });
+    // [FIX V5.5.048] เดิมมีเพียง try/finally ไม่มี catch — ทำให้ error ภายใน safeRun ไม่ถูก log/alert ที่ระดับนี้
+    // (safeRun จับ error ภายในตัวเองแล้ว แต่ outer try ก็ควรมี catch เผื่อกรณี exception เกิดนอก safeRun
+    //  เช่น invalidateAllGlobalCaches(), getPipelineDiagnosticSummary_())
+  } catch (e) {
+    logError('App', 'runFullPipeline failed: ' + e.message, e);
+    safeUiAlert_('❌ Pipeline ล้มเหลว:\n' + e.message);
+    throw e;
   } finally {
     lock.releaseLock();
     // [PERF-012] Flush log buffer ก่อน execution จบ — ป้องกัน log entries สูญหาย

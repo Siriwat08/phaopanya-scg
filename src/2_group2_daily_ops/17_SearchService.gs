@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.047
+ * VERSION: 5.5.048
  * FILE: 17_SearchService.gs
  * LMDS V5.5 — Search Service (The Bridger — Group 2)
  * ===================================================
@@ -45,10 +45,12 @@
  *   │  │   └── lookupSingleRow()          [UI Wrapper สำหรับเรียกทีละแถว]         │
  *   │  ├── flushLookupResults_()   [Output: batch setValues กลับไปที่ DAILY_JOB] │
  *   │  │   └── ใช้ clearContent() และ setBackgrounds เฉพาะช่วง ลดการพังของ Format│
- *   │  └── getEnrichmentLock_()    [Utility: PropertiesService Lock]         │
+ *   │  └── (Locking handled by caller — runLookupEnrichment re-entrancy guarded) │
  *   └────────────────────────────────────────────────────────────────────────┘
  * ===================================================
  */
+// [FIX V5.5.048] ลบ dead reference getEnrichmentLock_() ออกจาก ARCHITECTURE comment
+//                เนื่องจากฟังก์ชันนี้ไม่มีอยู่จริง (LockService ถูกจัดการที่ caller ด้านนอก)
 
 // ============================================================
 // SECTION 1: findBestGeoByPersonPlace — ShipToName Only

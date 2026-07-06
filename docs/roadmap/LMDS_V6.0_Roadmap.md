@@ -1,12 +1,12 @@
 # LMDS V6.0 Enhancement Roadmap
 
 > **Document Type:** Technical Enhancement Roadmap
-> **Version:** 6.0.0-draft
-> **Last Updated:** 2026-07-05
+> **Version:** 6.0.0-draft (updated 2026-07-06)
+> **Last Updated:** 2026-07-06
 > **Author:** LMDS Engineering (with AI Assistant)
-> **Status:** Draft for Review
-> **Base Version:** V5.5.044 (post-audit PR #22-#25)
-> **Target Version:** V6.0.000 (after all 7 phases complete)
+> **Status:** Updated — 4 features done, 10 pending
+> **Base Version:** V5.5.048 (post-critical-fixes + quick wins PR #22-#38)
+> **Target Version:** V6.0.000 (after all remaining phases complete)
 
 ---
 
@@ -35,15 +35,15 @@
 
 LMDS V6.0 มุ่งยกระดับระบบจาก **"Master Data + Matching Engine ที่ใช้งานได้"** เป็น **"Intelligent Logistics Data Platform ที่เรียนรู้และปรับตัวเองได้"** โดยเพิ่ม 14 enhancements ครอบคลุม 7 ด้าน:
 
-| ด้าน | Features | Phase | PR |
-|-----|----------|-------|-----|
-| **Data Cleansing** | Semantic Note Parser + Double Metaphone Phonetic | Phase 1 | #26 |
-| **Matching Engine** | Contextual Disambiguation + Dynamic Weighting + Geofencing Tie-breaker | Phase 2 | #27 |
-| **System Learning** | Self-Healing Alias จาก Q_REVIEW | Phase 3 | #28 |
-| **WebApp & Dashboard** | Map Analytics + Live Feed Monitor | Phase 4 | #29 |
-| **Pipeline Management** | Email Alert + Dependency-aware Pipeline | Phase 5 | #30 |
-| **Architecture & Data** | Dedup Audit + Audit Trail | Phase 6 | #31 |
-| **Security** | RBAC 3 roles (Viewer/Reviewer/Admin) | Phase 7 | #32 |
+| ด้าน | Features | Phase | PR | Status |
+|-----|----------|-------|-----|--------|
+| **Data Cleansing** | Semantic Note Parser + Double Metaphone Phonetic | Phase 1 | TBD | ❌ Pending |
+| **Matching Engine** | ~~Contextual Disambiguation~~ + ~~Dynamic Weighting~~ + Geofencing Tie-breaker | Phase 2 | #37, #38 | ✅ 2.1+2.2 Done, ❌ 2.3 Pending |
+| **System Learning** | ~~Self-Healing Alias~~ จาก Q_REVIEW | Phase 3 | #37 | ✅ Core Done, ❌ Schema Pending |
+| **WebApp & Dashboard** | Map Analytics + Live Feed Monitor | Phase 4 | TBD | ❌ Pending |
+| **Pipeline Management** | ~~Telegram Alert~~ + Dependency-aware Pipeline | Phase 5 | #38 | ✅ 5.1 Done, ❌ 5.2 Pending |
+| **Architecture & Data** | Dedup Audit + Audit Trail | Phase 6 | TBD | ❌ Pending |
+| **Security** | RBAC 3 roles (Viewer/Reviewer/Admin) | Phase 7 | TBD | ❌ Pending |
 
 ### 1.2 Business Outcomes
 
@@ -67,16 +67,16 @@ LMDS V6.0 มุ่งยกระดับระบบจาก **"Master Data 
 | PR Strategy | 1 category = 1 PR | balance velocity & review quality |
 | Data Storage | Sheet ใหม่ | normalized, scalable |
 | Map Library | Leaflet.js | free, lightweight, GAS-friendly |
-| Alert Channel | Email (GmailApp) | ไม่ต้องเพิ่ม OAuth scope ใหม่ |
+| Alert Channel | **Telegram Bot** (changed from Email) | มี pattern อยู่แล้ว + ไม่ต้องเพิ่ม OAuth scope ✅ Done in V5.5.047 |
 | RBAC Roles | 3 roles | ครอบคลุม use case จริง |
 
 ---
 
-## 2. Current State Analysis (V5.5.044)
+## 2. Current State Analysis (V5.5.048)
 
 ### 2.1 Strengths (จาก audit 4 รอบ)
 
-หลัง PR #22-#25 ระบบมีความแข็งแรงในด้าน:
+หลัง PR #22-#38 ระบบมีความแข็งแรงในด้าน:
 
 | ด้าน | Status | Evidence |
 |-----|--------|----------|
@@ -88,6 +88,12 @@ LMDS V6.0 มุ่งยกระดับระบบจาก **"Master Data 
 | **Silent Failure** | ✅ Logged | 8 catch blocks แก้แล้ว |
 | **Dead Code** | ✅ Removed | 12 functions + 1 RAM cache ลบแล้ว |
 | **Code Quality** | ✅ 16/16 Laws | COMPLIANT |
+| **Self-Healing Alias** | ✅ Done (V5.5.046) | PR #37 — hook in resolveAndPersistMerge_ |
+| **Dynamic Weighting** | ✅ Done (V5.5.046) | PR #37 — calcDynamicWeights_ in Rule 4 |
+| **Contextual Disambiguation** | ✅ Done (V5.5.047) | PR #38 — SoldToName tie-breaker in resolvePerson |
+| **Telegram Alert** | ✅ Done (V5.5.047) | PR #38 — 3 hook points in PipelineManager |
+| **Geo Enrichment Fix** | ✅ Done (V5.5.045) | PR #35 — Issue #26 createPlace enrichment |
+| **Critical Fixes** | ✅ Done (V5.5.048) | .clasp.json.example + catch block + ALIAS_IDX + dead refs |
 
 ### 2.2 Gaps ที่ V6.0 จะ address
 
@@ -106,6 +112,16 @@ LMDS V6.0 มุ่งยกระดับระบบจาก **"Master Data 
 | **No Dedup Audit** | duplicates สะสม | Levenshtein <2 scanner | Phase 6.1 |
 | **No Audit Trail** | ไม่รู้ใครแก้อะไร | SYS_AUDIT_TRAIL | Phase 6.2 |
 | **Binary Auth** | admin/non-admin | 3 roles RBAC | Phase 7.1 |
+| **detectSameGeoMultiPerson dead code** | BLUEPRINT §6 อ้างว่าทำงานแต่ไม่ได้เสียบ | Wire เข้า Rule 3.5 หรือลบ + แก้ BLUEPRINT | Pre-V6 |
+| **Single Writer rule violation** | resolveAndPersistMerge_ เรียก createGlobalAlias ตรงๆ | ย้ายไป autoEnrichAliasesFromFactBatch_ หรืออัปเดต doc | Pre-V6 |
+| **appsscript.json access=MYSELF** | restricts WebApp to script owner only | ยืนยัน use case ก่อน RBAC | Phase 7 prereq |
+| **Deep Dive Audit 15 ประเด็น** | C1-C5, H1-H5, M1-M5 ยังไม่แก้ | Re-audit + prioritize | Pre-V6 |
+| **runFullPipeline ขาด catch** | error ไม่ถูก log | ✅ Fixed in V5.5.048 | Done |
+| **Hardcoded row[N]** | 4 จุดใน cleanupStaleCanonicalAliases_ | ✅ Fixed in V5.5.048 | Done |
+| **ARCHITECTURE dead refs** | createMenu_, getEnrichmentLock_, checkIsEPOD typo | ✅ Fixed in V5.5.048 | Done |
+| **INVESTIGATE_Issue26.gs ใน src/** | debug script ถูก deploy ขึ้น GAS | ✅ Moved to scripts/investigations/ in V5.5.048 | Done |
+| **CHANGELOG gap** | 18 versions ไม่มี entry | ✅ Fixed in V5.5.048 | Done |
+| **Missing .clasp.json** | developer ใหม่ deploy ไม่ได้ | ✅ Created .clasp.json.example in V5.5.048 | Done |
 
 ### 2.3 Baseline Metrics (สำหรับวัดผล V6.0)
 
@@ -1429,7 +1445,7 @@ function MIGRATION_V6_RBAC() { ... }
 | **2** | - | - | - | - |
 | **3** | SYS_NEGATIVE_SAMPLES | M_ALIAS.verified_by, M_ALIAS.review_id, M_ALIAS.verified_at | - | - |
 | **4** | - | - | MATCH_ENGINE_RUNNING, MATCH_ENGINE_CURRENT_ROW, etc. | - |
-| **5** | - | - | ALERT_RECIPIENTS, ALERT_COOLDOWN_* | `gmail.send` ⚠️ |
+| **5** | - | - | TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID | - (Telegram, not Email — no new OAuth scope needed) |
 | **6** | SYS_AUDIT_TRAIL, SYS_AUDIT_ARCHIVE | - | - | - |
 | **7** | - | - | ROLE_ASSIGNMENTS | - |
 
@@ -1475,7 +1491,19 @@ Phase 6 (Arch) ───────┼────► Phase 7 (Security)
               Phase 7 (RBAC) — last (depends on all features being in place to assign permissions)
 ```
 
-**Recommended order:** 1 → 2 → 3 → 6 → 5 → 4 → 7
+**Recommended order (updated V5.5.048):**
+
+4 features already done (Phase 2.1, 2.2, 3.1 core, 5.1). Remaining:
+
+```
+1 (Cleansing)  → V6.0.001
+5.2 (Preflight) → V6.0.002
+6.1 (Dedup)     → V6.0.003
+4 (WebApp)      → V6.0.004
+2.3 (Tie-break) → V6.0.005
+3.1 schema + 6.2 (Audit Trail) → V6.0.006
+7 (RBAC — last) → V6.0.000
+```
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.047
+ * VERSION: 5.5.048
  * FILE: 14_Utils.gs
  * LMDS V5.5 — Utility Functions
  * ===================================================
