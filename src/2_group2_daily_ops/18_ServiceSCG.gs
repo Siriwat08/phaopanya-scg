@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.047
+ * VERSION: 5.5.048
  * FILE: 18_ServiceSCG.gs
  * LMDS V5.5 — SCG API Service (Group 2 Commander)
  * ===================================================
@@ -46,7 +46,7 @@
  *   │  │   ├── 7. buildOwnerSummary()                                       │
  *   │  │   └── 8. buildShipmentSummary()                                    │
  *   │  ├── fetchWithRetry_() — HTTP retry without PII leak in error         │
- *   │  ├── checkIsEPOD() — E-POD eligibility (ReDoS safe regex)             │
+ *   │  ├── checkIsEPOD_() — E-POD eligibility (ReDoS safe regex)            │
  *   │  ├── getSCGCookie_() — [REVERTED] อ่านจาก B1 ก่อน → fallback Properties │
  *   │  └── clearAllSCGSheets_UI() — ใช้ clearContent() แทน deleteRows()       │
  *   └───────────────────────────────────────────────────────────────────────┘

@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.5.047
+ * VERSION: 5.5.048
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -794,13 +794,14 @@ function cleanupStaleCanonicalAliases_(newGlobalAliasRows, context) {
 
     // 1. Collect canonical aliases being written this batch
     //    globalRow format: [aliasId, masterUuid, variantName, entityType, confidence, source, createdAt, activeFlag]
+    // [FIX V5.5.048] ใช้ ALIAS_IDX.* (จาก 01_Config.gs) แทน magic numbers row[1]/row[2]/row[3]/row[4] — Law 1 (No Hardcoded Index)
     const canonicalMap = {}; // key: "entityType::masterUuid" → canonicalNorm (current canonical)
     newGlobalAliasRows.forEach(function (row) {
-      const confidence = Number(row[4] || 0);
+      const confidence = Number(row[ALIAS_IDX.CONFIDENCE] || 0);
       if (confidence !== 100) return; // only canonical aliases
-      const masterUuid = String(row[1] || '').trim();
-      const entityType = String(row[3] || '').trim();
-      const variantName = String(row[2] || '').trim();
+      const masterUuid = String(row[ALIAS_IDX.MASTER_UUID] || '').trim();
+      const entityType = String(row[ALIAS_IDX.ENTITY_TYPE] || '').trim();
+      const variantName = String(row[ALIAS_IDX.VARIANT_NAME] || '').trim();
       const canonicalNorm = normalizeForCompare(variantName);
       if (!masterUuid || !entityType || !canonicalNorm) return;
       const key = entityType + '::' + masterUuid;
