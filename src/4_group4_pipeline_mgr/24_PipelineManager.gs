@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.005
+ * VERSION: 6.0.006
  * FILE: 24_PipelineManager.gs
  * LMDS V5.5 — Pipeline Manager (Standalone Module)
  * ===================================================
@@ -1359,13 +1359,17 @@ function sendPipelineAlert_(message, severity) {
     } else {
       icon = 'ℹ️';
     }
-    const text = icon + ' *LMDS Pipeline Alert*\n' + message;
+    // [FIX V6.0.006] ใช้ HTML tags แทน Markdown (* ไม่ทำงานใน HTML mode)
+    const text = icon + ' <b>LMDS Pipeline Alert</b>\n' + message;
 
     const response = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
       method: 'post',
       contentType: 'application/json',
       muteHttpExceptions: true,
-      payload: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'Markdown' })
+      // [FIX V6.0.006] เปลี่ยนจาก Markdown → HTML เพื่อหลีกเลี่ยง parse error
+      //   สาเหตุ: Markdown ตีความ _ เป็น italic → ถ้าข้อความมี _ จะทำให้ Telegram ตอบ 400
+      //   HTML ปลอดภัยกว่า — ไม่มีปัญหากับ _ หรือ * ในข้อความ
+      payload: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
     });
 
     const respCode = response.getResponseCode();
