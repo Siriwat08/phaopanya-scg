@@ -5,10 +5,58 @@
  * ===================================================
  * PURPOSE:
  *   3 roles: Viewer (read-only) / Reviewer (+ approve Q_REVIEW) / Admin (full)
+ *   Enforce deny-by-default pattern in WebApp + menu actions (SEC-001)
+ * ===================================================
+ * CHANGELOG: See /docs/CHANGELOG.md for full history.
+ *   Latest 3 versions:
+ *     v6.0.006 (2026-07-07) — DOC SYNC (header added) + Stale trigger cleanup + Telegram HTML fix
+ *     v6.0.005 (2026-07-07) — Stable (no RBAC changes)
+ *     v6.0.004 (2026-07-06) — INITIAL: RBAC 3 roles + 11 permissions + 3 helper functions
  * ===================================================
  * DEPENDENCIES:
- *   REQUIRES: 01_Config (RBAC_CONFIG)
- *   CALLS: PropertiesService, Session
+ *   REQUIRES:
+ *     - 01_Config (RBAC_CONFIG — defined in this file)
+ *     - 03_SetupSheets (logError, safeUiAlert_)
+ *   CALLS:
+ *     - PropertiesService.getScriptProperties() — read LMDS_ADMINS, ROLE_ASSIGNMENTS
+ *     - Session.getEffectiveUser().getEmail() — identify caller
+ *     - SpreadsheetApp.getUi() — prompt UI for setupRoleAssignments_UI
+ *   EXPORTS TO:
+ *     - 22_WebApp.gs (requirePermission_, hasPermission_ — guards for doGet/doPost)
+ *     - 00_App.gs (setupRoleAssignments_UI — menu entry under "🔐 Security")
+ *   SHEETS ACCESSED: none (RBAC config is in PropertiesService, not Sheets)
+ * ===================================================
+ * ARCHITECTURE:
+ *   ┌──────────────────────────────────────────────────────────┐
+ *   │                27_RbacService.gs                         │
+ *   │           Role-Based Access Control (V6.0)               │
+ *   ├──────────────────────────────────────────────────────────┤
+ *   │                                                          │
+ *   │  RBAC_CONFIG (frozen) ── ROLES + PERMISSIONS matrix      │
+ *   │       │                                                  │
+ *   │       ├── getCurrentUserRole_()                          │
+ *   │       │     1. LMDS_ADMINS property → admin              │
+ *   │       │     2. ROLE_ASSIGNMENTS property → matched role  │
+ *   │       │     3. Default → viewer (deny-by-default)        │
+ *   │       │                                                  │
+ *   │       ├── hasPermission_(permission) → boolean           │
+ *   │       │     Check role vs PERMISSIONS[permission] list   │
+ *   │       │                                                  │
+ *   │       ├── requirePermission_(permission) → throws        │
+ *   │       │     Throw if hasPermission_() returns false      │
+ *   │       │                                                  │
+ *   │       └── setupRoleAssignments_UI()                      │
+ *   │             Menu wrapper to set ROLE_ASSIGNMENTS prop    │
+ *   │                                                          │
+ *   │  Integration Points:                                     │
+ *   │   - 22_WebApp.gs doGet/doPost → requirePermission_()     │
+ *   │   - 00_App.gs menu actions → hasPermission_() guards     │
+ *   │                                                          │
+ *   │  Security Pattern: DENY-BY-DEFAULT                      │
+ *   │   - Unknown user → viewer (read-only)                   │
+ *   │   - Unknown permission key → false (deny)               │
+ *   │   - Role resolution error → null → deny                 │
+ *   └──────────────────────────────────────────────────────────┘
  * ===================================================
  */
 
