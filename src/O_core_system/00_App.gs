@@ -787,8 +787,15 @@ function runPipelinePreflightStrict_UI() {
     const lines = [];
     lines.push('📊 Pipeline Preflight Report (V6.0.007)\n');
     lines.push('Overall: ' + (result.ready ? '✅ READY' : '❌ NOT READY') + '\n');
-    lines.push('Checks: ' + result.checks.length + ' total | ' +
-      result.issues.length + ' fail | ' + result.warnings.length + ' warn\n');
+    lines.push(
+      'Checks: ' +
+        result.checks.length +
+        ' total | ' +
+        result.issues.length +
+        ' fail | ' +
+        result.warnings.length +
+        ' warn\n'
+    );
 
     // Detail per check
     lines.push('─── Detail ───');
@@ -820,7 +827,10 @@ function runPipelinePreflightStrict_UI() {
 
     // If not ready, log a warning (don't auto-abort — user may want to investigate)
     if (!result.ready) {
-      logWarn('App', 'runPipelinePreflightStrict_UI: pipeline NOT READY — ' + result.issues.length + ' blocking issues');
+      logWarn(
+        'App',
+        'runPipelinePreflightStrict_UI: pipeline NOT READY — ' + result.issues.length + ' blocking issues'
+      );
     }
   } catch (e) {
     logError('App', 'runPipelinePreflightStrict_UI failed: ' + e.message, e);

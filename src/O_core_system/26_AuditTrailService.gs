@@ -219,8 +219,15 @@ function logAuditTrail(entityType, entityId, action, fieldChanged, oldValue, new
     if (typeof logDebug === 'function') {
       logDebug(
         'AuditTrail',
-        'logAuditTrail: ' + action + ' ' + entityType + ':' + String(entityId).substring(0, 20) +
-          ' by ' + changedBy + (reason ? ' (' + reason + ')' : '')
+        'logAuditTrail: ' +
+          action +
+          ' ' +
+          entityType +
+          ':' +
+          String(entityId).substring(0, 20) +
+          ' by ' +
+          changedBy +
+          (reason ? ' (' + reason + ')' : '')
       );
     }
 
@@ -358,8 +365,14 @@ function cleanupAuditTrail_UI() {
     // Confirmation
     const confirm = ui.alert(
       '🧹 Prune Audit Trail',
-      'พบ ' + rowsToDelete.length + ' รายการที่เก่ากว่า ' + retentionDays + ' วัน\n' +
-        '(changed_at < ' + cutoff.toISOString().substring(0, 10) + ')\n\n' +
+      'พบ ' +
+        rowsToDelete.length +
+        ' รายการที่เก่ากว่า ' +
+        retentionDays +
+        ' วัน\n' +
+        '(changed_at < ' +
+        cutoff.toISOString().substring(0, 10) +
+        ')\n\n' +
         'ยืนยันการลบ?',
       ui.ButtonSet.YES_NO
     );
@@ -371,7 +384,10 @@ function cleanupAuditTrail_UI() {
       sheet.deleteRow(rowNum);
     });
 
-    logInfo('AuditTrail', 'cleanupAuditTrail_UI: pruned ' + rowsToDelete.length + ' rows older than ' + retentionDays + ' days');
+    logInfo(
+      'AuditTrail',
+      'cleanupAuditTrail_UI: pruned ' + rowsToDelete.length + ' rows older than ' + retentionDays + ' days'
+    );
     safeUiAlert_('✅ ลบ ' + rowsToDelete.length + ' รายการเรียบร้อย');
   } catch (err) {
     logError('AuditTrail', 'cleanupAuditTrail_UI failed: ' + err.message, err);

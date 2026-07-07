@@ -1197,7 +1197,9 @@ function runPipelinePreflight(opts) {
   const geoSheet = ss.getSheetByName(SHEET.SYS_TH_GEO);
   const geoRows = geoSheet ? geoSheet.getLastRow() - 1 : 0;
   if (!geoSheet || geoRows < 100) {
-    issues.push('SYS_TH_GEO dictionary ไม่ครบ (พบ ' + geoRows + ' rows, ต้องการ ≥100) — กรุณารัน "buildGeoDictionary" ก่อน');
+    issues.push(
+      'SYS_TH_GEO dictionary ไม่ครบ (พบ ' + geoRows + ' rows, ต้องการ ≥100) — กรุณารัน "buildGeoDictionary" ก่อน'
+    );
     checks.push({ name: 'SYS_TH_GEO', status: 'FAIL', detail: geoRows + ' rows (need ≥100)' });
   } else {
     checks.push({ name: 'SYS_TH_GEO', status: 'PASS', detail: geoRows + ' rows' });
@@ -1224,7 +1226,11 @@ function runPipelinePreflight(opts) {
   const personSheet = ss.getSheetByName(SHEET.M_PERSON);
   if (!personSheet || personSheet.getLastColumn() < 12) {
     issues.push('M_PERSON sheet ไม่พบหรือคอลัมน์ไม่ครบ (ต้องการ ≥12 สำหรับ V6.0.001 phonetic keys)');
-    checks.push({ name: 'M_PERSON', status: 'FAIL', detail: 'cols=' + (personSheet ? personSheet.getLastColumn() : 0) });
+    checks.push({
+      name: 'M_PERSON',
+      status: 'FAIL',
+      detail: 'cols=' + (personSheet ? personSheet.getLastColumn() : 0)
+    });
   } else {
     // Spot-check header at PERSON_IDX.PHONETIC_PRIMARY (index 10)
     const headers = personSheet.getRange(1, 1, 1, personSheet.getLastColumn()).getValues()[0];
@@ -1261,7 +1267,11 @@ function runPipelinePreflight(opts) {
   // ───────────────────────────────────────────────────────────
   const aliasSheet = ss.getSheetByName(SHEET.M_ALIAS);
   if (aliasSheet && aliasSheet.getLastColumn() < 11) {
-    warnings.push('M_ALIAS sheet มี ' + aliasSheet.getLastColumn() + ' cols (V6.0.003 ต้องการ 11) — รัน setupAllSheets() เพื่อ auto-repair');
+    warnings.push(
+      'M_ALIAS sheet มี ' +
+        aliasSheet.getLastColumn() +
+        ' cols (V6.0.003 ต้องการ 11) — รัน setupAllSheets() เพื่อ auto-repair'
+    );
     checks.push({ name: 'M_ALIAS cols', status: 'WARN', detail: aliasSheet.getLastColumn() + ' cols (need 11)' });
   } else if (aliasSheet) {
     checks.push({ name: 'M_ALIAS cols', status: 'PASS', detail: aliasSheet.getLastColumn() + ' cols' });
@@ -1284,8 +1294,14 @@ function runPipelinePreflight(opts) {
   if (typeof logInfo === 'function') {
     logInfo(
       'Pipeline',
-      'runPipelinePreflight: ready=' + ready + ', issues=' + issues.length + ', warnings=' + warnings.length +
-        ', checks=' + checks.length
+      'runPipelinePreflight: ready=' +
+        ready +
+        ', issues=' +
+        issues.length +
+        ', warnings=' +
+        warnings.length +
+        ', checks=' +
+        checks.length
     );
   }
 

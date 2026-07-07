@@ -581,7 +581,11 @@ function validateSchemaConsistency() {
     // [V6.0.001] เพิ่มการตรวจ SCHEMA vs NOTES_IDX สำหรับ SHEET.SYS_NOTES (Semantic Note Parser)
     { sheetName: SHEET.SYS_NOTES, idx: NOTES_IDX, label: 'SYS_NOTES (Semantic Note Parser)' },
     // [V6.0.003] เพิ่มการตรวจ SCHEMA vs NEGATIVE_SAMPLE_IDX สำหรับ SHEET.SYS_NEGATIVE_SAMPLES (System Learning)
-    { sheetName: SHEET.SYS_NEGATIVE_SAMPLES, idx: NEGATIVE_SAMPLE_IDX, label: 'SYS_NEGATIVE_SAMPLES (System Learning)' },
+    {
+      sheetName: SHEET.SYS_NEGATIVE_SAMPLES,
+      idx: NEGATIVE_SAMPLE_IDX,
+      label: 'SYS_NEGATIVE_SAMPLES (System Learning)'
+    },
     // [V6.0.007] เพิ่มการตรวจ SCHEMA vs AUDIT_IDX สำหรับ SHEET.SYS_AUDIT_TRAIL (Audit Trail Critical-Only)
     { sheetName: SHEET.SYS_AUDIT_TRAIL, idx: AUDIT_IDX, label: 'SYS_AUDIT_TRAIL (Audit Trail)' }
   ];
