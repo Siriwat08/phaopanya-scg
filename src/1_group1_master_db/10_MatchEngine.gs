@@ -236,12 +236,43 @@ function prepareMatchEngineContext_(startTime) {
 function runMatchEngineLoop_(ctx, startTime) {
   const timeLimit = AI_CONFIG.TIME_LIMIT_MS || 5 * 60 * 1000;
 
+  // [V6.0.007] Emergency Stop Signal Check
+  //   User can request stop via menu "🛑 หยุด Pipeline (Emergency Stop)".
+  //   We check every STOP_CHECK_INTERVAL rows (10) to balance responsiveness
+  //   with PropertiesService read latency (~5-10ms per call).
+  //   On stop: flush current batch via finalizeMatchEngine_ + clear signal +
+  //   set ctx.stoppedByUser = true so finalizeMatchEngine_ removes any
+  //   existing auto-resume trigger (don't want it to fire after user stop).
+  const STOP_CHECK_INTERVAL = 10;
+  let lastStopCheck = -STOP_CHECK_INTERVAL; // force first check at i=0
+
   for (let i = ctx.startIndex; i < ctx.pendingRows.length; i++) {
     if (new Date() - startTime > timeLimit) {
       logWarn('MatchEngine', `Time Guard: หยุดที่แถว ${i}/${ctx.pendingRows.length} (ติดตั้ง Auto-Trigger)`);
       // [FIX v5.2.007] ไม่บันทึก checkpoint อีกต่อไป — SYNC_STATUS ทำหน้าที่แทน
       installAutoResume_('runMatchEngine');
       return;
+    }
+
+    // [V6.0.007] Stop Signal Check — user requested emergency stop
+    if (i - lastStopCheck >= STOP_CHECK_INTERVAL) {
+      lastStopCheck = i;
+      if (isPipelineStopRequested_()) {
+        ctx.stoppedByUser = true;
+        logWarn(
+          'MatchEngine',
+          '🛑 STOP SIGNAL: หยุดที่แถว ' +
+            i +
+            '/' +
+            ctx.pendingRows.length +
+            ' (user requested via menu) — กำลัง flush batch และปิด gracefully...'
+        );
+        // Clear the stop signal so the next manual run starts clean
+        clearPipelineStopSignal_();
+        // Return — finalizeMatchEngine_ will flush the current batch
+        // and remove auto-resume trigger (because ctx.stoppedByUser = true)
+        return;
+      }
     }
 
     const srcObj = ctx.pendingRows[i];
@@ -331,6 +362,15 @@ function finalizeMatchEngine_(ctx, startTime, lock) {
   // [FIX v5.2.007] ถ้าประมวลผลครบทุกแถว → ลบ Auto-Trigger
   if (ctx.processed + ctx.errorCount >= ctx.pendingRows.length) {
     removeAutoResume_();
+  }
+
+  // [V6.0.007] Emergency Stop — remove auto-resume trigger so it doesn't fire
+  //   after user explicitly stopped. Also clear any stop signal that might
+  //   have been set after the loop's last check (defensive).
+  if (ctx.stoppedByUser) {
+    removeAutoResume_();
+    clearPipelineStopSignal_();
+    logInfo('MatchEngine', '🛑 Pipeline หยุดโดย user — ลบ Auto-Resume trigger + clear stop signal เรียบร้อย');
   }
 
   const elapsedSec = Math.round((new Date() - startTime) / 1000);
@@ -1706,6 +1746,60 @@ function cleanupOrphanAutoResumeTriggers_() {
     }
   } catch (err) {
     logWarn('MatchEngine', 'cleanupOrphanAutoResumeTriggers_ failed (non-fatal): ' + err.message);
+  }
+}
+
+// ============================================================
+// SECTION: [V6.0.007] Emergency Stop Signal
+//   User can request pipeline stop via menu "🛑 หยุด Pipeline (Emergency Stop)".
+//   The running pipeline checks isPipelineStopRequested_() every 10 rows
+//   and exits gracefully if true (flushes current batch + removes auto-resume
+//   trigger so it doesn't fire after user stop).
+//
+//   Communication channel: PropertiesService script property 'PIPELINE_STOP_REQUESTED'
+//   - "true" = stop requested
+//   - absent/other = no stop requested (default)
+//
+//   Why PropertiesService instead of LockService?
+//   - PropertiesService is readable from any execution context (menu UI vs
+//     pipeline execution run in different processes)
+//   - LockService is for mutual exclusion, not signaling
+//   - CacheService would also work but has TTL (we want the signal to persist
+//     until the pipeline sees it)
+// ============================================================
+
+const PIPELINE_STOP_KEY = 'PIPELINE_STOP_REQUESTED';
+
+/**
+ * isPipelineStopRequested_ — [V6.0.007] Check if user requested emergency stop
+ *   Called every 10 rows from runMatchEngineLoop_. Returns true if the
+ *   PIPELINE_STOP_REQUESTED property is set to 'true'.
+ *   Failsafe: returns false on any error (don't break pipeline just because
+ *   PropertiesService had a hiccup).
+ * @return {boolean}
+ * @private
+ */
+function isPipelineStopRequested_() {
+  try {
+    return PropertiesService.getScriptProperties().getProperty(PIPELINE_STOP_KEY) === 'true';
+  } catch (e) {
+    // Non-fatal — don't break pipeline just because stop check failed
+    return false;
+  }
+}
+
+/**
+ * clearPipelineStopSignal_ — [V6.0.007] Clear the stop signal
+ *   Called by finalizeMatchEngine_ after a graceful stop, OR by the
+ *   "🟢 ยกเลิก Stop Signal" menu if user wants to manually clear.
+ *   Failsafe: silently ignores errors.
+ * @private
+ */
+function clearPipelineStopSignal_() {
+  try {
+    PropertiesService.getScriptProperties().deleteProperty(PIPELINE_STOP_KEY);
+  } catch (e) {
+    // ignore
   }
 }
 
