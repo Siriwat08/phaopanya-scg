@@ -690,8 +690,16 @@ function executeMergeDecision_(ss, sheet, targetRow, rowArr, reviewer, now, deci
   // [REF-004 + REF-013] Build srcObj via helper
   const srcObj = buildSrcObjFromReview_(ss, rowArr);
 
+  // [V6.0.007] Extract review_id from rowArr — wire through to createGlobalAlias
+  //   so M_ALIAS.verified_by/review_id/verified_at are populated for HUMAN aliases.
+  //   Previously: review_id was always '' because executeMergeDecision_ didn't
+  //   pass it down the chain (resolveAndPersist_ → resolveAndPersistMerge_ →
+  //   createGlobalAlias). This caused M_ALIAS cols 8-10 to be empty even for
+  //   human-verified aliases created via Q_REVIEW MERGE.
+  const reviewId = String(rowArr[REVIEW_IDX.REVIEW_ID] || '').trim();
+
   // [REF-001] Delegate to resolveAndPersist_ gateway — no direct Group 1 CRUD calls
-  const result = resolveAndPersist_(srcObj, 'MERGE_TO_CANDIDATE', candidates);
+  const result = resolveAndPersist_(srcObj, 'MERGE_TO_CANDIDATE', candidates, reviewId);
 
   // [PERF-002] สะสม factData ส่งคืนแทนการเขียนทันที — ลดจาก N API calls เหลือ 1 batch write
   if (result && result.factRowData) {
