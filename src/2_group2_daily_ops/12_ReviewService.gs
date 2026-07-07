@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.006
+ * VERSION: 6.0.007
  * FILE: 12_ReviewService.gs
  * LMDS V5.5 — Review Queue Service
  * [FIX BUG-B2] v5.4.003: updateReviewRowStatus_() helper — 1 setValues แทน 5× setValue
@@ -531,6 +531,32 @@ function applyReviewDecision(reviewId, decisionVal, rowData, optTargetRow) {
     }
 
     logInfo('ReviewService', 'applyReviewDecision: ' + reviewId + ' → ' + decisionVal + ' โดย ' + reviewer);
+
+    // [V6.0.007] Audit Trail — record review decision (Critical-Only scope)
+    //   Map decision → AUDIT_ACTIONS:
+    //     CREATE_NEW          → CREATE
+    //     MERGE_TO_CANDIDATE  → MERGE
+    //     ESCALATE            → UPDATE (status change only)
+    //     IGNORE              → DELETE (effectively discards the review)
+    //   Failsafe: logAuditTrail never throws — wrapped in its own try/catch
+    if (typeof logAuditTrail === 'function' && typeof AUDIT_ENTITY_TYPES !== 'undefined') {
+      const auditActionMap = {
+        CREATE_NEW: 'CREATE',
+        MERGE_TO_CANDIDATE: 'MERGE',
+        ESCALATE: 'UPDATE',
+        IGNORE: 'DELETE'
+      };
+      const auditAction = auditActionMap[decisionVal] || 'UPDATE';
+      logAuditTrail(
+        AUDIT_ENTITY_TYPES.Q_REVIEW,
+        reviewId,
+        auditAction,
+        'review_status',
+        String(rowArr[REVIEW_IDX.STATUS] || 'PENDING'),
+        decisionVal + ' by ' + reviewer,
+        'Q_REVIEW decision'
+      );
+    }
 
     // [FIX v5.5.005] return result เพื่อให้ caller ได้ factRowData
     return result;

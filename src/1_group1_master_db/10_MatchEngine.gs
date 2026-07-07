@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.006
+ * VERSION: 6.0.007
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -892,6 +892,38 @@ function cleanupStaleCanonicalAliases_(newGlobalAliasRows, context) {
         keysToCheck.length +
         ' entities'
     );
+
+    // [V6.0.007] Audit Trail — record batch alias deactivation (Critical-Only scope)
+    //   Since this is a batch operation, we log one DELETE record per deactivated row.
+    //   For very large batches (>50), we summarize to avoid audit spam.
+    //   Failsafe: logAuditTrail never throws — wrapped in its own try/catch
+    if (typeof logAuditTrail === 'function' && typeof AUDIT_ENTITY_TYPES !== 'undefined') {
+      if (rowsToDeactivate.length <= 50) {
+        // Log each row individually for fine-grained audit
+        rowsToDeactivate.forEach(function (rowNum) {
+          logAuditTrail(
+            AUDIT_ENTITY_TYPES.ALIAS,
+            'row:' + rowNum,
+            AUDIT_ACTIONS.DELETE,
+            'active_flag',
+            'true',
+            'false',
+            'cleanupStaleCanonicalAliases_ (batch)'
+          );
+        });
+      } else {
+        // Large batch — log one summary record
+        logAuditTrail(
+          AUDIT_ENTITY_TYPES.ALIAS,
+          'batch:' + keysToCheck.length,
+          AUDIT_ACTIONS.DELETE,
+          'active_flag',
+          String(rowsToDeactivate.length) + ' rows',
+          'false',
+          'cleanupStaleCanonicalAliases_ (batch summary)'
+        );
+      }
+    }
   } catch (err) {
     // Non-fatal — don't break the pipeline just because cleanup failed
     logError('cleanupStaleCanonicalAliases_', err.message, err);
@@ -1426,40 +1458,25 @@ function handleReview_(srcObj, decision, personResult, placeResult, geoResult) {
 //   - 01_Config.gs:106 — ลบบรรทัด invalidateSameDayDestCache_()
 //   หากต้องการ restore → ดู git history ของ commit นี้
 
-/**
- * detectSameGeoMultiPerson — [AUDIT-002 V5.5.042] ⚠️ DEAD CODE — ไม่ถูกเรียกใช้ใน production
- *
- *   ฟังก์ชันนี้ถูก implement สมบูรณ์ตั้งแต่ v5.4 แต่ไม่ได้ถูก wire เข้า makeMatchDecision()
- *   หรือ flow อื่นใดใน pipeline ทำให้ฟีเจอร์ "ตรวจจับหลายบุคคลใช้พิกัดเดียวกัน"
- *   ที่ BLUEPRINT.md §6 อ้างว่ามี — จริงๆ แล้วไม่เคยทำงาน
- *
- *   ผู้ดูแลควรตัดสินใจ:
- *   - ถ้าต้องการฟีเจอร์นี้ → wire เข้า makeMatchDecision() ใน Rule 3.5 (NEARBY_PENDING)
- *     โดยเรียก detectSameGeoMultiPerson(geoId, currentPersonId) แล้วส่งเข้า Q_REVIEW
- *     ถ้าพบ conflict (return true)
- *   - ถ้าไม่ต้องการ → ลบฟังก์ชันนี้ทิ้ง + แก้ BLUEPRINT.md §6 ให้ตรงกับโค้ด
- *
- *   ตอนนี้คงไว้เป็น utility function สำหรับ admin เรียกดูด้วยตนเองผ่าน Apps Script Editor
- *
- * @param {string} geoId
- * @param {string} currentPersonId
- * @return {boolean} true ถ้ามี person อื่นใช้ geoId เดียวกัน
- */
-function detectSameGeoMultiPerson(geoId, currentPersonId) {
-  // [AUDIT-002 V5.5.042] Log warning ถ้าถูกเรียก เพื่อให้ผู้ดูแลสังเกตเห็นว่า
-  //   ฟังก์ชันนี้ยังไม่ได้ wire เข้า production pipeline
-  if (typeof logWarn === 'function') {
-    logWarn(
-      'MatchEngine',
-      'detectSameGeoMultiPerson() ถูกเรียก — หมายเหตุ: ฟังก์ชันนี้ไม่ได้ wire เข้า makeMatchDecision ' +
-        '(dead code ตั้งแต่ v5.4) ตรวจสอบ BLUEPRINT.md §6 สำหรับการ wire ที่ถูกต้อง'
-    );
-  }
-  const allDests = loadAllDestinations_();
-  return allDests.some(
-    (d) => d.geoId === geoId && d.personId !== currentPersonId && d.status === APP_CONST.STATUS_ACTIVE
-  );
-}
+// [REMOVED V6.0.007] detectSameGeoMultiPerson — dead code since v5.4
+//   ฟังก์ชันนี้ถูก implement สมบูรณ์ตั้งแต่ v5.4 แต่ไม่เคยถูก wire เข้า makeMatchDecision()
+//   หรือ flow อื่นใดใน pipeline ทำให้เป็น dead code มาตลอด
+//   ตั้งแต่ V5.5.042 ถูก mark เป็น "DEAD CODE — ไม่ถูกเรียกใช้ใน production"
+//   ใน V6.0.007 ลบทิ้งสุดท้ายเพื่อลดความสับสน + ลด code maintenance burden
+//
+//   หากต้องการ restore → ดู git history ของ commit V6.0.007 (Feature 4: Dead Code Cleanup)
+//   หากต้องการฟีเจอร์ "ตรวจจับหลายบุคคลใช้พิกัดเดียวกัน" → สร้างใหม่แบบ wire เข้า
+//   makeMatchDecision() Rule 3.5 (NEARBY_PENDING) ตั้งแต่ต้น อย่า restore แบบเดิม
+//
+//   Original signature (for reference):
+//   function detectSameGeoMultiPerson(geoId, currentPersonId) { ... }
+//   - Returns true ถ้ามี person อื่นใช้ geoId เดียวกัน (ใน M_DESTINATION)
+//   - ใช้ loadAllDestinations_() + .some() check
+//
+//   Reason for removal:
+//   - ไม่มี caller ใน .gs ใด (ตรวจด้วย grep "detectSameGeoMultiPerson" src/ → 0 ผลลัพธ์)
+//   - ฟังก์ชัน log warning ทุกครั้งที่ถูกเรียก = wasted log space
+//   - BLUEPRINT.md (current version) ไม่ได้อ้างถึงฟีเจอร์นี้อีกแล้ว (V6.0 doc sync)
 
 function getGeoProvince_(geoId) {
   if (!geoId) return '';
