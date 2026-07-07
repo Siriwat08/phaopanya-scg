@@ -86,6 +86,9 @@ function onOpen() {
         .addItem('Step 2 — Normalize ชื่อ/ที่อยู่', 'runNormalize')
         .addItem('Step 3 — Match Engine', 'runMatchEngine')
         .addSeparator()
+        .addItem('🛑 [V6] หยุด Pipeline (Emergency Stop)', 'requestPipelineStop_UI')
+        .addItem('🟢 [V6] ยกเลิก Stop Signal', 'clearPipelineStopSignal_UI')
+        .addSeparator()
         .addItem('📋 เปิด Review Queue', 'openReviewQueue')
         .addItem('▶️ รันคำสั่งที่เลือกไว้ทั้งหมด', 'applyAllPendingDecisions')
         .addItem('🧹 [V6] ล้างแถวที่ Done/Escalated', 'clearDoneReviews_UI')
@@ -903,6 +906,129 @@ function cleanupAutoResumeTriggers_UI() {
     );
   } catch (e) {
     logError('App', 'cleanupAutoResumeTriggers_UI failed: ' + e.message, e);
+    safeUiAlert_('❌ ล้มเหลว: ' + e.message);
+  }
+}
+
+// ============================================================
+// SECTION: [V6.0.007] Emergency Stop Signal UI
+// ============================================================
+
+/**
+ * requestPipelineStop_UI — [V6.0.007] Menu wrapper to request emergency stop
+ *   of the running pipeline. Sets PIPELINE_STOP_REQUESTED='true' in script
+ *   properties. The running pipeline (runMatchEngineLoop_) checks this every
+ *   10 rows and exits gracefully when true.
+ *
+ *   Workflow:
+ *     1. Show confirmation dialog explaining what will happen
+ *     2. On YES → set stop signal + alert user that pipeline will stop within ~10 rows
+ *     3. Pipeline (running in another execution) sees the signal, flushes its
+ *        current batch, removes auto-resume trigger, and exits
+ *     4. Data processed so far is preserved in SOURCE SYNC_STATUS + FACT_DELIVERY
+ *
+ *   Important:
+ *     - This menu returns immediately (doesn't wait for pipeline to stop)
+ *     - User should check SYS_LOG to confirm pipeline stopped
+ *     - Stop typically takes effect within 10-30 seconds (10 rows × ~1-3s per row)
+ *     - If pipeline is NOT running, the signal stays set until cleared —
+ *       next pipeline run would stop immediately at row 0. Use
+ *       "🟢 ยกเลิก Stop Signal" menu to clear before next run.
+ */
+function requestPipelineStop_UI() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    const confirm = ui.alert(
+      '🛑 หยุด Pipeline (Emergency Stop)',
+      'กำลังจะส่งสัญญาณหยุด pipeline\n\n' +
+        'สิ่งที่จะเกิดขึ้น:\n' +
+        '• Pipeline จะหยุดภายใน ~10-30 วินาที (หลังแถวปัจจุบัน)\n' +
+        '• ข้อมูลที่ประมวลผลแล้วจะถูกบันทึก (flush batch)\n' +
+        '• Auto-Resume trigger จะถูกลบ (pipeline จะไม่รันต่อเอง)\n' +
+        '• Stop signal จะถูก clear อัตโนมัติหลัง pipeline หยุด\n\n' +
+        'หมายเหตุ:\n' +
+        '• ถ้า pipeline ไม่ได้รันอยู่, signal จะค้างจนกว่าจะกด "🟢 ยกเลิก Stop Signal"\n' +
+        '• สามารถรัน pipeline ใหม่ได้หลังจากหยุด (จะเริ่มจากแถวที่ยังไม่ประมวลผล)\n\n' +
+        'ยืนยันการหยุด pipeline?',
+      ui.ButtonSet.YES_NO
+    );
+    if (confirm !== ui.Button.YES) {
+      safeUiAlert_('ℹ️ ยกเลิก — ไม่ส่ง stop signal');
+      return;
+    }
+
+    // Set the stop signal
+    PropertiesService.getScriptProperties().setProperty('PIPELINE_STOP_REQUESTED', 'true');
+    logInfo('App', 'requestPipelineStop_UI: stop signal SET — pipeline will stop within ~10-30 seconds');
+
+    safeUiAlert_(
+      '🛑 Stop signal ถูกส่งแล้ว',
+      'Pipeline จะหยุดภายใน ~10-30 วินาที\n\n' +
+        'สิ่งที่จะเกิดขึ้น:\n' +
+        '✓ Pipeline จะ flush batch ปัจจุบัน (ข้อมูลไม่หาย)\n' +
+        '✓ Auto-Resume trigger จะถูกลบ\n' +
+        '✓ Stop signal จะถูก clear อัตโนมัติ\n\n' +
+        'ตรวจสอบ SYS_LOG เพื่อดูสถานะการหยุด\n' +
+        'ค้นหา: "🛑 STOP SIGNAL: หยุดที่แถว"'
+    );
+
+    // Try to send Telegram alert (best-effort)
+    if (typeof sendPipelineAlert_ === 'function') {
+      try {
+        sendPipelineAlert_('🛑 User กดหยุด Pipeline (Emergency Stop) — pipeline จะหยุดภายใน ~10-30 วินาที', 'WARN');
+      } catch (e) {
+        // ignore
+      }
+    }
+  } catch (e) {
+    logError('App', 'requestPipelineStop_UI failed: ' + e.message, e);
+    safeUiAlert_('❌ ล้มเหลว: ' + e.message);
+  }
+}
+
+/**
+ * clearPipelineStopSignal_UI — [V6.0.007] Menu wrapper to clear stop signal
+ *   Use this if:
+ *     - User pressed Emergency Stop by mistake (pipeline hasn't seen it yet)
+ *     - Pipeline crashed before clearing the signal
+ *     - Want to start a fresh pipeline run without the lingering stop signal
+ *
+ *   Idempotent — safe to call even if no signal is set.
+ */
+function clearPipelineStopSignal_UI() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    const confirm = ui.alert(
+      '🟢 ยกเลิก Stop Signal',
+      'กำลังจะ clear stop signal (PIPELINE_STOP_REQUESTED)\n\n' +
+        'ใช้เมนูนี้ถ้า:\n' +
+        '• กด Emergency Stop ไปแล้วแต่ pipeline ยังไม่หยุด (เปลี่ยนใจ)\n' +
+        '• Pipeline crash ก่อนจะ clear signal เอง\n' +
+        '• ต้องการรัน pipeline ใหม่โดยไม่มี signal ค้าง\n\n' +
+        'ยืนยันการ clear?',
+      ui.ButtonSet.YES_NO
+    );
+    if (confirm !== ui.Button.YES) {
+      safeUiAlert_('ℹ️ ยกเลิก — signal ยังค้างอยู่');
+      return;
+    }
+
+    if (typeof clearPipelineStopSignal_ === 'function') {
+      clearPipelineStopSignal_();
+    } else {
+      // Defensive — direct fallback if helper not loaded
+      PropertiesService.getScriptProperties().deleteProperty('PIPELINE_STOP_REQUESTED');
+    }
+    logInfo('App', 'clearPipelineStopSignal_UI: stop signal CLEARED');
+
+    safeUiAlert_(
+      '✅ Stop signal cleared',
+      'Pipeline สามารถรันได้ปกติ\n\n' +
+        'ถ้า pipeline กำลังรันอยู่, มันจะไม่หยุดอีกต่อไป\n' +
+        'ถ้ายังไม่ได้รัน, สามารถเริ่มรันใหม่ได้ทันที'
+    );
+  } catch (e) {
+    logError('App', 'clearPipelineStopSignal_UI failed: ' + e.message, e);
     safeUiAlert_('❌ ล้มเหลว: ' + e.message);
   }
 }
