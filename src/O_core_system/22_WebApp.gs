@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.006
+ * VERSION: 6.0.007
  * FILE: 22_WebApp.gs
  * LMDS V5.5 — Web App Server (Dashboard)
  * ===================================================
@@ -350,6 +350,18 @@ function getDashboardData() {
   // คำนวณ trend การจัดส่งย้อนหลัง 7 วัน เพื่อแสดงเป็น line chart บน Dashboard
   const deliveryTrend = computeDeliveryTrend7Days_(factSheet);
 
+  // ─── [V6.0.007] Audit Trail Stats ───
+  // แสดง audit activity บน dashboard (เช่น "24 changes today")
+  // Failsafe: ถ้า 26_AuditTrailService.gs ไม่ได้โหลด → return empty stats
+  let auditStats = { totalRows: 0, last24h: 0, last7d: 0, byAction: {}, byEntityType: {} };
+  if (typeof getAuditTrailStats === 'function') {
+    try {
+      auditStats = getAuditTrailStats();
+    } catch (e) {
+      logWarn('WebApp', 'getAuditTrailStats failed (non-fatal): ' + e.message);
+    }
+  }
+
   const elapsedMs = Date.now() - startTime;
   // [FIX] เพิ่ม reviewTotal ใน log เพื่อ debug ปัญหา review=0
   logInfo(
@@ -364,6 +376,8 @@ function getDashboardData() {
       stats.sourceSheetTotal +
       ', trend7d=' +
       deliveryTrend.total +
+      ', audit24h=' +
+      auditStats.last24h +
       ', elapsed=' +
       elapsedMs +
       'ms'
@@ -373,6 +387,7 @@ function getDashboardData() {
     stats: stats,
     topIssues: topIssues,
     deliveryTrend: deliveryTrend,
+    auditStats: auditStats,
     sheetsExist: sheetsExist,
     lastUpdated: new Date().toISOString(),
     appVersion: APP_VERSION,

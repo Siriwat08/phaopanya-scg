@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.006
+ * VERSION: 6.0.007
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -892,6 +892,38 @@ function cleanupStaleCanonicalAliases_(newGlobalAliasRows, context) {
         keysToCheck.length +
         ' entities'
     );
+
+    // [V6.0.007] Audit Trail — record batch alias deactivation (Critical-Only scope)
+    //   Since this is a batch operation, we log one DELETE record per deactivated row.
+    //   For very large batches (>50), we summarize to avoid audit spam.
+    //   Failsafe: logAuditTrail never throws — wrapped in its own try/catch
+    if (typeof logAuditTrail === 'function' && typeof AUDIT_ENTITY_TYPES !== 'undefined') {
+      if (rowsToDeactivate.length <= 50) {
+        // Log each row individually for fine-grained audit
+        rowsToDeactivate.forEach(function (rowNum) {
+          logAuditTrail(
+            AUDIT_ENTITY_TYPES.ALIAS,
+            'row:' + rowNum,
+            AUDIT_ACTIONS.DELETE,
+            'active_flag',
+            'true',
+            'false',
+            'cleanupStaleCanonicalAliases_ (batch)'
+          );
+        });
+      } else {
+        // Large batch — log one summary record
+        logAuditTrail(
+          AUDIT_ENTITY_TYPES.ALIAS,
+          'batch:' + keysToCheck.length,
+          AUDIT_ACTIONS.DELETE,
+          'active_flag',
+          String(rowsToDeactivate.length) + ' rows',
+          'false',
+          'cleanupStaleCanonicalAliases_ (batch summary)'
+        );
+      }
+    }
   } catch (err) {
     // Non-fatal — don't break the pipeline just because cleanup failed
     logError('cleanupStaleCanonicalAliases_', err.message, err);

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.006
+ * VERSION: 6.0.007
  * FILE: 02_Schema.gs
  * LMDS V5.5 — Sheet Schema Definitions
  * ===================================================
@@ -322,6 +322,29 @@ const SCHEMA = Object.freeze({
     'marked_at' // [7] timestamp
   ],
 
+  /**
+   * SYS_AUDIT_TRAIL — [V6.0.007] Audit Trail storage (Critical-Only scope)
+   * เก็บ record ของการ CREATE/UPDATE/DELETE/MERGE บน M_ALIAS + Q_REVIEW
+   *   เพื่อ change tracking + compliance + debugging
+   * 11 คอลัมน์ — เขียนโดย logAuditTrail() ใน 26_AuditTrailService.gs
+   *   - ไม่เคยถูกลบโดย operation อื่น (ยกเว้น cleanupAuditTrail_UI retention pruning)
+   *   - append-only pattern: เพิ่ม row ใหม่เท่านั้น ไม่ update row เดิม
+   *   - retention: keep last 90 days (override via AUDIT_RETENTION_DAYS script property)
+   */
+  SYS_AUDIT_TRAIL: [
+    'audit_id', // [0] AU+12 hex (e.g., "AU3F9A2B1C4D5")
+    'entity_type', // [1] 'ALIAS' | 'Q_REVIEW' (V6.0.007 scope; expandable to PERSON/PLACE/...)
+    'entity_id', // [2] FK → M_ALIAS.alias_id / Q_REVIEW.review_id
+    'action', // [3] 'CREATE' | 'UPDATE' | 'DELETE' | 'MERGE'
+    'field_changed', // [4] column name(s) that changed (comma-separated); 'all' for CREATE
+    'old_value', // [5] previous value (JSON string, truncated to 500 chars)
+    'new_value', // [6] new value (JSON string, truncated to 500 chars)
+    'changed_by', // [7] user email (or 'system' for automated processes)
+    'changed_at', // [8] timestamp
+    'change_reason', // [9] optional note (e.g., "Q_REVIEW merge", "stale cleanup")
+    'ip_address' // [10] (best effort — usually empty in GAS)
+  ],
+
   // [REMOVE v5.5.013] MAPS_CACHE SCHEMA ถูกลบออก — MAPS_CACHE sheet ไม่ได้ใช้แล้ว
   //   สูตร Google Maps ใช้ CacheService.getDocumentCache แทน (ดู 15_GoogleMapsAPI.gs)
 
@@ -558,7 +581,9 @@ function validateSchemaConsistency() {
     // [V6.0.001] เพิ่มการตรวจ SCHEMA vs NOTES_IDX สำหรับ SHEET.SYS_NOTES (Semantic Note Parser)
     { sheetName: SHEET.SYS_NOTES, idx: NOTES_IDX, label: 'SYS_NOTES (Semantic Note Parser)' },
     // [V6.0.003] เพิ่มการตรวจ SCHEMA vs NEGATIVE_SAMPLE_IDX สำหรับ SHEET.SYS_NEGATIVE_SAMPLES (System Learning)
-    { sheetName: SHEET.SYS_NEGATIVE_SAMPLES, idx: NEGATIVE_SAMPLE_IDX, label: 'SYS_NEGATIVE_SAMPLES (System Learning)' }
+    { sheetName: SHEET.SYS_NEGATIVE_SAMPLES, idx: NEGATIVE_SAMPLE_IDX, label: 'SYS_NEGATIVE_SAMPLES (System Learning)' },
+    // [V6.0.007] เพิ่มการตรวจ SCHEMA vs AUDIT_IDX สำหรับ SHEET.SYS_AUDIT_TRAIL (Audit Trail Critical-Only)
+    { sheetName: SHEET.SYS_AUDIT_TRAIL, idx: AUDIT_IDX, label: 'SYS_AUDIT_TRAIL (Audit Trail)' }
   ];
 
   const errors = [];

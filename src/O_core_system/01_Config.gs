@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.006
+ * VERSION: 6.0.007
  * FILE: 01_Config.gs
  * LMDS V5.5 — System Configuration & Constants
  * ===================================================
@@ -70,9 +70,9 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.006';
-const SCHEMA_VERSION = '6.0.006';
-const APP_NAME = 'LMDS V5.5';
+const APP_VERSION = '6.0.007';
+const SCHEMA_VERSION = '6.0.007';
+const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
 let _GLOBAL_GEO_DICT_CACHE = null; // สำหรับ 16_GeoDictionaryBuilder (8 fields: postcode,subDistrict,district,province,searchKey,postalKey,noteType,noteScope)
@@ -141,6 +141,9 @@ const SHEET = Object.freeze({
   // [V6.0.003] System Learning — negative samples from IGNORE review decisions
   //   ใช้สำหรับป้องกัน autoEnrich สร้าง alias ผิดในรอบถัดไป
   SYS_NEGATIVE_SAMPLES: 'SYS_NEGATIVE_SAMPLES',
+  // [V6.0.007] Audit Trail — record CREATE/UPDATE/DELETE/MERGE on M_ALIAS + Q_REVIEW
+  //   Critical-only scope: ALIAS + Q_REVIEW; expandable to other entities in future
+  SYS_AUDIT_TRAIL: 'SYS_AUDIT_TRAIL',
   // [REMOVE v5.5.013] MAPS_CACHE ถูกลบออก — ไม่ได้ใช้ใน pipeline อีกต่อไป
   //   สูตร Google Maps ใช้ CacheService.getDocumentCache แทน (ดู 15_GoogleMapsAPI.gs)
   DAILY_JOB: 'ตารางงานประจำวัน',
@@ -749,7 +752,9 @@ function validateConfig() {
       // [V6.0.001] เพิ่มการตรวจ SYS_NOTES — Semantic Note Parser storage
       { name: SHEET.SYS_NOTES, idx: NOTES_IDX, label: 'SYS_NOTES (Semantic Note Parser)' },
       // [V6.0.003] เพิ่มการตรวจ SYS_NEGATIVE_SAMPLES — System Learning negative samples
-      { name: SHEET.SYS_NEGATIVE_SAMPLES, idx: NEGATIVE_SAMPLE_IDX, label: 'SYS_NEGATIVE_SAMPLES (System Learning)' }
+      { name: SHEET.SYS_NEGATIVE_SAMPLES, idx: NEGATIVE_SAMPLE_IDX, label: 'SYS_NEGATIVE_SAMPLES (System Learning)' },
+      // [V6.0.007] เพิ่มการตรวจ SYS_AUDIT_TRAIL — Audit Trail (Critical Only)
+      { name: SHEET.SYS_AUDIT_TRAIL, idx: AUDIT_IDX, label: 'SYS_AUDIT_TRAIL (Audit Trail)' }
     ];
     checks.forEach((item) => {
       const schemaArr = SCHEMA[item.name];

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.006
+ * VERSION: 6.0.007
  * FILE: 21_AliasService.gs
  * LMDS V5.5 — Hybrid Alias Architecture (Global M_ALIAS + Entity-Specific Views)
  * ===================================================
@@ -204,6 +204,29 @@ function createGlobalAlias(masterUuid, variantName, entityType, confidence, sour
       'AliasService',
       `createGlobalAlias: ${aliasId} [${entityType}] (variant hash: ${generateMd5Hash(String(variantName)).substring(0, 8)}) → ${masterUuid.substring(0, 8)}... (${source})`
     );
+
+    // [V6.0.007] Audit Trail — record alias creation (Critical-Only scope)
+    //   Failsafe: logAuditTrail never throws — wrapped in its own try/catch
+    if (typeof logAuditTrail === 'function') {
+      logAuditTrail(
+        AUDIT_ENTITY_TYPES.ALIAS,
+        aliasId,
+        AUDIT_ACTIONS.CREATE,
+        'all',
+        null,
+        {
+          masterUuid: masterUuid,
+          variantName: variantName,
+          entityType: entityType,
+          confidence: confidence || 100,
+          source: source || 'MANUAL',
+          verifiedBy: optVerifiedBy || '',
+          reviewId: optReviewId || ''
+        },
+        source || 'MANUAL'
+      );
+    }
+
     return aliasId;
   } catch (err) {
     // [FIX B3 v5.5.002] เพิ่ม try-catch ตาม Rule 12

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.006
+ * VERSION: 6.0.007
  * FILE: 00_App.gs
  * LMDS V5.5 — Application Entry Point & Menu Controller
  * ===================================================
@@ -135,6 +135,8 @@ function onOpen() {
         .addItem('👥 [V6] ตั้งค่า Roles (RBAC)', 'setupRoleAssignments_UI')
         .addSeparator()
         .addItem('🧹 [V6] ลบ Trigger ค้าง (Cleanup)', 'cleanupStaleTriggers_UI')
+        .addSeparator()
+        .addItem('📜 [V6] Prune Audit Trail (90 วัน)', 'cleanupAuditTrail_UI')
         .addItem('📖 ดู Version Info', 'showVersionInfo')
     )
 
