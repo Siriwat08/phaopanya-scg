@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>LMDS V6.0.006 — System Workflow Flowchart</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Sarabun', 'Segoe UI', sans-serif;
+    background: #f5f7fa;
+    color: #1e293b;
+    line-height: 1.6;
+    padding: 24px;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  header {
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    color: white;
+    padding: 32px 36px;
+    border-radius: 14px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 14px rgba(30,58,138,0.18);
+  }
+  header h1 { font-size: 28px; margin-bottom: 6px; font-weight: 700; }
+  header .sub { font-size: 15px; opacity: 0.92; }
+  header .badges { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+  header .badge {
+    background: rgba(255,255,255,0.18);
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    backdrop-filter: blur(6px);
+  }
+  .toc {
+    background: white;
+    padding: 22px 28px;
+    border-radius: 12px;
+    margin-bottom: 28px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .toc h2 { font-size: 18px; margin-bottom: 12px; color: #1e3a8a; }
+  .toc ol { padding-left: 24px; columns: 2; column-gap: 36px; }
+  .toc li { margin: 6px 0; }
+  .toc a { color: #2563eb; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .diagram-section {
+    background: white;
+    padding: 28px 32px;
+    border-radius: 12px;
+    margin-bottom: 28px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .diagram-section h2 {
+    font-size: 22px;
+    color: #1e3a8a;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .diagram-section .num {
+    background: #1e3a8a;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .diagram-section .subtitle {
+    color: #64748b;
+    font-size: 14px;
+    margin-bottom: 18px;
+    margin-left: 48px;
+  }
+  .mermaid {
+    background: #fafbfc;
+    padding: 24px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    overflow-x: auto;
+    margin: 12px 0;
+  }
+  .legend {
+    background: #f1f5f9;
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .legend strong { color: #1e3a8a; }
+  .legend-item { display: inline-flex; align-items: center; gap: 8px; margin-right: 18px; margin-bottom: 6px; }
+  .legend-box {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .card {
+    background: #f8fafc;
+    border-left: 4px solid #3b82f6;
+    padding: 14px 18px;
+    border-radius: 6px;
+  }
+  .card.green { border-left-color: #10b981; }
+  .card.blue { border-left-color: #3b82f6; }
+  .card.orange { border-left-color: #f59e0b; }
+  .card.purple { border-left-color: #8b5cf6; }
+  .card.red { border-left-color: #ef4444; }
+  .card h4 { color: #1e293b; font-size: 15px; margin-bottom: 6px; }
+  .card p, .card li { font-size: 13px; color: #475569; }
+  .card ul { padding-left: 18px; margin-top: 4px; }
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 6px 0 6px 28px; position: relative; }
+  .checklist li::before {
+    content: '✅';
+    position: absolute;
+    left: 0;
+    font-size: 14px;
+  }
+  .checklist li.warn::before { content: '⚠️'; }
+  .checklist li.fail::before { content: '❌'; }
+  .file-path {
+    font-family: 'Fira Code', 'Courier New', monospace;
+    background: #1e293b;
+    color: #94a3b8;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin: 4px 0;
+  }
+  .file-path b { color: #fbbf24; }
+  footer {
+    text-align: center;
+    color: #64748b;
+    font-size: 13px;
+    padding: 24px;
+    margin-top: 32px;
+  }
+  @media print {
+    body { background: white; padding: 0; }
+    .diagram-section { box-shadow: none; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>🗺️ LMDS V6.0.006 — System Workflow Flowchart</h1>
+  <div class="sub">Logistics Master Data System · Phaopanya SCG · ภาพรวมการทำงานทั้งระบบ + ผังงานย่อย 7 diagrams</div>
+  <div class="badges">
+    <span class="badge">📅 Updated: 2026-07-07</span>
+    <span class="badge">🔖 Code: V6.0.006</span>
+    <span class="badge">📂 26 .gs + 17 HTML files</span>
+    <span class="badge">🛡️ Security: 12/12 PASS</span>
+    <span class="badge">✅ Verdict: GO (with 4 Critical fixes)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>📑 สารบัญ (8 Flowcharts)</h2>
+  <ol>
+    <li><a href="#d1">ภาพรวมทั้งระบบ (Master Flow)</a></li>
+    <li><a href="#d2">🟩 Group 1: Master Learning (จาก AppSheet)</a></li>
+    <li><a href="#d3">🟦 Group 2: Daily Ops (SCG API → ตารางงานประจำวัน)</a></li>
+    <li><a href="#d4">🔍 Search Service — ShipToName-Only Flow</a></li>
+    <li><a href="#d5">⚙️ Pipeline Manager (Auto-Resume + Quota)</a></li>
+    <li><a href="#d6">🌐 WebApp Routes (V6.0 — 7 Views)</a></li>
+    <li><a href="#d7">🔐 RBAC Flow (Phase 7 — V6.0.004)</a></li>
+    <li><a href="#d8">🔁 V6.0 Phases ใหม่ทั้ง 7 (Phase 1–7)</a></li>
+  </ol>
+</nav>
+
+<!-- ==================== DIAGRAM 1: MASTER FLOW ==================== -->
+<section class="diagram-section" id="d1">
+  <h2><span class="num">1</span> ภาพรวมทั้งระบบ (Master Flow)</h2>
+  <p class="subtitle">แสดง Trinity Framework: Person + Place + Geo = Destination และการไหลของข้อมูล Group 1 ↔ Group 2</p>
+
+  <div class="legend">
+    <strong>🎨 สัญลักษณ์:</strong>
+    <span class="legend-item"><span class="legend-box" style="background:#dcfce7"></span> ชีตข้อมูลดิบ (Source)</span>
+    <span class="legend-item"><span class="legend-box" style="background:#dbeafe"></span> Master DB (Single Source of Truth)</span>
+    <span class="legend-item"><span class="legend-box" style="background:#fef3c7"></span> ชีตผลลัพธ์ (Output)</span>
+    <span class="legend-item"><span class="legend-box" style="background:#fce7f3"></span> WebApp / UI</span>
+    <span class="legend-item"><span class="legend-box" style="background:#e0e7ff"></span> Process / Function</span>
+  </div>
+
+  <div class="mermaid">
+flowchart TB
+    %% ============ EXTERNAL SOURCES ============
+    subgraph EXT["🌐 แหล่งข้อมูลภายนอก"]
+        APPSHEET["📱 AppSheet<br/>คนขับส่งงานจริง<br/>100% LatLong"]
+        SCGAPI["🔌 SCG API<br/>แผนงานประจำวัน<br/>(Cookie + ShipmentNo)"]
+    end
+
+    %% ============ GROUP 1 ============
+    subgraph G1["🟩 Group 1: The Brain & Master DB"]
+        direction TB
+        SRC["📊 SCGนครหลวงJWDภูมิภาค<br/>(ชีตข้อมูลดิบ)"]
+        ME["⚙️ 10_MatchEngine.gs<br/>runMatchEngine()<br/>processOneRow()"]
+        RES_P["resolvePerson()<br/>06_PersonService"]
+        RES_PL["resolvePlace()<br/>07_PlaceService"]
+        RES_G["resolveGeo()<br/>08_GeoService"]
+        RES_D["resolveDestination()<br/>09_DestinationService"]
+        DEC["makeMatchDecision()<br/>executeDecision()"]
+        ALIAS["autoEnrichAliasesFromFactBatch_<br/>(SINGLE WRITER for M_ALIAS)"]
+    end
+
+    %% ============ MASTER DB ============
+    subgraph MASTER["💾 Master Database (Group 1 เป็นเจ้าของ)"]
+        direction LR
+        MP["M_PERSON<br/>(ชื่อปลายทาง)"]
+        MPL["M_PLACE<br/>(สถานที่/ที่อยู่)"]
+        MG["M_GEO_POINT<br/>(พิกัด GPS)"]
+        MD["M_DESTINATION<br/>Person+Place+Geo<br/>⭐ Trinity Node"]
+        MAL["M_ALIAS / M_PERSON_ALIAS<br/>M_PLACE_ALIAS<br/>(Hybrid Alias System)"]
+        SYSG["SYS_TH_GEO<br/>ฐานข้อมูลไทย"]
+    end
+
+    %% ============ GROUP 2 ============
+    subgraph G2["🟦 Group 2: Daily Ops & Search"]
+        direction TB
+        INPUT["📝 Input<br/>(Cookie + Shipment No)"]
+        FETCH["fetchDataFromSCGJWD()<br/>18_ServiceSCG"]
+        DJOB["📅 ตารางงานประจำวัน<br/>(DAILY_JOB)"]
+        SEARCH["runLookupEnrichment()<br/>17_SearchService<br/>⭐ ShipToName-Only"]
+        WRITE["✍️ เขียน LatLong_Actual<br/>+ color coding"]
+        SUMMARY["สรุป_เจ้าของสินค้า<br/>สรุป_Shipment"]
+    end
+
+    %% ============ TRANSACTIONS ============
+    subgraph TXN["📚 Transaction & Review"]
+        FACT["FACT_DELIVERY<br/>(ประวัติธุรกรรม)"]
+        QREV["⚠️ Q_REVIEW<br/>(คิวตรวจสอบ)"]
+    end
+
+    %% ============ V6.0 ADDITIONS ============
+    subgraph V6["✨ V6.0 Phases 1–7 (ใหม่)"]
+        NORM["05_NormalizeService<br/>Semantic Notes + Double Metaphone"]
+        DYN["Dynamic Weights<br/>calcDynamicWeights_()"]
+        SELF["Self-Healing Alias<br/>MIGRATION_HybridAliasSystem"]
+        RBAC["🔐 RBAC<br/>27_RbacService<br/>Viewer/Reviewer/Admin"]
+        TELE["📲 Telegram Alert<br/>24_PipelineManager"]
+        PIPE["⚙️ Pipeline Manager<br/>Auto-Resume + Quota"]
+        HARD["🛡️ Hardening<br/>Preflight + Dedup Audit"]
+    end
+
+    %% ============ WEBAPP ============
+    subgraph WEB["🌐 WebApp (V6.0.004)"]
+        DO["doGet(e)<br/>22_WebApp.gs"]
+        DASH["📊 Dashboard<br/>(7-Day Trend)"]
+        QRV["Q_REVIEW View<br/>(Approve/Reject)"]
+        FACTV["FACT_DELIVERY View"]
+        MAP["🗺️ Map Analytics<br/>Leaflet Heatmap"]
+        LF["📡 Live Feed Monitor"]
+    end
+
+    %% ============ FLOWS ============
+    APPSHEET -->|คนขับบันทึก| SRC
+    SCGAPI -.->|Cookie Auth| FETCH
+    INPUT --> FETCH
+    FETCH --> DJOB
+    DJOB --> SEARCH
+    SEARCH -->|1.fastLookupByShipToName| MAL
+    SEARCH -->|2.resolvePerson + getDestsByPersonId| MP
+    SEARCH -->|3.→ M_DESTINATION| MD
+    MD --> WRITE
+    DJOB --> WRITE
+    DJOB --> SUMMARY
+    WRITE --> DJOB
+
+    SRC --> ME
+    ME --> NORM
+    NORM --> RES_P & RES_PL
+    RES_P --> MP
+    RES_PL --> MPL
+    RES_P -.->|ใช้อ้างอิง| SYSG
+    RES_PL -.->|ใช้อ้างอิง| SYSG
+    RES_G --> MG
+    MP & MPL & MG --> DEC
+    DEC --> RES_D
+    RES_D --> MD
+    DEC -->|✅ AUTO_MATCH| FACT
+    DEC -->|⚠️ UNCERTAIN| QREV
+    DEC -->|❓ NEED_REVIEW| QREV
+    QREV -->|Approve| FACT
+    FACT --> ALIAS
+    ALIAS --> MAL
+    ALIAS -.->|Phase 3 Self-Healing| SELF
+
+    %% WebApp routes
+    DO --> DASH & QRV & FACTV & MAP & LF
+    QRV -.->|Approve| FACT
+    FACTV -.->|Read| FACT
+    DASH -.->|Stats| FACT & QREV & MD
+
+    %% V6.0 enhancements
+    ME -.->|Phase 2| DYN
+    PIPE -.->|Quota circuit-breaker| ME
+    PIPE -->|on fail| TELE
+    HARD -.->|Pre-flight| ME
+    RBAC -.->|guard| DO
+    RBAC -.->|guard| FETCH
+
+    %% ============ STYLES ============
+    classDef source fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
+    classDef master fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    classDef output fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#78350f
+    classDef webapp fill:#fce7f3,stroke:#db2777,stroke-width:2px,color:#831843
+    classDef process fill:#e0e7ff,stroke:#6366f1,stroke-width:2px,color:#312e81
+    classDef v6 fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#581c87
+
+    class APPSHEET,SCGAPI,INPUT,SRC source
+    class MP,MPL,MG,MD,MAL,SYSG master
+    class FACT,QREV,DJOB,SUMMARY,FACTV,MAP output
+    class DO,DASH,QRV,LF webapp
+    class ME,RES_P,RES_PL,RES_G,RES_D,DEC,SEARCH,WRITE,ALIAS,FETCH,NORM,DYN,SELF,TELE,PIPE,HARD process
+    class RBAC v6
+  </div>
+</section>
+
+<!-- ==================== DIAGRAM 2: GROUP 1 DETAIL ==================== -->
+<section class="diagram-section" id="d2">
+  <h2><span class="num">2</span> 🟩 Group 1: Master Learning (จาก AppSheet)</h2>
+  <p class="subtitle">รายละเอียด: SCGนครหลวงJWDภูมิภาค → MatchEngine → 3-axis resolve → Master + Alias</p>
+
+  <div class="grid">
+    <div class="card green">
+      <h4>📥 Source</h4>
+      <p><b>SCGนครหลวงJWDภูมิภาค</b><br/>ข้อมูลจริงจากคนขับผ่าน AppSheet<br/>คอลัมน์สำคัญ: RAW_PERSON_NAME(12), LAT(14), LNG(15), RAW_ADDRESS(18)</p>
+    </div>
+    <div class="card blue">
+      <h4>🧠 Match Engine</h4>
+      <p><b>10_MatchEngine.gs</b><br/>runMatchEngine() → runMatchEngineLoop_()<br/>processOneRow(srcObj) — 6-min limit + Auto-Resume</p>
+    </div>
+    <div class="card orange">
+      <h4>🎯 3-Axis Resolve</h4>
+      <ul>
+        <li><b>resolvePerson()</b> → M_PERSON</li>
+        <li><b>resolvePlace()</b> → M_PLACE</li>
+        <li><b>resolveGeo()</b> → M_GEO_POINT</li>
+      </ul>
+    </div>
+    <div class="card purple">
+      <h4>✨ V6.0 Phase 1+2</h4>
+      <ul>
+        <li><b>Phase 1:</b> Semantic Notes + Double Metaphone</li>
+        <li><b>Phase 2:</b> Disambiguation + Dynamic Weights</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mermaid">
+flowchart LR
+    START(["▶️ START<br/>คนขับบันทึกข้อมูลจริง"]) --> SRC["📊 SCGนครหลวงJWDภูมิภาค<br/>Row N"]
+    SRC --> CHECK{SYNC_STATUS<br/>ตรวจแถวซ้ำ?}
+    CHECK -->|"= DONE"| SKIP["⏭️ Skip<br/>(กันประมวลผลซ้ำ)"]
+    CHECK -->|"≠ DONE"| READ["📖 อ่าน srcObj จาก 04_SourceRepository<br/>rawPersonName, rawLat, rawLng,<br/>rawAddress, rawPlaceName, province"]
+
+    READ --> NORM["🧹 05_NormalizeService<br/>normalizePersonNameFull()<br/>normalizePlaceName()<br/>✨ Phase 1: Semantic Notes<br/>✨ Phase 1: Double Metaphone"]
+    NORM --> P["👤 resolvePerson<br/>06_PersonService"]
+    NORM --> PL["📍 resolvePlace<br/>07_PlaceService"]
+    READ --> G["🌍 resolveGeo<br/>08_GeoService"]
+
+    P --> DYN{"✨ calcDynamicWeights_<br/>Phase 2"}
+    PL --> DYN
+    DYN --> DEC["🤔 makeMatchDecision<br/>10_MatchEngine"]
+
+    DEC -->|"HIGH ≥ 0.85<br/>AUTO_MATCH"| EXEC["✅ executeDecision<br/>upsert M_DESTINATION"]
+    DEC -->|"MEDIUM 0.6–0.85<br/>NEED_REVIEW"| QRV["⚠️ Q_REVIEW<br/>(รอคนตรวจ)"]
+    DEC -->|"LOW < 0.6<br/>NEW_ENTITY"| EXEC
+
+    EXEC --> FACT["📚 FACT_DELIVERY<br/>(บันทึกธุรกรรม)"]
+    EXEC --> ALIAS["🏷️ autoEnrichAliasesFromFactBatch_<br/>⭐ SINGLE WRITER<br/>→ M_ALIAS"]
+    EXEC --> DEST["🎯 M_DESTINATION<br/>person + place + geo"]
+
+    QRV -->|Approve| FACT
+    QRV -->|Reject| SKIP
+
+    FACT --> SELF{"✨ Phase 3<br/>Self-Healing Alias?<br/>21_AliasService"}
+    SELF -->|Yes| MIGR["MIGRATION_HybridAliasSystem()<br/>+ assignMasterUuidIfMissing()"]
+    SELF -->|No| END(["⏹️ END"])
+
+    MIGR --> END
+    ALIAS --> END
+
+    classDef src fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    classDef proc fill:#e0e7ff,stroke:#6366f1,stroke-width:1.5px
+    classDef dec fill:#fef3c7,stroke:#d97706,stroke-width:2px
+    classDef ok fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    classDef warn fill:#fef3c7,stroke:#d97706,stroke-width:2px
+    classDef err fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+
+    class SRC src
+    class NORM,P,PL,G,DYN,EXEC,FACT,ALIAS,DEST,SELF,MIGR proc
+    class CHECK,DEC dec
+    class EXEC,END ok
+    class QRV warn
+    class SKIP err
+  </div>
+
+  <div class="file-path">
+    <b>📁 ไฟล์หลัก:</b>
+    src/1_group1_master_db/10_MatchEngine.gs ·
+    src/1_group1_master_db/05_NormalizeService.gs ·
+    src/1_group1_master_db/06_PersonService.gs ·
+    src/1_group1_master_db/07_PlaceService.gs ·
+    src/1_group1_master_db/08_GeoService.gs ·
+    src/1_group1_master_db/21_AliasService.gs
+  </div>
+</section>
+
+<!-- ==================== DIAGRAM 3: GROUP 2 DAILY OPS ==================== -->
+<section class="diagram-section" id="d3">
+  <h2><span class="num">3</span> 🟦 Group 2: Daily Ops (SCG API → ตารางงานประจำวัน)</h2>
+  <p class="subtitle">โหลดงานจาก SCG API → normalize → ค้นหาพิกัดจาก Master → เขียนกลับ LatLong_Actual</p>
+
+  <div class="mermaid">
+flowchart TB
+    START(["▶️ START<br/>ผู้ใช้ใส่ Input"]) --> INPUT["📝 ชีต Input<br/>Cookie + Shipment No"]
+
+    INPUT --> AUTH{"🔐 27_RbacService<br/>isAuthorizedUser_()<br/>requirePermission_()"}
+    AUTH -->|"❌ ไม่มีสิทธิ์"| DENY["🚫 Throw Error<br/>log unauthorized"]
+    AUTH -->|"✅ ผ่าน"| READB1["📖 อ่าน Cookie จาก B1<br/>18_ServiceSCG.getSCGCookie_()"]
+
+    READB1 --> FETCH["🌐 fetchDataFromSCGJWD()<br/>18_ServiceSCG<br/>(HTTP POST + JSON)"]
+    FETCH --> APIRESP["📥 SCG API Response<br/>allFlatData[]"]
+    APIRESP --> CLEAR["🧹 clearContent()<br/>dataSheet.clear()"]
+
+    CLEAR --> WRITE_HDR["📋 เขียน Header<br/>(28 columns)"]
+    WRITE_HDR --> WRITE_DATA["📦 setValues batch<br/>(allFlatData → ตารางงานประจำวัน)"]
+
+    WRITE_DATA --> CALL_ENRICH["➡️ applyMasterCoordinatesToDailyJob()<br/>เรียกต่อทันที"]
+
+    CALL_ENRICH --> LOOP_START{"🔄 Loop แต่ละแถว<br/>ShipToName ≠ blank?"}
+    LOOP_START -->|"❌ ว่าง"| SKIP["⏭️ Skip + สีเทา"]
+    LOOP_START -->|"✅ มีข้อมูล"| ALREADY{"มี LatLong_Actual<br/>อยู่แล้ว?"}
+
+    ALREADY -->|"✅ ใช่ + valid"| SKIP
+    ALREADY -->|"❌ ไม่มี"| SEARCH["🔍 runLookupEnrichment()<br/>17_SearchService<br/>(รายละเอียดใน diagram #4)"]
+
+    SEARCH --> RESULT{"ผลลัพธ์?"}
+    RESULT -->|"✅ FOUND<br/>(Tier 0 Alias หรือ Tier 1 Person)"| WRITE_COORD["✍️ เขียน LatLong_Actual<br/>+ สีเขียว"]
+    RESULT -->|"❌ NOT_FOUND"| WRITE_BLANK["✍️ เขียนว่าง<br/>+ สีแดง NOT_FOUND"]
+
+    WRITE_COORD --> NEXT["ไปแถวถัดไป"]
+    WRITE_BLANK --> NEXT
+    SKIP --> NEXT
+    NEXT --> HAS_MORE{"มีแถวเหลือ?"}
+
+    HAS_MORE -->|"✅ ใช่"| LOOP_START
+    HAS_MORE -->|"❌ ไม่"| SUMMARY["📊 buildOwnerSummary()<br/>buildShipmentSummary()"]
+
+    SUMMARY --> SHEET_SUM["📋 สรุป_เจ้าของสินค้า<br/>สรุป_Shipment"]
+    SHEET_SUM --> END(["⏹️ END<br/>พร้อมให้คนขับใช้งาน"])
+
+    DENY --> ENDERR(["⏹️ END<br/>พร้อม Error Log"])
+
+    classDef input fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    classDef proc fill:#e0e7ff,stroke:#6366f1,stroke-width:1.5px
+    classDef dec fill:#fef3c7,stroke:#d97706,stroke-width:2px
+    classDef ok fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    classDef warn fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+
+    class INPUT,APIRESP,SHEET_SUM input
+    class READB1,FETCH,CLEAR,WRITE_HDR,WRITE_DATA,CALL_ENRICH,SEARCH,WRITE_COORD,WRITE_BLANK,SUMMARY proc
+    class AUTH,ALREADY,LOOP_START,RESULT,HAS_MORE dec
+    class END,SHEET_SUM ok
+    class WRITE_BLANK,DENY,ENDERR warn
+  </div>
+
+  <div class="file-path">
+    <b>📁 ไฟล์หลัก:</b>
+    src/2_group2_daily_ops/18_ServiceSCG.gs ·
+    src/2_group2_daily_ops/17_SearchService.gs ·
+    src/O_core_system/27_RbacService.gs
+  </div>
+</section>
+
+<!-- ==================== DIAGRAM 4: SEARCH SERVICE ==================== -->
+<section class="diagram-section" id="d4">
+  <h2><span class="num">4</span> 🔍 Search Service — ShipToName-Only Flow</h2>
+  <p class="subtitle">📜 Business Rule v5.4.003: ใช้ ShipToName เท่านั้น ห้ามใช้ ShipToAddress / LatLong_SCG เป็น fallback</p>
+
+  <div class="card orange" style="margin-bottom: 14px;">
+    <h4>⚠️ Business Rule (Single Source of Truth)</h4>
+    <p>ShipToAddress จาก SCG API <b>ไม่น่าเชื่อถือ</b> (อาจมีแค่อำเภอ) → ห้ามใช้เป็น anchor<br/>
+    LatLong_SCG จาก SCG API <b>ยังไม่ verified</b> → ห้าม fallback เขียน LatLong_Actual<br/>
+    AI Reasoning ถูกลบออกใน v5.4.003 → ไม่เหมาะกับ production</p>
+  </div>
+
+  <div class="mermaid">
+flowchart TB
+    START(["📥 INPUT<br/>ShipToName (raw)<br/>จาก ตารางงานประจำวัน"]) --> VALIDATE{rawPerson<br/>≥ 3 chars?}
+    VALIDATE -->|"❌ สั้นเกิน / ว่าง"| RET1["🔙 return NOT_FOUND<br/>reason: ShipToName ว่าง"]
+    VALIDATE -->|"✅ ผ่าน"| NORM["🧹 normalizePersonNameFull()<br/>05_NormalizeService"]
+
+    NORM --> TIER0{"Tier 0: fastLookupByShipToName()<br/>21_AliasService<br/>(Fast Track)"}
+
+    TIER0 -->|"🎯 Alias พบ<br/>(HIGH confidence ≥ 95)"| RESOLVE_UUID["🔎 resolveMasterUuidViaGlobalAlias()<br/>→ masterUuid"]
+    RESOLVE_UUID --> GET_DEST["📋 ดึง Destination<br/>จาก M_DESTINATION โดย masterUuid"]
+    GET_DEST --> RESULT_OK["✅ buildSearchResult_<br/>lat, lng, person, place"]
+
+    TIER0 -->|"❌ Alias ไม่พบ"| TIER1{"Tier 1: resolvePerson()<br/>06_PersonService"}
+
+    TIER1 -->|"✅ Person พบ<br/>(confidence ≥ 85)"| GET_PERSON_ID["🔎 personId"]
+    GET_PERSON_ID --> GET_DESTS["📋 getDestsByPersonId(personId)<br/>→ M_DESTINATION<br/>+ usageCount dominant"]
+    GET_DESTS --> RESULT_OK
+
+    TIER1 -->|"❌ Person ไม่พบ"| SUBSTR{"Substring Fallback?<br/>(เปิดใน V6.0)?"}
+    SUBSTR -->|"✅ เปิด + match"| RESOLVE_UUID
+    SUBSTR -->|"❌ ปิด / ไม่ match"| RET2["🔙 return NOT_FOUND<br/>reason: ไม่พบใน Master"]
+
+    RESULT_OK --> CHECK_MULTI{พบหลาย<br/>Destination?}
+    CHECK_MULTI -->|"❌ เดียว"| RETURN["📤 return OK<br/>+ lat,lng"]
+    CHECK_MULTI -->|"✅ หลายตัว"| BREAK["⚖️ breakTieAmongCandidates()<br/>Phase 2: Dynamic Weights"]
+    BREAK --> RETURN
+
+    RET1 --> WRITE_NF["✍️ เขียนว่าง + สีแดง<br/>ใน ตารางงานประจำวัน"]
+    RET2 --> WRITE_NF
+    RETURN --> WRITE_OK["✍️ เขียน LatLong_Actual<br/>+ สีเขียว"]
+
+    WRITE_OK --> LOG["📝 logInfo<br/>(matched via Tier X)"]
+    WRITE_NF --> LOG_NF["📝 logWarn<br/>(NOT_FOUND)"]
+    LOG --> END(["⏹️ END"])
+    LOG_NF --> END
+
+    classDef input fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    classDef proc fill:#e0e7ff,stroke:#6366f1,stroke-width:1.5px
+    classDef dec fill:#fef3c7,stroke:#d97706,stroke-width:2px
+    classDef ok fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    classDef warn fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+    classDef brk fill:#f3e8ff,stroke:#9333ea,stroke-width:2px
+
+    class START input
+    class NORM,RESOLVE_UUID,GET_DEST,GET_PERSON_ID,GET_DESTS,WRITE_OK,WRITE_NF,LOG,LOG_NF proc
+    class VALIDATE,TIER0,TIER1,SUBSTR,CHECK_MULTI dec
+    class RESULT_OK,RETURN,END ok
+    class RET1,RET2 warn
+    class BREAK brk
+  </div>
+
+  <div class="file-path">
+    <b>📁 ไฟล์หลัก:</b>
+    src/2_group2_daily_ops/17_SearchService.gs ·
+    src/1_group1_master_db/21_AliasService.gs ·
+    src/1_group1_master_db/05_NormalizeService.gs
+  </div>
+</section>
+
+<!-- ==================== DIAGRAM 5: PIPELINE MANAGER ==================== -->
+<section class="diagram-section" id="d5">
+  <h2><span class="num">5</span> ⚙️ Pipeline Manager (V6.0 Phase 5.2 — Auto-Resume + Quota + Circuit Breaker)</h2>
+  <p class="subtitle">ทำงานยาวเกิน 6 นาที → Checkpoint + Trigger → Auto-resume | Quota + Circuit Breaker ป้องกันพัง</p>
+
+  <div class="mermaid">
+flowchart TB
+    START(["▶️ START<br/>runPipelineBatch()"]) --> CHECK_CB{"🔌 Circuit Breaker<br/>tripped?"}
+    CHECK_CB -->|"🚨 Tripped (5 errors)"| CB_END["⏸️ Skip + log<br/>รอ cooldown 1h"]
+    CHECK_CB -->|"✅ OK"| CHECK_QUOTA{"📊 Daily Quota<br/>available?"}
+
+    CHECK_QUOTA -->|"❌ หมด"| Q_END["⏸️ Skip + Telegram Alert<br/>รอ quota reset"]
+    CHECK_QUOTA -->|"✅ พอ"| LOAD_CKPT["📂 loadPipelineCheckpoint_<br/>ดูว่าค้างแถวไหน"]
+
+    LOAD_CKPT --> RESUME_FROM["⏯️ Resume จาก row index<br/>ถ้าไม่มี → เริ่มใหม่"]
+    RESUME_FROM --> GET_STATE["📊 getPipelineState_<br/>(dailyQuota, circuitBreaker)"]
+
+    GET_STATE --> LOCK["🔒 acquireMatchEngineLock_<br/>+ LockService.waitLock"]
+    LOCK --> TIME_CHK{"⏱️ hasTimePassed_<br/>(< 5 min)?"}
+
+    TIME_CHK -->|"❌ หมดเวลา"| SAVE_CKPT["💾 setPipelineCheckpoint_<br/>row idx + state"]
+    SAVE_CKPT --> CREATE_TRIG["🔔 installPipelineTriggers<br/>time-based trigger 1min"]
+    CREATE_TRIG --> TRIG_END(["⏹️ END<br/>(Auto-resume)"])
+
+    TIME_CHK -->|"✅ ยังมีเวลา"| BATCH["🔄 ประมวลผล batch<br/>(~100 rows)"]
+    BATCH --> RESULT{batchResult}
+    RESULT -->|"✅ Success"| RECORD_OK["✅ recordBatchSuccess_<br/>incrementQuotaUsage"]
+    RESULT -->|"❌ Error"| RECORD_ERR["❌ recordBatchError_<br/>+ checkIsEPOD_"]
+
+    RECORD_OK --> MORE{"มีแถวเหลือ?"}
+    MORE -->|"✅ ใช่"| TIME_CHK
+    MORE -->|"❌ ไม่"| COMPLETE["🎉 completePipeline_<br/>clearPipelineCheckpoint_"]
+
+    RECORD_ERR --> CB_CHECK{"error count<br/>≥ 5?"}
+    CB_CHECK -->|"🚨 ใช่"| TRIP_CB["⚠️ setCircuitBreaker_<br/>tripped = true"]
+    CB_CHECK -->|"✅ ไม่ถึง"| SAVE_CKPT
+
+    TRIP_CB --> TG["📲 sendTelegramAlert<br/>(Phase 5.1)"]
+    TG --> TRIG_END
+    COMPLETE --> TG_OK["📲 sendTelegramAlert<br/>✅ Pipeline Complete"]
+    COMPLETE --> CLEAR["🧹 removeAllPipelineTriggers_"]
+    CLEAR --> END_OK(["⏹️ END<br/>(success)"])
+
+    CB_END --> TG_CB["📲 Telegram<br/>(Circuit tripped)"]
+    Q_END --> TG_Q["📲 Telegram<br/>(Quota exhausted)"]
+
+    classDef start fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    classDef proc fill:#e0e7ff,stroke:#6366f1,stroke-width:1.5px
+    classDef dec fill:#fef3c7,stroke:#d97706,stroke-width:2px
+    classDef ok fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    classDef warn fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+    classDef tg fill:#dbeafe,stroke:#2563eb,stroke-width:2px
+
+    class START,END_OK,TRIG_END start
+    class LOAD_CKPT,RESUME_FROM,GET_STATE,LOCK,BATCH,RECORD_OK,RECORD_ERR,COMPLETE,CLEAR,SAVE_CKPT,CREATE_TRIG proc
+    class CHECK_CB,CHECK_QUOTA,TIME_CHK,RESULT,MORE,CB_CHECK dec
+    class TG,TG_OK,TG_CB,TG_Q tg
+    class CB_END,Q_END,TRIP_CB warn
+  </div>
+
+  <div class="file-path">
+    <b>📁 ไฟล์หลัก:</b>
+    src/4_group4_pipeline_mgr/24_PipelineManager.gs
+  </div>
+</section>
+
+<!-- ==================== DIAGRAM 6: WEBAPP ROUTES ==================== -->
+<section class="diagram-section" id="d6">
+  <h2><span class="num">6</span> 🌐 WebApp Routes (V6.0 — 7 Views)</h2>
+  <p class="subtitle">doGet(e) → RBAC guard → 7 views: Dashboard, Q_REVIEW, FACT_DELIVERY, Map, Live Feed, Source, Match Engine</p>
+
+  <div class="mermaid">
+flowchart TB
+    USER(["👤 User เปิด URL"]) --> DO["🔗 doGet(e)<br/>22_WebApp.gs"]
+
+    DO --> RBAC_AUTH{"🔐 requirePermission_<br/>27_RbacService"}
+    RBAC_AUTH -->|"❌ ไม่มีสิทธิ์"| UNAUTH["⚠️ Unauthorized.html<br/>(401 page)"]
+    RBAC_AUTH -->|"✅ Viewer/Reviewer/Admin"| ROUTE{page param}
+
+    ROUTE -->|"หรือ default"| INDEX["📄 Index.html<br/>(SPA Router)"]
+    ROUTE -->|"dashboard"| DASH["📊 Dashboard.html<br/>Stat Cards + 7-Day Trend<br/>(Viewer+)"]
+    ROUTE -->|"qreview"| QRV["⚠️ Q_REVIEW.html<br/>+ QReview Detail Panel<br/>(Reviewer+: Approve/Reject)"]
+    ROUTE -->|"fact_delivery"| FV["📚 FactDelivery.html<br/>(Viewer+)"]
+    ROUTE -->|"source_sheet"| SRC["📊 SourceSheet.html<br/>(Viewer+)"]
+    ROUTE -->|"match_engine"| ME["🧠 MatchEngine.html<br/>Metrics + Quota<br/>(Admin only)"]
+    ROUTE -->|"map_analytics"| MAP["🗺️ MapAnalytics.html<br/>Leaflet + Heatmap<br/>(Viewer+)"]
+    ROUTE -->|"search"| SRCH["🔍 Search.html<br/>(Viewer+)"]
+    ROUTE -->|"live_feed"| LF["📡 LiveFeed.html<br/>polling 3s<br/>(Admin only)"]
+
+    INDEX -->|"hash route"| DASH & QRV & FV & SRC & ME & MAP & SRCH & LF
+
+    QRV --> ACT{action}
+    ACT -->|"approve"| APPROVE["✅ Approve → upsertFactDelivery<br/>(Reviewer+)"]
+    ACT -->|"reject"| REJECT["❌ Reject → mark Q_REVIEW<br/>(Reviewer+)"]
+    ACT -->|"view_detail"| DETAIL["📋 QReview Detail Panel<br/>(3-axis context)"]
+
+    DASH --> DATA["📊 getDashboardData()<br/>+ computeDeliveryTrend7Days_()"]
+    FV --> DATA2["📊 getFactDeliveryData()<br/>(paginated)"]
+    QRV --> DATA3["📊 getQReviewData()<br/>(filter by status)"]
+    MAP --> DATA4["📊 getMapData()<br/>(lat,lng cluster)"]
+    LF --> DATA5["📊 getLiveFeedData()<br/>(polling every 3s)"]
+
+    APPROVE --> SYNC_F["📚 FACT_DELIVERY<br/>(update)"]
+    REJECT --> SYNC_R["📋 Q_REVIEW<br/>(mark rejected)"]
+
+    SYNC_F -.->|"Phase 3"| SELF["🏷️ Self-Healing Alias<br/>(เรียนรู้จากการ Approve)"]
+    SYNC_R --> END(["⏹️ Response OK"])
+
+    classDef user fill:#fce7f3,stroke:#db2777,stroke-width:2px
+    classDef proc fill:#e0e7ff,stroke:#6366f1,stroke-width:1.5px
+    classDef dec fill:#fef3c7,stroke:#d97706,stroke-width:2px
+    classDef view fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px
+    classDef ok fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    classDef warn fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+
+    class USER user
+    class DO,INDEX,DATA,DATA2,DATA3,DATA4,DATA5,APPROVE,REJECT,SELF proc
+    class RBAC_AUTH,ROUTE,ACT dec
+    class DASH,QRV,FV,SRC,ME,MAP,SRCH,LF,DETAIL view
+    class SYNC_F,END ok
+    class UNAUTH warn
+  </div>
+
+  <div class="file-path">
+    <b>📁 ไฟล์หลัก:</b>
+    src/O_core_system/22_WebApp.gs ·
+    src/3_group3_webapp/Index.html ·
+    src/3_group3_webapp/views/*.html (7 views) ·
+    src/3_group3_webapp/js/*.html (App, Api, Auth) ·
+    src/O_core_system/27_RbacService.gs
+  </div>
+</section>
+
+<!-- ==================== DIAGRAM 7: RBAC FLOW ==================== -->
+<section class="diagram-section" id="d7">
+  <h2><span class="num">7</span> 🔐 RBAC Flow (Phase 7 — V6.0.004)</h2>
+  <p class="subtitle">3 roles × 8 permissions → guard ทุก destructive operation + WebApp route + API call</p>
+
+  <div class="mermaid">
+flowchart LR
+    subgraph PERMS["RBAC_CONFIG (Object.freeze)"]
+        direction TB
+        P1["view:dashboard<br/>view:fact_delivery<br/>view:qreview<br/>view:map_analytics"]
+        P2["approve:qreview<br/>(Reviewer+)"]
+        P3["run:match_engine<br/>run:pipeline<br/>(Admin only)"]
+        P4["write:master_data<br/>edit:alias<br/>(Admin only)"]
+    end
+
+    subgraph HIERARCHY["ROLE_HIERARCHY"]
+        direction TB
+        V["👁️ Viewer<br/>read-only"]
+        R["✏️ Reviewer<br/>Viewer + approve Q_REVIEW"]
+        A["🛡️ Admin<br/>Reviewer + write/rerun"]
+    end
+
+    subgraph GUARDS["🛡️ Guard Functions"]
+        direction TB
+        G1["requirePermission_(perm)<br/>throws if !hasPermission"]
+        G2["hasPermission_(role, perm)<br/>lookup PERMISSIONS + hierarchy"]
+        G3["enforceRBAC_(perm)<br/>for destructive ops"]
+        G4["isAuthorizedUser_()<br/>(legacy alias)"]
+    end
+
+    USER(["👤 User<br/>email"]) -->|"Session.getActiveUser().getEmail()"| LOOKUP["🔎 getUserRole_(email)<br/>→ LMDS_ADMINS sheet"]
+    LOOKUP --> ROLE{role?}
+    ROLE -->|in admins| A
+    ROLE -->|in reviewers| R
+    ROLE -->|"อื่นๆ / ไม่พบ"| V
+
+    V -->|"has perm?"| P1
+    R -->|"has perm?"| P1 & P2
+    A -->|"has perm?"| P1 & P2 & P3 & P4
+
+    G1 --> G2
+    G2 --> PERMS
+    G2 --> HIERARCHY
+
+    G1 -->|"throw"| DENY["🚫 AuthorizationError<br/>log + Alert"]
+    G1 -->|"pass"| OK["✅ Continue"]
+
+    OK -->|"any destructive op"| G3
+
+    classDef perm fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px
+    classDef role fill:#f3e8ff,stroke:#9333ea,stroke-width:2px
+    classDef guard fill:#e0e7ff,stroke:#6366f1,stroke-width:1.5px
+    classDef ok fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    classDef warn fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+    classDef user fill:#fce7f3,stroke:#db2777,stroke-width:2px
+
+    class P1,P2,P3,P4 perm
+    class V,R,A role
+    class G1,G2,G3,G4,LOOKUP guard
+    class OK ok
+    class DENY warn
+    class USER user
+  </div>
+
+  <div class="file-path">
+    <b>📁 ไฟล์หลัก:</b>
+    src/O_core_system/27_RbacService.gs (NEW in V6.0.004)
+  </div>
+</section>
+
+<!-- ==================== DIAGRAM 8: V6.0 PHASES ==================== -->
+<section class="diagram-section" id="d8">
+  <h2><span class="num">8</span> 🔁 V6.0 Phases 1–7 (Roadmap Implementation Status)</h2>
+  <p class="subtitle">ทุก Phase ใน roadmap V6.0.001-006 ถูก implement แล้ว — แสดงไฟล์ + commit ที่เกี่ยวข้อง</p>
+
+  <div class="grid">
+    <div class="card green">
+      <h4>📦 Phase 1: Data Cleansing (V6.0.001)</h4>
+      <p><b>ไฟล์:</b> 05_NormalizeService.gs</p>
+      <ul>
+        <li>Semantic Notes parser (COD/Fragile/Time/Contact/Instruction)</li>
+        <li>Double Metaphone (Thai)</li>
+        <li>Thai Phonetic Key</li>
+      </ul>
+      <p><b>Commit:</b> <code>f7b89a9</code></p>
+    </div>
+    <div class="card blue">
+      <h4>🧠 Phase 2: Matching Engine (V6.0.002)</h4>
+      <p><b>ไฟล์:</b> 10_MatchEngine.gs</p>
+      <ul>
+        <li>Contextual Disambiguation (breakTieAmongCandidates)</li>
+        <li>Dynamic Weights (calcDynamicWeights_)</li>
+      </ul>
+      <p><b>Commit:</b> <code>8cdce5c</code></p>
+    </div>
+    <div class="card purple">
+      <h4>🤖 Phase 3: System Learning (V6.0.003)</h4>
+      <p><b>ไฟล์:</b> 21_AliasService.gs</p>
+      <ul>
+        <li>Self-Healing Alias (MIGRATION_HybridAliasSystem)</li>
+        <li>Master UUID assignment (assignMasterUuidIfMissing)</li>
+      </ul>
+      <p><b>Commit:</b> <code>acee446</code></p>
+    </div>
+    <div class="card orange">
+      <h4>🌐 Phase 4: WebApp (V6.0.004)</h4>
+      <p><b>ไฟล์:</b> 22_WebApp.gs + 17 HTML files</p>
+      <ul>
+        <li>Dashboard + 7-Day Trend Chart</li>
+        <li>Q_REVIEW Detail Panel</li>
+        <li>FACT_DELIVERY + Source Sheet views</li>
+        <li>Match Engine Metrics</li>
+        <li>Map Analytics (Leaflet Heatmap)</li>
+        <li>Live Feed Monitor</li>
+      </ul>
+      <p><b>Commit:</b> <code>f783acb</code></p>
+    </div>
+    <div class="card blue">
+      <h4>⚙️ Phase 5: Pipeline (V6.0.004)</h4>
+      <p><b>ไฟล์:</b> 24_PipelineManager.gs</p>
+      <ul>
+        <li>5.1 Telegram Alert (sendTelegramAlert)</li>
+        <li><b>5.2 Dependency-aware Auto-Resume</b></li>
+        <li>Quota circuit breaker</li>
+      </ul>
+      <p><b>Commit:</b> <code>f783acb</code></p>
+    </div>
+    <div class="card green">
+      <h4>🛡️ Phase 6: Audit Trail (V6.0.004)</h4>
+      <p><b>ไฟล์:</b> 19_Hardening.gs</p>
+      <ul>
+        <li>Preflight Audit</li>
+        <li>Sheet Protection + Range Guard</li>
+        <li>6.1 Dedup Audit (runDedupAudit)</li>
+      </ul>
+      <p><b>Commit:</b> <code>f783acb</code></p>
+    </div>
+    <div class="card red">
+      <h4>🔐 Phase 7: RBAC (V6.0.004)</h4>
+      <p><b>ไฟล์:</b> 27_RbacService.gs (NEW)</p>
+      <ul>
+        <li>3 roles × 8 permissions</li>
+        <li>requirePermission_ / hasPermission_</li>
+        <li>Migration from LMDS_ADMINS</li>
+        <li>Script Owner = Admin เสมอ</li>
+      </ul>
+      <p><b>Commit:</b> <code>f783acb</code></p>
+    </div>
+    <div class="card orange">
+      <h4>🔧 Bug Fixes (V6.0.005)</h4>
+      <p><b>ไฟล์:</b> หลายไฟล์</p>
+      <ul>
+        <li>SonarCloud alerts</li>
+        <li>Input clear behavior</li>
+        <li>Q_REVIEW lifecycle</li>
+        <li>Duplicate places detection</li>
+      </ul>
+      <p><b>Commit:</b> <code>925f981</code></p>
+    </div>
+    <div class="card purple">
+      <h4>📲 Telegram + Trigger (V6.0.006)</h4>
+      <p><b>ไฟล์:</b> 24_PipelineManager.gs</p>
+      <ul>
+        <li>Remove stale trigger</li>
+        <li>Telegram MarkdownV2 escape</li>
+      </ul>
+      <p><b>Commit:</b> <code>e6c76e8</code></p>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 20px; color: #1e3a8a;">📊 สรุปสถานะ implementation</h3>
+  <table style="width:100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">
+    <thead>
+      <tr style="background: #1e3a8a; color: white;">
+        <th style="padding: 10px; text-align: left;">Phase</th>
+        <th style="padding: 10px;">ไฟล์หลัก</th>
+        <th style="padding: 10px;">เวอร์ชัน</th>
+        <th style="padding: 10px;">สถานะ</th>
+        <th style="padding: 10px;">Commit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="padding: 8px;">Phase 1 — Data Cleansing</td><td style="padding: 8px;">05_NormalizeService.gs</td><td style="padding: 8px; text-align: center;">V6.0.001</td><td style="padding: 8px; text-align: center; color: #16a34a; font-weight: bold;">✅ DONE</td><td style="padding: 8px;"><code>f7b89a9</code></td></tr>
+      <tr><td style="padding: 8px;">Phase 2 — Matching Engine</td><td style="padding: 8px;">10_MatchEngine.gs</td><td style="padding: 8px; text-align: center;">V6.0.002</td><td style="padding: 8px; text-align: center; color: #16a34a; font-weight: bold;">✅ DONE</td><td style="padding: 8px;"><code>8cdce5c</code></td></tr>
+      <tr><td style="padding: 8px;">Phase 3 — System Learning</td><td style="padding: 8px;">21_AliasService.gs</td><td style="padding: 8px; text-align: center;">V6.0.003</td><td style="padding: 8px; text-align: center; color: #16a34a; font-weight: bold;">✅ DONE</td><td style="padding: 8px;"><code>acee446</code></td></tr>
+      <tr><td style="padding: 8px;">Phase 4 — WebApp</td><td style="padding: 8px;">22_WebApp.gs + 17 HTML</td><td style="padding: 8px; text-align: center;">V6.0.004</td><td style="padding: 8px; text-align: center; color: #16a34a; font-weight: bold;">✅ DONE</td><td style="padding: 8px;"><code>f783acb</code></td></tr>
+      <tr><td style="padding: 8px;">Phase 5 — Pipeline + Telegram</td><td style="padding: 8px;">24_PipelineManager.gs</td><td style="padding: 8px; text-align: center;">V6.0.004-006</td><td style="padding: 8px; text-align: center; color: #16a34a; font-weight: bold;">✅ DONE</td><td style="padding: 8px;"><code>f783acb / e6c76e8</code></td></tr>
+      <tr><td style="padding: 8px;">Phase 6 — Audit Trail + Dedup</td><td style="padding: 8px;">19_Hardening.gs</td><td style="padding: 8px; text-align: center;">V6.0.004</td><td style="padding: 8px; text-align: center; color: #16a34a; font-weight: bold;">✅ DONE</td><td style="padding: 8px;"><code>f783acb</code></td></tr>
+      <tr><td style="padding: 8px;">Phase 7 — RBAC</td><td style="padding: 8px;">27_RbacService.gs</td><td style="padding: 8px; text-align: center;">V6.0.004</td><td style="padding: 8px; text-align: center; color: #16a34a; font-weight: bold;">✅ DONE</td><td style="padding: 8px;"><code>f783acb</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ==================== SUMMARY ==================== -->
+<section class="diagram-section">
+  <h2>📋 สรุป: Workflow เดิม (V5.5.034) vs ปัจจุบัน (V6.0.006)</h2>
+
+  <div class="grid">
+    <div class="card green">
+      <h4>✅ Workflow เดิมยังครบ 100%</h4>
+      <ul class="checklist">
+        <li>Trinity Framework (Person+Place+Geo=Dest)</li>
+        <li>Group 1: SCGนครหลวงJWDภูมิภาค → Master</li>
+        <li>Group 2: SCG API → ตารางงานประจำวัน</li>
+        <li>ShipToName-Only Policy (Business Rule v5.4.003)</li>
+        <li>Single Writer Pattern (autoEnrichAliasesFromFactBatch_)</li>
+        <li>SRC_IDX / DATA_IDX ตรง 100%</li>
+        <li>SHEET names ตรง 100%</li>
+        <li>2 search tiers (Alias Fast Track + Person)</li>
+        <li>Q_REVIEW → Approve → FACT_DELIVERY</li>
+      </ul>
+    </div>
+
+    <div class="card blue">
+      <h4>✨ สิ่งที่เพิ่มใน V6.0</h4>
+      <ul class="checklist">
+        <li>Phase 1: Semantic Notes + Double Metaphone</li>
+        <li>Phase 2: Dynamic Weights + Disambiguation</li>
+        <li>Phase 3: Self-Healing Alias + Hybrid System</li>
+        <li>Phase 4: WebApp 7 views + 7-Day Trend</li>
+        <li>Phase 5: Telegram Alert + Quota + Circuit Breaker</li>
+        <li>Phase 6: Preflight Audit + Sheet Protection + Dedup</li>
+        <li>Phase 7: RBAC 3 roles × 8 permissions</li>
+        <li>Bug fixes: 4 issues (V6.0.005)</li>
+        <li>Bug fixes: stale trigger + Telegram MD (V6.0.006)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card orange" style="margin-top: 14px;">
+    <h4>🎯 Verdict</h4>
+    <p><b>✅ Workflow ใน LMDS_SYSTEM_WORKFLOW_TH.md (V5.5.034) ยังถูกต้อง 100% ใน V6.0.006</b><br/>
+    เอกสารอธิบายหลักการ Trinity Framework, Single Writer, ShipToName-Only ยังครบและไม่มี breaking change<br/>
+    สิ่งที่เพิ่มใน V6.0 เป็น <b>enhancement</b> (Phase 1–7) ไม่ได้แก้ business rule หลัก<br/>
+    <b>แนะนำ:</b> อัปเดต header ของ LMDS_SYSTEM_WORKFLOW_TH.md จาก V5.5.034 → V6.0.006 + เพิ่ม section สำหรับ V6.0 Phases</p>
+  </div>
+</section>
+
+<footer>
+  <p>📊 LMDS V6.0.006 — System Workflow Flowchart · ตรวจสอบเมื่อ 2026-07-07 13:04 ICT<br/>
+  🎨 สร้างโดย Mavis (M3) · Powered by Mermaid.js v10 · ทั้งหมด 8 diagrams</p>
+</footer>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    flowchart: {
+      useMaxWidth: true,
+      htmlLabels: true,
+      curve: 'basis',
+      padding: 18,
+      nodeSpacing: 40,
+      rankSpacing: 50
+    },
+    themeVariables: {
+      fontFamily: '"Sarabun", "Segoe UI", sans-serif',
+      fontSize: '14px',
+      primaryColor: '#e0e7ff',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#6366f1',
+      lineColor: '#475569',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#dcfce7'
+    }
+  });
+</script>
+
+</body>
+</html>
