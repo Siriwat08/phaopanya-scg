@@ -122,6 +122,7 @@ function onOpen() {
         .addItem('🛡️ ป้องกันข้อมูล Sensitive', 'applySheetProtection_UI')
         .addSeparator()
         .addItem('🛡️ [PH2] Preflight Audit', 'runPreflightAudit')
+        .addItem('🔍 [V6] Pipeline Preflight (Strict)', 'runPipelinePreflightStrict_UI')
         .addItem('🧹 [PH2] Detect Duplicates', 'detectDoubleProcessing')
         .addItem('✅ ตรวจสอบ System Integrity', 'checkSystemIntegrity')
         .addItem('🔍 วินิจฉัย Pipeline (Diagnostic)', 'diagnoseSystemState')
@@ -752,6 +753,77 @@ function cleanupStaleTriggers_UI() {
     }
   } catch (e) {
     logError('App', 'cleanupStaleTriggers_UI failed: ' + e.message, e);
+    safeUiAlert_('❌ ล้มเหลว: ' + e.message);
+  }
+}
+
+// ============================================================
+// SECTION 6: [V6.0.007] Pipeline Preflight (Strict Mode UI)
+// ============================================================
+
+/**
+ * runPipelinePreflightStrict_UI — [V6.0.007] Menu wrapper to run pipeline preflight
+ *   in non-strict mode (display result) + offer strict-mode option (throw on issue).
+ *   Calls runPipelinePreflight() from 24_PipelineManager.gs which now supports:
+ *     - 6 dependency-aware checks (was 3)
+ *     - Structured report: { ready, issues, warnings, checks }
+ *     - Optional strict mode (throw on any issue)
+ *
+ *   This UI wrapper:
+ *     1. Runs preflight (non-strict) to display the report
+ *     2. Shows pass/fail/warn counts in alert
+ *     3. If issues exist, asks user if they want to abort (don't run pipeline)
+ */
+function runPipelinePreflightStrict_UI() {
+  try {
+    if (typeof runPipelinePreflight !== 'function') {
+      safeUiAlert_('❌ ไม่พบฟังก์ชัน runPipelinePreflight — ตรวจสอบว่า 24_PipelineManager.gs โหลดแล้ว');
+      return;
+    }
+
+    const result = runPipelinePreflight({ strict: false });
+
+    // Build report text
+    const lines = [];
+    lines.push('📊 Pipeline Preflight Report (V6.0.007)\n');
+    lines.push('Overall: ' + (result.ready ? '✅ READY' : '❌ NOT READY') + '\n');
+    lines.push('Checks: ' + result.checks.length + ' total | ' +
+      result.issues.length + ' fail | ' + result.warnings.length + ' warn\n');
+
+    // Detail per check
+    lines.push('─── Detail ───');
+    result.checks.forEach(function (c) {
+      let icon = '⏭️'; // SKIP default
+      if (c.status === 'PASS') icon = '✅';
+      else if (c.status === 'FAIL') icon = '❌';
+      else if (c.status === 'WARN') icon = '⚠️';
+      lines.push(icon + ' ' + c.name + ': ' + c.detail);
+    });
+
+    // Issues (blocking)
+    if (result.issues.length > 0) {
+      lines.push('\n─── ❌ Blocking Issues (' + result.issues.length + ') ───');
+      result.issues.forEach(function (i) {
+        lines.push('• ' + i);
+      });
+    }
+
+    // Warnings (advisory)
+    if (result.warnings.length > 0) {
+      lines.push('\n─── ⚠️ Warnings (' + result.warnings.length + ') ───');
+      result.warnings.forEach(function (w) {
+        lines.push('• ' + w);
+      });
+    }
+
+    safeUiAlert_(lines.join('\n'));
+
+    // If not ready, log a warning (don't auto-abort — user may want to investigate)
+    if (!result.ready) {
+      logWarn('App', 'runPipelinePreflightStrict_UI: pipeline NOT READY — ' + result.issues.length + ' blocking issues');
+    }
+  } catch (e) {
+    logError('App', 'runPipelinePreflightStrict_UI failed: ' + e.message, e);
     safeUiAlert_('❌ ล้มเหลว: ' + e.message);
   }
 }
