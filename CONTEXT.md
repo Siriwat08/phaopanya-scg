@@ -1,5 +1,5 @@
 # 🚀 Project Overview
-**Logistics Master Data System (LMDS) V6.0.006** คือระบบจัดการฐานข้อมูลหลักด้านการขนส่ง (Master Data & Matching Engine + RBAC + WebApp) เป็น Full-stack solution บน Google Apps Script + Google Sheets
+**Logistics Master Data System (LMDS) V6.0.011** คือระบบจัดการฐานข้อมูลหลักด้านการขนส่ง (Master Data & Matching Engine + RBAC + WebApp) เป็น Full-stack solution บน Google Apps Script + Google Sheets
 
 ---
 
@@ -141,7 +141,7 @@ clasp push
 
 # 🎯 Current Focus & Known Issues
 
-- **Focus:** V6.0.006 Production Ready — โค้ด ↔ เอกสารตรง 100% — 18 audit cycles complete
+- **Focus:** V6.0.011 Production Ready — โค้ด ↔ เอกสารตรง 100% — 18 audit cycles complete
 - **Status:** 96% Ready (Roadmap 68% → Target 100% by Phase completion)
 - **Pending Features:** SYS_AUDIT_TRAIL (design ready), Semantic Note Parser (design ready)
 - **Gotchas:** ถ้าระบบขึ้นสีแดง `NOT_FOUND` ตอนโหลดงาน มักเกิดจาก Schema หัวคอลัมน์ในชีตไม่ตรงกับ `SCHEMA` ใน 02_Schema.gs

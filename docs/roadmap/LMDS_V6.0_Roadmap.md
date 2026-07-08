@@ -41,7 +41,7 @@ LMDS V6.0 มุ่งยกระดับระบบจาก **"Master Data 
 | **Matching Engine** | ~~Contextual Disambiguation~~ + ~~Dynamic Weighting~~ + ~~Geofencing Tie-breaker~~ | Phase 2 | #37, #38, #46 | ✅ Done (V5.5.046-047 + V6.0.002) |
 | **System Learning** | ~~Self-Healing Alias~~ จาก Q_REVIEW + M_ALIAS +3 cols + SYS_NEGATIVE_SAMPLES | Phase 3 | #37, #47 | ✅ Done (V5.5.046 + V6.0.003) |
 | **WebApp & Dashboard** | ~~Map Analytics~~ + ~~Live Feed Monitor~~ | Phase 4 | #48 | ✅ Done (V6.0.004) |
-| **Pipeline Management** | ~~Telegram Alert~~ + ~~Dependency-aware Pipeline~~ | Phase 5 | #38, #48, #50 | ✅ Done (V5.5.047 + V6.0.004 + V6.0.006 + V6.0.007 strict mode) |
+| **Pipeline Management** | ~~Telegram Alert~~ + ~~Dependency-aware Pipeline~~ | Phase 5 | #38, #48, #50 | ✅ Done (V5.5.047 + V6.0.004 + V6.0.011 + V6.0.007 strict mode) |
 | **Architecture & Data** | ~~Dedup Audit~~ + ~~Audit Trail (Critical Only)~~ | Phase 6 | #48, V6.0.007 | ✅ Done (V6.0.004 dedup + V6.0.007 audit trail critical-only) |
 | **Security** | ~~RBAC 3 roles (Viewer/Reviewer/Admin)~~ | Phase 7 | #48 | ✅ Done (V6.0.004) |
 
@@ -1501,7 +1501,7 @@ Phase 6 (Arch) ───────┼────► Phase 7 (Security)
 6.1 (Dedup)     → V6.0.003
 4 (WebApp)      → V6.0.004
 2.3 (Tie-break) → V6.0.005
-3.1 schema + 6.2 (Audit Trail) → V6.0.006
+3.1 schema + 6.2 (Audit Trail) → V6.0.011
 7 (RBAC — last) → V6.0.000
 ```
 
