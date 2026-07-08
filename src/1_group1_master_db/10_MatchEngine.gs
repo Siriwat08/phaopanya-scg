@@ -1923,11 +1923,12 @@ function persistResult_(factData, reviewData) {
  * @param {Object} srcObj - Source object with raw data
  * @param {string} decisionType - 'MERGE_TO_CANDIDATE' or 'CREATE_NEW'
  * @param {Object} candidates - { candPersonIds: [], candPlaceIds: [] } for MERGE
+ * @param {string} [optReviewId] - Q_REVIEW review_id (for audit trail in M_ALIAS, MERGE only)
  * @return {Object|null} { factRowData } or null
  */
-function resolveAndPersist_(srcObj, decisionType, candidates) {
+function resolveAndPersist_(srcObj, decisionType, candidates, optReviewId) {
   if (decisionType === 'MERGE_TO_CANDIDATE') {
-    return resolveAndPersistMerge_(srcObj, candidates);
+    return resolveAndPersistMerge_(srcObj, candidates, optReviewId);
   } else if (decisionType === 'CREATE_NEW') {
     return resolveAndPersistCreate_(srcObj);
   }
@@ -1937,11 +1938,16 @@ function resolveAndPersist_(srcObj, decisionType, candidates) {
 
 /**
  * resolveAndPersistMerge_ — [REF-001] MERGE path within resolveAndPersist_
+ *   [V6.0.007] Added optReviewId parameter — wired through to createGlobalAlias
+ *   so the M_ALIAS verified_by/review_id/verified_at fields are populated
+ *   for HUMAN-verified aliases (the previous code passed verified_by but
+ *   left review_id empty, which is why M_ALIAS cols 8-10 were empty).
  * @param {Object} srcObj
  * @param {Object} candidates - { candPersonIds: [], candPlaceIds: [] }
+ * @param {string} [optReviewId] - Q_REVIEW review_id (for audit trail in M_ALIAS)
  * @return {Object|null} { factRowData } or null
  */
-function resolveAndPersistMerge_(srcObj, candidates) {
+function resolveAndPersistMerge_(srcObj, candidates, optReviewId) {
   let targetPersonId = null;
   if (candidates && candidates.candPersonIds && candidates.candPersonIds.length > 0) {
     const personResult = resolvePerson(srcObj.rawPersonName);
@@ -2028,7 +2034,15 @@ function resolveAndPersistMerge_(srcObj, candidates) {
     if (targetPersonId && srcObj.rawPersonName) {
       const personUuid = getPersonMasterUuid_(targetPersonId);
       if (personUuid) {
-        const newAliasId = createGlobalAlias(personUuid, srcObj.rawPersonName, 'PERSON', 100, 'HUMAN', verifiedBy);
+        const newAliasId = createGlobalAlias(
+          personUuid,
+          srcObj.rawPersonName,
+          'PERSON',
+          100,
+          'HUMAN',
+          verifiedBy,
+          optReviewId || ''
+        );
         if (newAliasId) {
           logInfo('MatchEngine', 'Self-Healing Alias: PERSON "' + srcObj.rawPersonName + '" → ' + targetPersonId);
         }
@@ -2037,7 +2051,15 @@ function resolveAndPersistMerge_(srcObj, candidates) {
     if (targetPlaceId && srcObj.rawPlaceName) {
       const placeUuid = getPlaceMasterUuid_(targetPlaceId);
       if (placeUuid) {
-        const newAliasId = createGlobalAlias(placeUuid, srcObj.rawPlaceName, 'PLACE', 100, 'HUMAN', verifiedBy);
+        const newAliasId = createGlobalAlias(
+          placeUuid,
+          srcObj.rawPlaceName,
+          'PLACE',
+          100,
+          'HUMAN',
+          verifiedBy,
+          optReviewId || ''
+        );
         if (newAliasId) {
           logInfo('MatchEngine', 'Self-Healing Alias: PLACE "' + srcObj.rawPlaceName + '" → ' + targetPlaceId);
         }

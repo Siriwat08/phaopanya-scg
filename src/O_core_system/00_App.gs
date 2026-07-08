@@ -89,6 +89,9 @@ function onOpen() {
         .addItem('🛑 [V6] หยุด Pipeline (Emergency Stop)', 'requestPipelineStop_UI')
         .addItem('🟢 [V6] ยกเลิก Stop Signal', 'clearPipelineStopSignal_UI')
         .addSeparator()
+        .addItem('🔄 [V6] Backfill Alias Audit Fields', 'backfillAliasAuditFields_UI')
+        .addItem('🧹 [V6] Safe Reset (Clear Transactional Only)', 'safeResetTransactional_UI')
+        .addSeparator()
         .addItem('📋 เปิด Review Queue', 'openReviewQueue')
         .addItem('▶️ รันคำสั่งที่เลือกไว้ทั้งหมด', 'applyAllPendingDecisions')
         .addItem('🧹 [V6] ล้างแถวที่ Done/Escalated', 'clearDoneReviews_UI')
@@ -1029,6 +1032,85 @@ function clearPipelineStopSignal_UI() {
     );
   } catch (e) {
     logError('App', 'clearPipelineStopSignal_UI failed: ' + e.message, e);
+    safeUiAlert_('❌ ล้มเหลว: ' + e.message);
+  }
+}
+
+// ============================================================
+// SECTION: [V6.0.007] Backfill Alias Audit Fields UI
+// ============================================================
+
+/**
+ * backfillAliasAuditFields_UI — [V6.0.007] Menu wrapper to backfill
+ *   verified_at for existing HUMAN aliases that have empty audit fields.
+ *
+ *   Background:
+ *     V6.0.003 added 3 columns to M_ALIAS (verified_by, review_id, verified_at)
+ *     but the code didn't wire review_id through the Q_REVIEW MERGE chain
+ *     until V6.0.007. So HUMAN aliases created between V6.0.003 and V6.0.007
+ *     have empty verified_at.
+ *
+ *   This menu:
+ *     1. Confirms with user before running
+ *     2. Calls backfillAliasAuditFields() in 21_AliasService.gs
+ *     3. Shows detailed report: total scanned / backfilled / skipped / errors
+ *
+ *   Safe to run multiple times — idempotent (skips rows that already have
+ *   verified_at set).
+ */
+function backfillAliasAuditFields_UI() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    const confirm = ui.alert(
+      '🔄 Backfill Alias Audit Fields',
+      'กำลังจะ backfill verified_at สำหรับ M_ALIAS rows ที่ source=HUMAN แต่ verified_at ว่าง\n\n' +
+        'สาเหตุที่ต้อง backfill:\n' +
+        '• V6.0.003 เพิ่มคอลัมน์ verified_by/review_id/verified_at\n' +
+        '• แต่ code ไม่ได้ wire review_id ผ่าน Q_REVIEW MERGE chain จนถึง V6.0.007\n' +
+        '• ทำให้ HUMAN aliases ที่สร้างก่อน V6.0.007 มี verified_at ว่าง\n\n' +
+        'สิ่งที่จะทำ:\n' +
+        '• Scan M_ALIAS ทุกแถว\n' +
+        '• แถวที่ source=HUMAN + verified_at ว่าง → ตั้ง verified_at = created_at\n' +
+        '• แถวอื่นๆ (AUTO_ENRICH_FACT, HISTORY_ENRICH, MANUAL) → skip\n' +
+        '• review_id ไม่สามารถ backfill ได้ (Q_REVIEW rows อาจถูก clear ไปแล้ว)\n\n' +
+        'Safe: idempotent — รันซ้ำได้ จะ skip แถวที่ verified_at มีค่าแล้ว\n\n' +
+        'ยืนยันการ backfill?',
+      ui.ButtonSet.YES_NO
+    );
+    if (confirm !== ui.Button.YES) {
+      safeUiAlert_('ℹ️ ยกเลิก — ไม่มีการ backfill');
+      return;
+    }
+
+    if (typeof backfillAliasAuditFields !== 'function') {
+      safeUiAlert_('❌ ไม่พบฟังก์ชัน backfillAliasAuditFields — ตรวจสอบว่า 21_AliasService.gs โหลดแล้ว');
+      return;
+    }
+
+    const result = backfillAliasAuditFields();
+
+    const lines = [];
+    lines.push('📊 Backfill Result\n');
+    lines.push('Total scanned: ' + result.totalScanned + ' rows');
+    lines.push('Backfilled: ' + result.backfilled + ' rows (verified_at set)');
+    lines.push('Skipped: ' + result.skipped + ' rows (non-HUMAN or already set)');
+
+    if (result.errors.length > 0) {
+      lines.push('\n❌ Errors (' + result.errors.length + '):');
+      result.errors.forEach(function (e) {
+        lines.push('• ' + e);
+      });
+    }
+
+    if (result.backfilled === 0 && result.errors.length === 0) {
+      lines.push('\n✅ ไม่มีแถวที่ต้อง backfill — ทุก HUMAN alias มี verified_at แล้ว');
+    } else if (result.backfilled > 0) {
+      lines.push('\n✅ Backfill เสร็จสิ้น — ตรวจสอบ M_ALIAS คอลัมน์ verified_at (K)');
+    }
+
+    safeUiAlert_(lines.join('\n'));
+  } catch (e) {
+    logError('App', 'backfillAliasAuditFields_UI failed: ' + e.message, e);
     safeUiAlert_('❌ ล้มเหลว: ' + e.message);
   }
 }

@@ -240,16 +240,138 @@ function createGlobalAlias(masterUuid, variantName, entityType, confidence, sour
 // ============================================================
 
 /**
+ * backfillAliasAuditFields — [V6.0.007] Backfill verified_by/review_id/verified_at
+ *   for existing M_ALIAS rows that have source='HUMAN' but empty audit fields.
+ *
+ *   Background:
+ *     V6.0.003 added 3 columns to M_ALIAS (verified_by, review_id, verified_at)
+ *     but the code didn't wire review_id through the Q_REVIEW MERGE chain
+ *     until V6.0.007. So aliases created via Q_REVIEW MERGE between V6.0.003
+ *     and V6.0.007 have:
+ *       - source='HUMAN' ✓
+ *       - verified_by = reviewer email ✓ (was already wired)
+ *       - review_id = '' ✗ (wasn't wired)
+ *       - verified_at = '' ✗ (only set when verified_by is non-empty)
+ *
+ *   This function:
+ *     1. Scans M_ALIAS for rows where source='HUMAN' AND verified_at is empty
+ *     2. For each match, sets verified_at = created_at (best approximation)
+ *     3. Returns count of rows backfilled
+ *
+ *   Note: review_id cannot be backfilled because the original Q_REVIEW rows
+ *   may have been cleared via clearDoneReviews_UI. We leave review_id as ''.
+ *
+ * @return {{ totalScanned: number, backfilled: number, skipped: number, errors: string[] }}
+ */
+function backfillAliasAuditFields() {
+  const result = { totalScanned: 0, backfilled: 0, skipped: 0, errors: [] };
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.M_ALIAS);
+    if (!sheet || sheet.getLastRow() < 2) {
+      result.errors.push('M_ALIAS sheet is empty or missing');
+      return result;
+    }
+
+    const schemaLen = SCHEMA[SHEET.M_ALIAS].length;
+    if (sheet.getLastColumn() < schemaLen) {
+      result.errors.push(
+        'M_ALIAS sheet has ' +
+          sheet.getLastColumn() +
+          ' cols, schema expects ' +
+          schemaLen +
+          ' — run setupAllSheets() to auto-repair first'
+      );
+      return result;
+    }
+
+    const lastRow = sheet.getLastRow();
+    const data = sheet.getRange(2, 1, lastRow - 1, schemaLen).getValues();
+    result.totalScanned = data.length;
+
+    // Find rows to backfill: source='HUMAN' AND verified_at is empty
+    const rowsToUpdate = []; // array of { rowNum: 1-based, verifiedAt: Date }
+    const now = new Date();
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const source = String(row[ALIAS_IDX.SOURCE] || '').trim();
+      const verifiedAt = row[ALIAS_IDX.VERIFIED_AT];
+      const createdAt = row[ALIAS_IDX.CREATED_AT];
+
+      // Skip non-HUMAN aliases (AUTO_ENRICH_FACT, HISTORY_ENRICH, MANUAL — these are not human-verified)
+      if (source !== 'HUMAN') {
+        result.skipped++;
+        continue;
+      }
+
+      // Skip if verified_at is already set
+      if (verifiedAt && String(verifiedAt).trim() !== '') {
+        result.skipped++;
+        continue;
+      }
+
+      // Backfill: use created_at as the best approximation of when the human verified
+      // (We don't have the original review timestamp, so created_at is the closest)
+      const backfillDate = createdAt && String(createdAt).trim() !== '' ? new Date(createdAt) : now;
+      rowsToUpdate.push({ rowNum: i + 2, verifiedAt: backfillDate }); // +2 because data[0] is row 2
+    }
+
+    if (rowsToUpdate.length === 0) {
+      logInfo('AliasService', 'backfillAliasAuditFields: no rows need backfill (scanned=' + result.totalScanned + ')');
+      return result;
+    }
+
+    // Batch update: write verified_at column (col 10, 0-based; column K, 1-based)
+    //   Using getRangeList for non-contiguous rows (more efficient than 1 setValues per row)
+    const values = rowsToUpdate.map(function (r) {
+      return [r.verifiedAt];
+    });
+    const rangeList = sheet.getRangeList(
+      rowsToUpdate.map(function (r) {
+        return 'K' + r.rowNum; // K = column 11 (verified_at, 1-based)
+      })
+    );
+    rangeList.setValues(
+      values.map(function (v) {
+        return v;
+      })
+    );
+
+    result.backfilled = rowsToUpdate.length;
+    logInfo(
+      'AliasService',
+      'backfillAliasAuditFields: backfilled verified_at for ' +
+        result.backfilled +
+        ' HUMAN aliases (skipped ' +
+        result.skipped +
+        ', total scanned ' +
+        result.totalScanned +
+        ')'
+    );
+
+    // Invalidate cache so next read sees the backfilled data
+    if (typeof invalidateChunkedCache_ === 'function') {
+      invalidateChunkedCache_(CACHE_KEY.GLOBAL_ALIAS_ALL);
+      invalidateChunkedCache_(CACHE_KEY.GLOBAL_ALIAS_REVERSE);
+    } else {
+      CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    }
+
+    return result;
+  } catch (err) {
+    logError('AliasService', 'backfillAliasAuditFields failed: ' + err.message, err);
+    result.errors.push(err.message);
+    return result;
+  }
+}
+
+/**
  * loadGlobalAliasesMap_ — โหลด M_ALIAS เป็น Map: { "PERSON_uuid": ["variant1","variant2"] }
  * ใช้ CacheService เพื่อลดการอ่านชีต
  * @return {Object} aliasMap
  */
 function loadGlobalAliasesMap_() {
-  const cacheKey = 'M_GLOBAL_ALIAS_ALL';
-  // [FIX CRIT-001] ใช้ chunked cache loader แทน cache.get ตรง — ป้องกัน 100KB limit
-  const cached = loadAliasCacheChunked_(cacheKey);
-  if (cached) return cached;
-
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET.M_ALIAS);
   const resultObj = {};
