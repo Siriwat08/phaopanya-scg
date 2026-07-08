@@ -90,6 +90,7 @@ function onOpen() {
         .addItem('🟢 [V6] ยกเลิก Stop Signal', 'clearPipelineStopSignal_UI')
         .addSeparator()
         .addItem('🔄 [V6] Backfill Alias Audit Fields', 'backfillAliasAuditFields_UI')
+        .addItem('🧹 [V6] Safe Reset (Clear Transactional Only)', 'safeResetTransactional_UI')
         .addSeparator()
         .addItem('📋 เปิด Review Queue', 'openReviewQueue')
         .addItem('▶️ รันคำสั่งที่เลือกไว้ทั้งหมด', 'applyAllPendingDecisions')
