@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.008
+ * VERSION: 6.0.009
  * FILE: 14_Utils.gs
  * LMDS V5.5 — Utility Functions
  * ===================================================
@@ -657,6 +657,25 @@ function clearSheetsPreserveHeaders_(ss, sheetNames) {
   });
 
   return { clearedCount: clearedCount, clearedNames: clearedNames, errors: errors };
+}
+
+/**
+ * columnNumberToLetter_ — [V6.0.009] Convert 1-based column number to A1 letter (1=A, 27=AA, etc.)
+ *   Used by getFactDeliveryPage/getSourcePage to build getRangeList A1 notations for pagination.
+ * @param {number} col - 1-based column number
+ * @return {string} column letter(s)
+ * @private
+ */
+function columnNumberToLetter_(col) {
+  let letter = '';
+  let c = col;
+  let temp;
+  while (c > 0) {
+    temp = (c - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    c = (c - temp - 1) / 26;
+  }
+  return letter;
 }
 
 // ============================================================
