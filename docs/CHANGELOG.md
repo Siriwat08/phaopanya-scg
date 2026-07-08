@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Cycle | Issues |
 |---------|------|-------|--------|
+| 6.0.011 | 2026-07-09 | GEO-DISTANCE GUARD | FUZZY_MATCH Rule 6 ตรวจระยะพิกัด — ลด confidence ถ้าห่าง >1 กม. + new helper getCandidateResolvedCoords_ |
+| 6.0.010 | 2026-07-09 | PHASE 3 — NICE-TO-HAVE (16 items) | LockService guards 9 functions + onInstall + SPA hash + Tailwind pin + Leaflet fallback + QReview overlay + onEdit lock + RBAC extend |
+| 6.0.009 | 2026-07-08 | PHASE 2 — IMPORTANT CORRECTNESS | submitReviewDecision lock + acquireAliasHistoryLock_ real lock + applyMasterCoordinatesToDailyJob PropertiesService→LockService + pagination optimization |
+| 6.0.008 | 2026-07-08 | PHASE 1 — DEPLOY BLOCKER + SONARCLOUD DEDUP | Api.html timeout + clearAllSCGSheets_UI confirm+lock + submitReviewDecision atomicity rollback + geo lock + ViewHelpers dedup |
 | 6.0.007 | 2026-07-08 | V6.0 FINAL COMPLETION — AUDIT TRAIL + STRICT PREFLIGHT + DEAD CODE CLEANUP | SYS_AUDIT_TRAIL sheet (Critical-Only) + runPipelinePreflight strict mode (6 checks) + detectSameGeoMultiPerson removed + roadmap 100% done |
 | 6.0.006 | 2026-07-07 | DOC SYNC + STALE TRIGGER + TELEGRAM FIX | doc sync V5.5 → V6.0.006 + stale trigger cleanup + Telegram HTML parse_mode + Preflight SOURCE fix |
 | 6.0.005 | 2026-07-07 | 4 ISSUES — SONARCLOUD + INPUT CLEAR + Q_REVIEW LIFECYCLE + DUPLICATE PLACES | parseInt radix + clearAllSCGSheets includes INPUT + clearDoneReviews_UI + createPlace district-level fix |
@@ -55,6 +59,122 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 | 5.5.006 | 2026-06-18 | CONSISTENCY SYNC | 28 doc inconsistencies |
 | 5.5.005 | 2026-06-16 | REVIEW SERVICE FIX | (intermediate) |
 | 5.5.004 | 2026-06-15 | INITIAL AUDIT CYCLES | 53 audit issues |
+
+---
+
+## [6.0.011] — 2026-07-09 — GEO-DISTANCE GUARD IN FUZZY_MATCH (Rule 6)
+
+### Problem
+FUZZY_MATCH (Rule 6) ไม่ได้ตรวจระยะพิกัด — ถ้าชื่อคล้ายกัน แต่พิกัดห่าง 3 กม. ก็แนะนำ MERGE
+
+### Fix
+- เพิ่ม geo-distance guard ใน Rule 6: คำนวณ haversine distance ระหว่าง source กับ candidate
+- > 1 กม. → confidence = min(เดิม, 50) + reason = FUZZY_MATCH_FAR_APART
+- 500-1000 ม. → confidence = min(เดิม, 65) + evidence = moderate_dist
+- ≤ 500 ม. → ไม่เปลี่ยน (ใกล้กันพอ)
+- New helper: `getCandidateResolvedCoords_(entityType, entityId)` — lookup M_DESTINATION by placeId/personId with in-memory cache
+
+### Files Changed
+- `src/1_group1_master_db/10_MatchEngine.gs` — Rule 6 geo-distance guard + new helper
+
+---
+
+## [6.0.010] — 2026-07-09 — PHASE 3 — NICE-TO-HAVE FIXES (16 items)
+
+### P3.1-P3.9: LockService guards on 9 functions
+Added tryLock to: clearDoneReviews_UI, populateAliasFromSCGRawData, MIGRATION_HybridAliasSystem, assignMasterUuidIfMissing, resetSourceSyncStatus, buildFullQualityReport, invalidateAllGlobalCaches, cleanupStaleTriggers_UI (safeResetTransactional_UI already had lock from PR #66)
+
+### P3.10: onInstall() trigger
+- Added `function onInstall(e) { onOpen(e); }` — menu appears after add-on installation
+
+### P3.11: SPA hash navigation
+- Added `window.location.hash` + `hashchange` event listener — browser back/forward works
+
+### P3.12: Pin Tailwind version
+- Changed `@tailwindcss/browser@4` → `@4.3.2` — prevents silent breaking changes
+
+### P3.13: Leaflet CDN fallback
+- Primary: unpkg.com → Fallback: cdnjs.cloudflare.com (leaflet.js) + cdn.jsdelivr.net (leaflet-heat.js)
+
+### P3.14: QReview global modal overlay
+- Full-screen overlay blocks navigation during submitReviewDecision processing
+
+### P3.15: onEdit tryLock
+- LockService guard around applyReviewDecision in onEdit — prevents double-edit
+
+### P3.16: Extend RBAC
+- `runFullPipeline` → `requirePermission_('action:run_pipeline')` (admin only)
+- `applyAllPendingDecisions` → `requirePermission_('action:approve_review')` (reviewer+admin)
+
+### Files Changed
+- `src/O_core_system/00_App.gs` — onInstall + onEdit lock + RBAC
+- `src/2_group2_daily_ops/12_ReviewService.gs` — clearDoneReviews_UI lock + RBAC
+- `src/1_group1_master_db/21_AliasService.gs` — MIGRATION + assignMasterUuid locks
+- `src/O_core_system/14_Utils.gs` — resetSourceSyncStatus lock
+- `src/2_group2_daily_ops/13_ReportService.gs` — buildFullQualityReport lock
+- `src/O_core_system/01_Config.gs` — invalidateAllGlobalCaches lock
+- `src/3_group3_webapp/js/App.html` — SPA hash navigation
+- `src/3_group3_webapp/Index.html` — Tailwind version pin
+- `src/3_group3_webapp/views/MapAnalytics.html` — Leaflet CDN fallback
+- `src/3_group3_webapp/views/QReview.html` — global modal overlay
+
+---
+
+## [6.0.009] — 2026-07-08 — PHASE 2 — IMPORTANT CORRECTNESS FIXES (4 items)
+
+### P2.1: submitReviewDecision LockService guard
+- Wrap in `LockService.tryLock(10000)` — prevents double-submit from WebApp
+- Returns `LOCK_BUSY` error to frontend if lock not acquired
+
+### P2.2: acquireAliasHistoryLock_ now acquires real lock
+- Was misleading name (no actual lock) — added real `LockService.tryLock(30000)`
+- Returns `{ss, lock}` so caller can release in finally
+
+### P2.3: applyMasterCoordinatesToDailyJob PropertiesService → LockService
+- Replaced pseudo-lock (`LOCK_ENRICHMENT` property) with real LockService (atomic + auto-release)
+- One-time cleanup: delete stale `LOCK_ENRICHMENT` property
+
+### P2.4: getFactDeliveryPage + getSourcePage pagination optimization
+- Two-step read: (1) status column only for counting (2) page rows only via getRangeList
+- 10-50x reduction in cell reads for large sheets
+- New helper: `columnNumberToLetter_(col)`
+
+### Files Changed
+- `src/O_core_system/22_WebApp.gs` — P2.1 + P2.4
+- `src/O_core_system/19_Hardening.gs` — P2.2
+- `src/2_group2_daily_ops/18_ServiceSCG.gs` — P2.3
+- `src/O_core_system/14_Utils.gs` — new helper
+
+---
+
+## [6.0.008] — 2026-07-08 — PHASE 1 — DEPLOY BLOCKER FIXES + SONARCLOUD DEDUP
+
+### P1.1: WebApp Api.html no client-side timeout (BUG-WEB-001)
+- Added 30s TIMEOUT_MS + concurrent call counter (MAX_CONCURRENT=6) + diagnostic logging
+
+### P1.2: clearAllSCGSheets_UI no confirm + no lock (BUGHUNT-01)
+- Added LockService.tryLock(5000) + YES_NO confirmation dialog
+
+### P1.3: submitReviewDecision non-atomic multi-sheet write (BUG-WEB-002)
+- Capture original status → if FACT_DELIVERY write fails → rollback Q_REVIEW status
+
+### P1.4: buildGeoDictionary + populateGeoMetadata no LockService (BUGHUNT-1)
+- Added LockService.tryLock(30000) + pass {lock} to withEntryPointGuard_
+
+### SonarCloud dedup (PR #65 + #66)
+- Extracted shared helpers: acquireScriptLockOrWarn_, releaseScriptLock_, clearSheetsPreserveHeaders_, columnNumberToLetter_
+- Extracted ViewHelpers component (pagination, loading, empty state, error state)
+- Deleted Quick file check_3/ folder (AI audit reports — recommendations applied)
+- Added Quick file check*/ to .gitignore
+
+### Files Changed
+- `src/3_group3_webapp/js/Api.html` — full rewrite (P1.1)
+- `src/2_group2_daily_ops/18_ServiceSCG.gs` — P1.2
+- `src/O_core_system/22_WebApp.gs` — P1.3
+- `src/1_group1_master_db/16_GeoDictionaryBuilder.gs` — P1.4
+- `src/1_group1_master_db/20_ThGeoService.gs` — P1.4
+- `src/O_core_system/14_Utils.gs` — shared helpers
+- `src/3_group3_webapp/js/components/ViewHelpers.html` — NEW
 
 ---
 

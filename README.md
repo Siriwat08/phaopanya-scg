@@ -4,8 +4,8 @@
 
 | รายการ | ค่า |
 |--------|-----|
-| **เวอร์ชัน** | 6.0.006 (Production Ready — 26 files, 96% implementation) |
-| **Last Updated** | 2026-07-07 |
+| **เวอร์ชัน** | 6.0.011 (Production Ready — 28 files, 98% implementation) |
+| **Last Updated** | 2026-07-09 |
 | **Platform** | Google Apps Script + Google Sheets |
 | **Core Engine** | MatchEngine V6.0 with Hybrid Alias Architecture + RBAC |
 | **Total Files** | 26 `.gs` files (24 production + 1 legacy `99_Legacy.gs` + 1 investigation script under `scripts/`) |
