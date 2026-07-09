@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.013
+ * VERSION: 6.0.014
  * FILE: 01_Config.gs
  * LMDS V5.5 — System Configuration & Constants
  * ===================================================
@@ -70,8 +70,8 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.013';
-const SCHEMA_VERSION = '6.0.013';
+const APP_VERSION = '6.0.014';
+const SCHEMA_VERSION = '6.0.014';
 const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
@@ -238,7 +238,12 @@ const PLACE_IDX = Object.freeze({
   MASTER_UUID: 13,
   // [V6.0.001] Double Metaphone Thai — Phonetic keys for fuzzy place matching
   PHONETIC_PRIMARY: 14,
-  PHONETIC_SECONDARY: 15
+  PHONETIC_SECONDARY: 15,
+  // [V6.0.014] Reverse geocode columns — store [24] data alongside [18]
+  //   canonical_name / normalized_name (cols 1/2) keep [18] per REVERT of V6.0.013.
+  //   These new columns store [24] (reverse geocode from GPS) for future matching use.
+  CANONICAL_REVERSE_GEOCODE: 16, // raw [24] from SOURCE
+  NORMALIZED_REVERSE_GEOCODE: 17 // normalized [24]
 });
 
 const PLACE_ALIAS_IDX = Object.freeze({
