@@ -2799,8 +2799,9 @@ function runTestMatchDryRun_(maxRows) {
     const srcObj = rowsToTest[i];
     try {
       // Mirror processOneRow() resolution calls — but stop BEFORE executeDecision()
+      // [V6.0.013] sync with processOneRow — use rawAddress [24] not rawPlaceName [18]
       const personResult = resolvePerson(srcObj.rawPersonName, null, { soldToName: srcObj.soldToName });
-      const placeResult = resolvePlace(srcObj.rawPlaceName || srcObj.rawAddress, srcObj.rawAddress || '');
+      const placeResult = resolvePlace(srcObj.rawAddress, srcObj.rawAddress || '');
       const geoResult = resolveGeo(srcObj.rawLat, srcObj.rawLng);
 
       // [V6.0.002] Tie-breaker — same as processOneRow (mirror logic for accuracy)
