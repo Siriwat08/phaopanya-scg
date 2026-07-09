@@ -1348,7 +1348,6 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
 
     // [V6.0.011] Geo-distance guard — ถ้า source มีพิกัด + candidate มีพิกัด
     //   ให้ตรวจระยะห่าง ถ้าห่างเกินไป → ลด confidence (ชื่อคล้ายแต่พิกัดห่าง = คนละที่)
-    //   ปัญหาเดิม: FUZZY_MATCH ไม่ได้ดูพิกัดเลย → แนะนำ MERGE แม้พิกัดห่าง 3 กม.
     if (srcObj.hasGeo && srcObj.rawLat && srcObj.rawLng) {
       const srcLat = Number(srcObj.rawLat);
       const srcLng = Number(srcObj.rawLng);
@@ -1369,6 +1368,24 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
 
         if (candidateCoords && candidateCoords.lat && candidateCoords.lng) {
           const distM = haversineDistanceM(srcLat, srcLng, candidateCoords.lat, candidateCoords.lng);
+
+          // [V6.0.013b Fix A] ถ้าพิกัดใกล้กันมาก (≤ GEO_RADIUS_M) → เป็นที่เดียวกันแน่ๆ
+          //   ชื่อคล้าย + พิกัดตรง = AUTO_MATCH แทน REVIEW
+          //   แก้ปัญหา: FIT Auto สาขา A match กับ FIT Auto สาขา B → พิกัดห่าง 3 กม. → REVIEW
+          //   แต่ถ้าพิกัดใกล้กัน ≤100 ม. → ที่เดียวกันแน่ๆ → AUTO_MATCH
+          if (distM <= AI_CONFIG.GEO_RADIUS_M) {
+            confidence = Math.max(confidence, 90);
+            reason = APP_CONST.MATCH_FUZZY;
+            evidence = 'fuzzy|geo_close|dist=' + Math.round(distM) + 'm|' + candidateType;
+            return {
+              action: 'AUTO_MATCH',
+              reason: reason,
+              confidence: confidence,
+              priority: 0,
+              evidence: evidence
+            };
+          }
+
           if (distM > 1000) {
             // ห่างเกิน 1 กม. → ลด confidence ลงมาก (ชื่อคล้ายแต่พิกัดห่าง = คนละที่)
             confidence = Math.min(confidence, 50);
@@ -1393,16 +1410,30 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
   }
 
   // Rule 7: ทุกอย่างใหม่หมด แต่ Driver ส่งพิกัดมาให้ -> CREATE_NEW
-  if (hasGeoInSource && !isGeoInMaster && !isPersonInMaster && !isPlaceInMaster) {
+  // [V6.0.013b Fix B] เดิมต้อง !isGeoInMaster && !isPersonInMaster && !isPlaceInMaster
+  //   แก้เป็น: ถ้ามี GPS จริง + ไม่มี geo ใน master → CREATE_NEW
+  //   เหตุผล: 29 แถวตก NEW_RECORD_PENDING เพราะมี person/place อยู่ใน master
+  //   แต่ geo ไม่อยู่ → ควรสร้างใหม่จาก GPS จริง ไม่ใช่ตก REVIEW
+  if (hasGeoInSource && !isGeoInMaster) {
     return {
       action: 'CREATE_NEW',
-      reason: 'ALL_NEW_WITH_GEO',
-      confidence: geoResult.confidence || 100,
+      reason: 'NEW_GEO_WITH_GPS',
+      confidence: 100,
       priority: 0
     };
   }
 
-  // Rule 8: Default
+  // Rule 8: Default — มี person/place ใน master แต่ไม่มี geo
+  // [V6.0.013b Fix B] ถ้ามี GPS จริง → CREATE_NEW แทน REVIEW (สร้าง geo ใหม่จาก GPS)
+  if (hasGeoInSource) {
+    return {
+      action: 'CREATE_NEW',
+      reason: 'NEW_GEO_FROM_GPS',
+      confidence: 90,
+      priority: 0
+    };
+  }
+
   return {
     action: 'REVIEW',
     reason: 'NEW_RECORD_PENDING',

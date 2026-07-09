@@ -115,8 +115,8 @@ function resolveGeo(lat, lng) {
       bestGeo = geo;
     }
 
-    // [UPGRADE v5.2.005] เก็บผู้ท้าชิงที่อยู่ในระยะ 100 เมตร
-    if (distM <= 100) {
+    // [V6.0.013b Fix C] เก็บผู้ท้าชิงที่อยู่ในระยะ 150 เมตร (was 100)
+    if (distM <= 150) {
       nearbyGeos.push({ id: geo.geoId, dist: distM });
     }
   });
@@ -164,8 +164,9 @@ function geoClassifyDistance_(distance, radius, candidateGeoIds, bestGeoId) {
       confidence: confidence,
       distanceM: distance
     };
-  } else if (distance <= 80) {
-    // radius+1 - 80 m: NEARBY YELLOW
+  } else if (distance <= 120) {
+    // [V6.0.013b Fix C] radius+1 - 120 m: NEARBY YELLOW (was 80)
+    //   เพิ่มจาก 80 → 120 เพราะ GEO_RADIUS_M=100 แล้ว 80 แคบเกินไป
     return {
       geoId: null, // ยังไม่ตัดสินใจ ต้องรอคนตรวจ
       status: 'NEARBY_PENDING',
@@ -174,8 +175,8 @@ function geoClassifyDistance_(distance, radius, candidateGeoIds, bestGeoId) {
       distanceM: distance,
       candidateGeoIds: candidateGeoIds
     };
-  } else if (distance <= 100) {
-    // 80 - 100 m: NEARBY ORANGE
+  } else if (distance <= 150) {
+    // [V6.0.013b Fix C] 120 - 150 m: NEARBY ORANGE (was 100)
     return {
       geoId: null,
       status: 'NEARBY_PENDING',
@@ -185,7 +186,8 @@ function geoClassifyDistance_(distance, radius, candidateGeoIds, bestGeoId) {
       candidateGeoIds: candidateGeoIds
     };
   } else {
-    // > 100 m: NOT_FOUND (สร้างใหม่)
+    // > 150 m: NOT_FOUND (สร้างใหม่)
+    // [V6.0.013b Fix C] was > 100
     return { geoId: null, status: 'NOT_FOUND', confidence: 0, distanceM: distance };
   }
 }
