@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.011
+ * VERSION: 6.0.012
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -379,6 +379,61 @@ function finalizeMatchEngine_(ctx, startTime, lock) {
     `เสร็จสิ้น — รัน:${ctx.processed} Match:${ctx.autoMatched} ` +
       `สร้างใหม่:${ctx.created} Review:${ctx.queued} Error:${ctx.errorCount} (${elapsedSec}s)`
   );
+
+  // [V6.0.012 P1.6] Log run stats to PIPELINE_RUN_LOG sheet for before/after comparison
+  //   Non-fatal: ถ้า logging ล้มเหลว ไม่กระทบ pipeline result
+  logPipelineRun_(ctx, startTime);
+}
+
+/**
+ * logPipelineRun_ — [V6.0.012 P1.6] Append run stats to PIPELINE_RUN_LOG sheet
+ *   ใช้สำหรับ before/after comparison เมื่อปรับ matching algorithm
+ *   Append-only: เพิ่ม row ใหม่เสมอ ไม่ update row เดิม
+ *   Non-fatal: ถ้า sheet ไม่มีหรือ write ล้มเหลว จะ log warn แล้วข้ามไป
+ * @param {Object} ctx - pipeline context (pendingRows, processed, autoMatched, created, queued, errorCount)
+ * @param {Date} startTime - pipeline start time
+ * @private
+ */
+function logPipelineRun_(ctx, startTime) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.PIPELINE_RUN_LOG);
+    if (!sheet) {
+      logDebug('MatchEngine', 'logPipelineRun_: PIPELINE_RUN_LOG sheet not found — skipping');
+      return;
+    }
+    const elapsedSec = Math.round((new Date() - startTime) / 1000);
+    const matchRate = ctx.processed > 0 ? Math.round((ctx.autoMatched / ctx.processed) * 100) : 0;
+    const row = [
+      new Date().getTime(), // run_id (timestamp-based millis)
+      new Date(), // run_at
+      APP_VERSION, // app_version
+      ctx.pendingRows.length, // total_rows
+      ctx.processed, // processed
+      ctx.autoMatched, // auto_matched
+      ctx.created, // created_new
+      ctx.queued, // queued_review
+      ctx.errorCount, // errors
+      matchRate, // match_rate (%)
+      elapsedSec, // elapsed_sec
+      '' // notes (empty for auto runs)
+    ];
+    sheet.appendRow(row);
+    logInfo(
+      'MatchEngine',
+      'Pipeline run logged: match_rate=' +
+        matchRate +
+        '%, processed=' +
+        ctx.processed +
+        ', auto_matched=' +
+        ctx.autoMatched +
+        ', elapsed=' +
+        elapsedSec +
+        's'
+    );
+  } catch (e) {
+    logWarn('MatchEngine', 'logPipelineRun_ failed (non-fatal): ' + e.message);
+  }
 }
 
 /**
@@ -1226,20 +1281,60 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
 
   // Rule 5: พบพิกัดใน Master + อย่างใดอย่างหนึ่ง (คน หรือ สถานที่) -> AUTO_MATCH (Partial)
   if (isGeoInMaster && (isPersonInMaster || isPlaceInMaster)) {
-    const confidence = matchCalcGeoAnchorScore_(
+    let confidence = matchCalcGeoAnchorScore_(
       geoResult.confidence,
       personResult.confidence,
       placeResult.confidence,
       isPersonInMaster
     );
-    const evidence = isPersonInMaster ? 'name|geo' : 'place|geo';
-    return {
-      action: 'AUTO_MATCH',
-      reason: APP_CONST.MATCH_GEO,
-      confidence,
-      priority: 0,
-      evidence: evidence // [NEW v5.2.008]
-    };
+    let reason = APP_CONST.MATCH_GEO;
+    let evidence = isPersonInMaster ? 'name|geo' : 'place|geo';
+
+    // [V6.0.012 P1.2] Geo-distance guard for Rule 5 (same pattern as Rule 6 in V6.0.011)
+    //   เดิม Rule 5: AUTO_MATCH เมื่อ geo + (person|place) โดยไม่ดูระยะห่างพิกัด
+    //   ปัญหา: ชื่อคล้ายกันแต่พิกัดห่างกันเกินไป → AUTO_MATCH ผิด (เหมือน bug ของ FUZZY_MATCH ก่อน V6.0.011)
+    //   ใหม่: ตรวจระยะห่างระหว่าง source lat/lng กับ candidate resolved coords
+    //     - > 1 กม. → downgrade เป็น REVIEW (reason='GEO_ANCHOR_FAR_APART') เพราะเป็นคนละที่
+    //     - > 500 ม. → ลด confidence (ยัง AUTO_MATCH ได้แต่คะแนนต่ำลง)
+    if (srcObj.hasGeo && srcObj.rawLat && srcObj.rawLng) {
+      const srcLat = Number(srcObj.rawLat);
+      const srcLng = Number(srcObj.rawLng);
+      if (!isNaN(srcLat) && !isNaN(srcLng) && srcLat !== 0 && srcLng !== 0) {
+        // หา candidate coordinates — ลองทั้ง place และ person
+        let candidateCoords = null;
+        let candidateType = '';
+
+        if (placeResult.placeId) {
+          candidateCoords = getCandidateResolvedCoords_('PLACE', placeResult.placeId);
+          if (candidateCoords) candidateType = 'place';
+        }
+
+        if (!candidateCoords && personResult.personId) {
+          candidateCoords = getCandidateResolvedCoords_('PERSON', personResult.personId);
+          if (candidateCoords) candidateType = 'person';
+        }
+
+        if (candidateCoords && candidateCoords.lat && candidateCoords.lng) {
+          const distM = haversineDistanceM(srcLat, srcLng, candidateCoords.lat, candidateCoords.lng);
+          if (distM > 1000) {
+            // ห่างเกิน 1 กม. → ลด confidence ลงมาก และ downgrade เป็น REVIEW
+            confidence = Math.min(confidence, 50);
+            reason = 'GEO_ANCHOR_FAR_APART';
+            evidence = evidence + '|far_apart|dist=' + Math.round(distM) + 'm|' + candidateType;
+          } else if (distM > 500) {
+            // ห่าง 500-1000 ม. → ลด confidence เล็กน้อย แต่ยัง AUTO_MATCH ได้
+            confidence = Math.min(confidence, 70);
+            evidence = evidence + '|moderate_dist|dist=' + Math.round(distM) + 'm|' + candidateType;
+          }
+        }
+      }
+    }
+
+    // If distance guard downgraded confidence below REVIEW threshold → return REVIEW
+    if (reason === 'GEO_ANCHOR_FAR_APART' && confidence < AI_CONFIG.THRESHOLD_REVIEW) {
+      return { action: 'REVIEW', reason: reason, confidence: confidence, priority: 1, evidence: evidence };
+    }
+    return { action: 'AUTO_MATCH', reason: reason, confidence: confidence, priority: 0, evidence: evidence };
   }
 
   // Rule 6: มีความกำกวม (Fuzzy Match / Needs Review)
@@ -1533,7 +1628,29 @@ function handleCreateNew_(srcObj, decision, personResult, placeResult, geoId, ge
   // geoId created before switch (v5.2.003)
 
   if (geoId && (personId || placeId)) {
-    destId = createDestination(personId, placeId, geoId, srcObj.rawLat, srcObj.rawLng, srcObj.deliveryDate);
+    // [V6.0.012 P1.1] Dedup: resolve existing destination first before creating new
+    //   เดิม: เรียก createDestination() ทันที → ถ้า (personId, placeId, geoId) ชุดเดิมมีอยู่แล้ว
+    //         จะสร้าง duplicate destination row (ใช้เกิดจาก reprocess / race condition)
+    //   ใหม่: เรียก resolveDestination() ก่อน ถ้าเจอ → reuse destId, ไม่สร้างใหม่
+    //   Pattern เดียวกับ handleAutoMatch_ (line ~1478)
+    if (typeof resolveDestination === 'function') {
+      try {
+        const existingDestResult = resolveDestination(personId, placeId, geoId);
+        if (
+          existingDestResult &&
+          (existingDestResult.status === 'FOUND' || existingDestResult.status === 'PARTIAL_MATCH')
+        ) {
+          destId = existingDestResult.destId;
+          logDebug('MatchEngine', 'handleCreateNew_: reused existing destination ' + destId);
+        }
+      } catch (destErr) {
+        // Non-fatal — fallback to createDestination below
+        logDebug('MatchEngine', 'handleCreateNew_: resolveDestination failed, will create new — ' + destErr.message);
+      }
+    }
+    if (!destId) {
+      destId = createDestination(personId, placeId, geoId, srcObj.rawLat, srcObj.rawLng, srcObj.deliveryDate);
+    }
   }
 
   const txRes = upsertFactDelivery(srcObj, personId, placeId, geoId, destId, decision);
@@ -2269,7 +2386,32 @@ function resolveAndPersistCreate_(srcObj) {
   // Destination
   let destId = null;
   if (geoId && (personId || placeId)) {
-    destId = createDestination(personId, placeId, geoId, srcObj.rawLat, srcObj.rawLng, null);
+    // [V6.0.012 P1.1] Dedup: resolve existing destination first before creating new
+    //   เดิม: เรียก createDestination() ทันที → ถ้า (personId, placeId, geoId) ชุดเดิมมีอยู่แล้ว
+    //         จะสร้าง duplicate destination row (เกิดจาก reprocess review queue หลายรอบ)
+    //   ใหม่: เรียก resolveDestination() ก่อน ถ้าเจอ → reuse destId, ไม่สร้างใหม่
+    //   Pattern เดียวกับ handleAutoMatch_ และ handleCreateNew_
+    if (typeof resolveDestination === 'function') {
+      try {
+        const existingDestResult = resolveDestination(personId, placeId, geoId);
+        if (
+          existingDestResult &&
+          (existingDestResult.status === 'FOUND' || existingDestResult.status === 'PARTIAL_MATCH')
+        ) {
+          destId = existingDestResult.destId;
+          logDebug('MatchEngine', 'resolveAndPersistCreate_: reused existing destination ' + destId);
+        }
+      } catch (destErr) {
+        // Non-fatal — fallback to createDestination below
+        logDebug(
+          'MatchEngine',
+          'resolveAndPersistCreate_: resolveDestination failed, will create new — ' + destErr.message
+        );
+      }
+    }
+    if (!destId) {
+      destId = createDestination(personId, placeId, geoId, srcObj.rawLat, srcObj.rawLng, null);
+    }
   }
 
   const factResult = upsertFactDelivery(srcObj, personId, placeId, geoId, destId, {
@@ -2557,4 +2699,185 @@ function reprocCreateDestinationForReview_(personId, placeId, geoId, rawLat, raw
   } catch (e) {
     return { destId: null, error: e.message };
   }
+}
+
+// ============================================================
+// SECTION: [V6.0.012 P1.7] Test Match Dry Run
+//   รัน matching algorithm บน SOURCE data โดยไม่บันทึกผลลัพธ์ลง master sheets
+//   ใช้สำหรับ comparison ก่อน/หลังเปลี่ยน matching algorithm
+//   ⚠️ ไม่เรียก executeDecision() หรือ flushBatches_() — ไม่เขียน master sheets
+// ============================================================
+
+/**
+ * runTestMatchDryRun_ — [V6.0.012 P1.7] Dry-run matching on SOURCE data
+ *   Reads unprocessed source rows, calls resolvePerson/Place/Geo + makeMatchDecision
+ *   for each row WITHOUT executing the decision (no writes to master sheets).
+ *   Writes results to TEST_MATCH_RESULTS sheet (clear-and-replace pattern).
+ *
+ *   Use case: compare match rates before/after tweaking matching algorithm
+ *   without polluting production data.
+ *
+ * @param {number} [maxRows=100] - max rows to test (default 100)
+ * @return {{ tested: number, totalRows: number, autoMatched: number,
+ *            createdNew: number, queuedReview: number, errors: number,
+ *            matchRate: number, elapsedSec: number }}
+ */
+function runTestMatchDryRun_(maxRows) {
+  maxRows = maxRows || 100;
+  const startTime = new Date();
+
+  // Load source rows (unprocessed only — same as runMatchEngine)
+  // [V6.0.012 P1.7] Reset cached state — same pattern as prepareMatchEngineContext_
+  resetProcessingState_();
+  const allPendingRows = loadSourceBatch_();
+
+  if (allPendingRows.length === 0) {
+    logInfo('MatchEngine', 'runTestMatchDryRun_: ไม่มีแถวที่ต้องประมวลผล');
+    return {
+      tested: 0,
+      totalRows: 0,
+      autoMatched: 0,
+      createdNew: 0,
+      queuedReview: 0,
+      errors: 0,
+      matchRate: 0,
+      elapsedSec: 0
+    };
+  }
+
+  const rowsToTest = allPendingRows.slice(0, maxRows);
+  logInfo('MatchEngine', 'runTestMatchDryRun_: testing ' + rowsToTest.length + '/' + allPendingRows.length + ' rows');
+
+  // Initialize counters
+  let autoMatched = 0;
+  let createdNew = 0;
+  let queuedReview = 0;
+  let errors = 0;
+
+  // Collect result rows for batch write to TEST_MATCH_RESULTS sheet
+  const resultRows = [];
+
+  for (let i = 0; i < rowsToTest.length; i++) {
+    const srcObj = rowsToTest[i];
+    try {
+      // Mirror processOneRow() resolution calls — but stop BEFORE executeDecision()
+      const personResult = resolvePerson(srcObj.rawPersonName, null, { soldToName: srcObj.soldToName });
+      const placeResult = resolvePlace(srcObj.rawPlaceName || srcObj.rawAddress, srcObj.rawAddress || '');
+      const geoResult = resolveGeo(srcObj.rawLat, srcObj.rawLng);
+
+      // [V6.0.002] Tie-breaker — same as processOneRow (mirror logic for accuracy)
+      if (personResult.status === 'NEEDS_REVIEW' && personResult.secondBestPerson) {
+        const candidates = [
+          { personId: personResult.personId, score: personResult.confidence },
+          { personId: personResult.secondBestPerson.personId, score: personResult.secondBestScore }
+        ];
+        const chosen = breakTieAmongCandidates(candidates, srcObj);
+        if (chosen && chosen.tiebreaker) {
+          personResult.personId = chosen.personId;
+          personResult.confidence = chosen.score;
+          personResult.status = chosen.score >= AI_CONFIG.THRESHOLD_AUTO ? 'FOUND' : 'NEEDS_REVIEW';
+        }
+      }
+
+      // Make decision ONLY — do NOT call executeDecision() (no writes!)
+      const decision = makeMatchDecision(srcObj, personResult, placeResult, geoResult);
+
+      // Count
+      if (decision.action === 'AUTO_MATCH') autoMatched++;
+      else if (decision.action === 'CREATE_NEW') createdNew++;
+      else if (decision.action === 'REVIEW') queuedReview++;
+
+      // Build result row — invoice_no masked (3 chars + ***)
+      const maskedInvoice = srcObj.invoiceNo ? String(srcObj.invoiceNo).substring(0, 3) + '***' : '';
+
+      resultRows.push([
+        srcObj.sourceRow, // [0] source_row
+        maskedInvoice, // [1] invoice_no (masked)
+        String(srcObj.rawPersonName || '').substring(0, 100), // [2] person_name (trunc)
+        String(srcObj.rawPlaceName || '').substring(0, 100), // [3] place_name (trunc)
+        decision.action || '', // [4] action
+        String(decision.reason || '').substring(0, 80), // [5] reason
+        decision.confidence || 0, // [6] confidence
+        String(decision.evidence || '').substring(0, 200) // [7] evidence
+      ]);
+    } catch (rowErr) {
+      errors++;
+      logError('MatchEngine', 'runTestMatchDryRun_: row ' + srcObj.sourceRow + ' failed — ' + rowErr.message, rowErr);
+      // Still push a placeholder row so user can see which row errored
+      const maskedInvoice = srcObj.invoiceNo ? String(srcObj.invoiceNo).substring(0, 3) + '***' : '';
+      resultRows.push([
+        srcObj.sourceRow,
+        maskedInvoice,
+        String(srcObj.rawPersonName || '').substring(0, 100),
+        String(srcObj.rawPlaceName || '').substring(0, 100),
+        'ERROR',
+        String(rowErr.message || '').substring(0, 80),
+        0,
+        ''
+      ]);
+    }
+  }
+
+  // Write results to TEST_MATCH_RESULTS sheet (clear-and-replace pattern)
+  //   Clear existing data rows (keep header) → write new rows in one batch
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.TEST_MATCH_RESULTS);
+    if (!sheet) {
+      logWarn(
+        'MatchEngine',
+        'runTestMatchDryRun_: TEST_MATCH_RESULTS sheet not found — skipping write (results in log only)'
+      );
+    } else {
+      // Clear existing data rows (keep header row 1)
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        const schemaLen = getSheetHeaders(SHEET.TEST_MATCH_RESULTS).length;
+        sheet.getRange(2, 1, lastRow - 1, schemaLen).clearContent();
+      }
+      // Write new rows in one batch
+      if (resultRows.length > 0) {
+        sheet.getRange(2, 1, resultRows.length, resultRows[0].length).setValues(resultRows);
+      }
+      logInfo('MatchEngine', 'runTestMatchDryRun_: wrote ' + resultRows.length + ' rows to TEST_MATCH_RESULTS');
+    }
+  } catch (writeErr) {
+    logError('MatchEngine', 'runTestMatchDryRun_: write to TEST_MATCH_RESULTS failed — ' + writeErr.message, writeErr);
+    // Non-fatal — counts are still returned to caller
+  }
+
+  // Compute match rate
+  const tested = resultRows.length;
+  const matchRate = tested > 0 ? Math.round((autoMatched / tested) * 100) : 0;
+  const elapsedSec = Math.round((new Date() - startTime) / 1000);
+
+  logInfo(
+    'MatchEngine',
+    'runTestMatchDryRun_ done: tested=' +
+      tested +
+      ' auto_match=' +
+      autoMatched +
+      ' create_new=' +
+      createdNew +
+      ' review=' +
+      queuedReview +
+      ' errors=' +
+      errors +
+      ' match_rate=' +
+      matchRate +
+      '% (' +
+      elapsedSec +
+      's)'
+  );
+
+  return {
+    tested: tested,
+    totalRows: allPendingRows.length,
+    autoMatched: autoMatched,
+    createdNew: createdNew,
+    queuedReview: queuedReview,
+    errors: errors,
+    matchRate: matchRate,
+    elapsedSec: elapsedSec
+  };
 }

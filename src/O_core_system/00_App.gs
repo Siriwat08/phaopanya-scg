@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.011
+ * VERSION: 6.0.012
  * FILE: 00_App.gs
  * LMDS V5.5 — Application Entry Point & Menu Controller
  * ===================================================
@@ -86,6 +86,8 @@ function onOpen(e) {
         .addItem('Step 1 — โหลดข้อมูลดิบจากแหล่ง', 'runLoadSource')
         .addItem('Step 2 — Normalize ชื่อ/ที่อยู่', 'runNormalize')
         .addItem('Step 3 — Match Engine', 'runMatchEngine')
+        .addSeparator()
+        .addItem('🧪 [V6] Test Match (Dry Run)', 'runTestMatchDryRun_UI')
         .addSeparator()
         .addItem('🛑 [V6] หยุด Pipeline (Emergency Stop)', 'requestPipelineStop_UI')
         .addItem('🟢 [V6] ยกเลิก Stop Signal', 'clearPipelineStopSignal_UI')
@@ -1232,6 +1234,77 @@ function runPipelinePreflightStrict_UI() {
     }
   } catch (e) {
     logError('App', 'runPipelinePreflightStrict_UI failed: ' + e.message, e);
+    safeUiAlert_('❌ ล้มเหลว: ' + e.message);
+  }
+}
+
+// ============================================================
+// SECTION: [V6.0.012 P1.7] Test Match Dry Run UI
+// ============================================================
+
+/**
+ * runTestMatchDryRun_UI — [V6.0.012 P1.7] Menu wrapper for dry-run matching
+ *   รัน matching algorithm บน SOURCE data โดยไม่บันทึกผลลัพธ์ลง master sheets
+ *   ใช้สำหรับ comparison ก่อน/หลังเปลี่ยน matching algorithm
+ *
+ *   ขั้นตอน:
+ *     1. โหลด unprocessed source rows (limit 100)
+ *     2. สำหรับแต่ละ row: เรียก resolvePerson / resolvePlace / resolveGeo / makeMatchDecision
+ *        ⚠️ ไม่เรียก executeDecision() หรือ flushBatches_() — ไม่เขียน master sheets
+ *     3. เขียนผลลัพธ์ไป TEST_MATCH_RESULTS sheet (clear ก่อนเขียนใหม่)
+ *     4. แสดงสรุป: X rows tested, Y auto-match, Z review, W create-new
+ *
+ *   Safe: ไม่กระทบข้อมูลจริง รันซ้ำได้
+ */
+function runTestMatchDryRun_UI() {
+  try {
+    // RBAC: require admin to run dry-run (consistency with runFullPipeline)
+    if (typeof requirePermission_ === 'function') requirePermission_('action:run_pipeline');
+
+    const ui = SpreadsheetApp.getUi();
+    const confirm = ui.alert(
+      '🧪 Test Match (Dry Run)',
+      'รัน matching algorithm บน SOURCE data โดยไม่บันทึกผลลัพธ์ลง master sheets\n\n' +
+        'สิ่งที่จะทำ:\n' +
+        '• โหลด 100 unprocessed rows แรกจาก SOURCE\n' +
+        '• สำหรับแต่ละ row: resolve + makeMatchDecision (NO executeDecision, NO writes)\n' +
+        '• เขียนผลลัพธ์ไป TEST_MATCH_RESULTS sheet (clear ของเก่าก่อน)\n' +
+        '• แสดงสรุป: X rows, Y auto-match, Z review, W create-new\n\n' +
+        'Safe: ไม่กระทบข้อมูลจริง — รันซ้ำได้\n\n' +
+        'ยืนยันการรัน Dry Run?',
+      ui.ButtonSet.YES_NO
+    );
+    if (confirm !== ui.Button.YES) {
+      safeUiAlert_('ℹ️ ยกเลิก — ไม่มีการรัน Dry Run');
+      return;
+    }
+
+    if (typeof runTestMatchDryRun_ !== 'function') {
+      safeUiAlert_('❌ ไม่พบฟังก์ชัน runTestMatchDryRun_ — ตรวจสอบว่า 10_MatchEngine.gs โหลดแล้ว');
+      return;
+    }
+
+    const maxRows = 100;
+    const summary = runTestMatchDryRun_(maxRows);
+
+    const lines = [];
+    lines.push('🧪 Test Match (Dry Run) — V6.0.012 P1.7\n');
+    lines.push('Rows tested: ' + summary.tested + ' / ' + summary.totalRows + ' (limit ' + maxRows + ')');
+    lines.push('Errors: ' + summary.errors);
+    lines.push('');
+    lines.push('─── Results ───');
+    lines.push('✅ AUTO_MATCH : ' + summary.autoMatched);
+    lines.push('🆕 CREATE_NEW : ' + summary.createdNew);
+    lines.push('👀 REVIEW     : ' + summary.queuedReview);
+    lines.push('');
+    lines.push('📊 Match rate: ' + summary.matchRate + '% (auto_match / tested)');
+    lines.push('⏱️  Elapsed: ' + summary.elapsedSec + 's');
+    lines.push('');
+    lines.push('ผลลัพธ์อยู่ในชีต "TEST_MATCH_RESULTS" — เปรียบเทียบก่อน/หลังเปลี่ยน algorithm ได้');
+
+    safeUiAlert_(lines.join('\n'));
+  } catch (e) {
+    logError('App', 'runTestMatchDryRun_UI failed: ' + e.message, e);
     safeUiAlert_('❌ ล้มเหลว: ' + e.message);
   }
 }

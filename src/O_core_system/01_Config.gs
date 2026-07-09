@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.011
+ * VERSION: 6.0.012
  * FILE: 01_Config.gs
  * LMDS V5.5 — System Configuration & Constants
  * ===================================================
@@ -70,8 +70,8 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.011';
-const SCHEMA_VERSION = '6.0.011';
+const APP_VERSION = '6.0.012';
+const SCHEMA_VERSION = '6.0.012';
 const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
@@ -176,6 +176,12 @@ const SHEET = Object.freeze({
   // [V6.0.007] Audit Trail — record CREATE/UPDATE/DELETE/MERGE on M_ALIAS + Q_REVIEW
   //   Critical-only scope: ALIAS + Q_REVIEW; expandable to other entities in future
   SYS_AUDIT_TRAIL: 'SYS_AUDIT_TRAIL',
+  // [V6.0.012 P1.6] Pipeline Run Log — append-only stats per run for before/after comparison
+  //   เขียนโดย logPipelineRun_() ใน 10_MatchEngine.gs เมื่อจบ pipeline run
+  PIPELINE_RUN_LOG: 'PIPELINE_RUN_LOG',
+  // [V6.0.012 P1.7] Test Match Results — output sheet for dry-run mode (no master writes)
+  //   เขียนโดย runTestMatchDryRun_() ใน 10_MatchEngine.gs เมื่อ user เลือกเมนู Dry Run
+  TEST_MATCH_RESULTS: 'TEST_MATCH_RESULTS',
   // [REMOVE v5.5.013] MAPS_CACHE ถูกลบออก — ไม่ได้ใช้ใน pipeline อีกต่อไป
   //   สูตร Google Maps ใช้ CacheService.getDocumentCache แทน (ดู 15_GoogleMapsAPI.gs)
   DAILY_JOB: 'ตารางงานประจำวัน',
@@ -632,7 +638,7 @@ const AI_CONFIG = Object.freeze({
   GEO_RADIUS_M: 50,
   GEO_GRID_SIZE: 0.01, // [ADD v5.4.003] ~1.1 กม. ต่อ grid cell — ย้ายจาก 08_GeoService.gs
   USE_AI_REASONING: false, // [PH2] Set to false for safety (AI should not guess coordinates)
-  TIME_LIMIT_MS: 300000 // [FIX v5.2.009] 5 นาที (300,000 ms) สำหรับจำกัดเวลาทำงานของ Loop
+  TIME_LIMIT_MS: 330000 // [V6.0.012 P1.5] 5.5 นาที (330,000 ms) — was 300000 (5 min)
 });
 
 // ============================================================
@@ -721,6 +727,38 @@ const SHIPMENT_SUM_IDX = Object.freeze({
   LAST_UPDATE: 6 // LastUpdated
 });
 
+// [V6.0.012 P1.6] PIPELINE_LOG_IDX — PIPELINE_RUN_LOG column indices
+//   ใช้สำหรับเก็บ stats ของแต่ละ pipeline run เพื่อ comparison ก่อน/หลังเปลี่ยนแปลง
+//   12 คอลัมน์ — เขียนโดย logPipelineRun_() ใน 10_MatchEngine.gs
+const PIPELINE_LOG_IDX = Object.freeze({
+  RUN_ID: 0, // [0] timestamp-based ID (millis)
+  RUN_AT: 1, // [1] timestamp
+  APP_VERSION: 2, // [2] APP_VERSION at run time
+  TOTAL_ROWS: 3, // [3] total pending rows at start
+  PROCESSED: 4, // [4] rows processed (success)
+  AUTO_MATCHED: 5, // [5] AUTO_MATCH count
+  CREATED_NEW: 6, // [6] CREATE_NEW count
+  QUEUED_REVIEW: 7, // [7] REVIEW count
+  ERRORS: 8, // [8] error count
+  MATCH_RATE: 9, // [9] auto_matched / processed * 100
+  ELAPSED_SEC: 10, // [10] elapsed seconds
+  NOTES: 11 // [11] optional notes
+});
+
+// [V6.0.012 P1.7] TEST_MATCH_IDX — TEST_MATCH_RESULTS column indices
+//   ใช้สำหรับ Dry Run mode — เขียนผลลัพธ์การ match โดยไม่บันทึกลง master sheets
+//   8 คอลัมน์ — เขียนโดย runTestMatchDryRun_() ใน 10_MatchEngine.gs
+const TEST_MATCH_IDX = Object.freeze({
+  SOURCE_ROW: 0, // [0] source row number
+  INVOICE_NO: 1, // [1] invoice number (masked)
+  PERSON_NAME: 2, // [2] raw person name
+  PLACE_NAME: 3, // [3] raw place name
+  ACTION: 4, // [4] AUTO_MATCH / CREATE_NEW / REVIEW
+  REASON: 5, // [5] match reason
+  CONFIDENCE: 6, // [6] confidence score
+  EVIDENCE: 7 // [7] match evidence (name|place|geo)
+});
+
 const APP_CONST = Object.freeze({
   STATUS_ACTIVE: 'Active',
   STATUS_ARCHIVED: 'Archived',
@@ -786,7 +824,11 @@ function validateConfig() {
       // [V6.0.003] เพิ่มการตรวจ SYS_NEGATIVE_SAMPLES — System Learning negative samples
       { name: SHEET.SYS_NEGATIVE_SAMPLES, idx: NEGATIVE_SAMPLE_IDX, label: 'SYS_NEGATIVE_SAMPLES (System Learning)' },
       // [V6.0.007] เพิ่มการตรวจ SYS_AUDIT_TRAIL — Audit Trail (Critical Only)
-      { name: SHEET.SYS_AUDIT_TRAIL, idx: AUDIT_IDX, label: 'SYS_AUDIT_TRAIL (Audit Trail)' }
+      { name: SHEET.SYS_AUDIT_TRAIL, idx: AUDIT_IDX, label: 'SYS_AUDIT_TRAIL (Audit Trail)' },
+      // [V6.0.012 P1.6] เพิ่มการตรวจ PIPELINE_RUN_LOG — Pipeline Run Log (stats per run)
+      { name: SHEET.PIPELINE_RUN_LOG, idx: PIPELINE_LOG_IDX, label: 'PIPELINE_RUN_LOG (Run Stats)' },
+      // [V6.0.012 P1.7] เพิ่มการตรวจ TEST_MATCH_RESULTS — Dry Run output sheet
+      { name: SHEET.TEST_MATCH_RESULTS, idx: TEST_MATCH_IDX, label: 'TEST_MATCH_RESULTS (Dry Run)' }
     ];
     checks.forEach((item) => {
       const schemaArr = SCHEMA[item.name];

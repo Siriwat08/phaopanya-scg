@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.011
+ * VERSION: 6.0.012
  * FILE: 02_Schema.gs
  * LMDS V5.5 — Sheet Schema Definitions
  * ===================================================
@@ -345,6 +345,48 @@ const SCHEMA = Object.freeze({
     'ip_address' // [10] (best effort — usually empty in GAS)
   ],
 
+  /**
+   * PIPELINE_RUN_LOG — [V6.0.012 P1.6] Pipeline Run Log storage
+   * เก็บ stats ของแต่ละ pipeline run เพื่อ comparison ก่อน/หลังเปลี่ยนแปลง
+   *   - append-only pattern: เพิ่ม row ใหม่เท่านั้น ไม่ update row เดิม
+   *   - retention: keep last 365 days (no auto-prune — manual cleanup only)
+   * 12 คอลัมน์ — เขียนโดย logPipelineRun_() ใน 10_MatchEngine.gs
+   *   ใช้สำหรับ before/after comparison เมื่อมีการปรับ matching algorithm
+   */
+  PIPELINE_RUN_LOG: [
+    'run_id', // [0] timestamp-based ID (millis since epoch)
+    'run_at', // [1] timestamp
+    'app_version', // [2] APP_VERSION at run time
+    'total_rows', // [3] total pending rows at start
+    'processed', // [4] rows processed (success)
+    'auto_matched', // [5] AUTO_MATCH count
+    'created_new', // [6] CREATE_NEW count
+    'queued_review', // [7] REVIEW count
+    'errors', // [8] error count
+    'match_rate', // [9] auto_matched / processed * 100
+    'elapsed_sec', // [10] elapsed seconds
+    'notes' // [11] optional notes
+  ],
+
+  /**
+   * TEST_MATCH_RESULTS — [V6.0.012 P1.7] Dry Run output sheet
+   * เก็บผลลัพธ์การ match จาก Dry Run mode (runTestMatchDryRun_)
+   *   ไม่ได้เขียนลง FACT_DELIVERY หรือ master sheets — ใช้สำหรับ comparison เท่านั้น
+   * 8 คอลัมน์ — เขียนโดย runTestMatchDryRun_() ใน 10_MatchEngine.gs
+   *   - ทุกครั้งที่รัน Dry Run จะ clear ข้อมูลเก่าก่อนเขียนใหม่ (replace pattern)
+   *   - invoice_no ถูก masked เพื่อความปลอดภัย (3 ตัวแรก + ***)
+   */
+  TEST_MATCH_RESULTS: [
+    'source_row', // [0] source row number
+    'invoice_no', // [1] invoice number (masked)
+    'person_name', // [2] raw person name
+    'place_name', // [3] raw place name
+    'action', // [4] AUTO_MATCH / CREATE_NEW / REVIEW
+    'reason', // [5] match reason
+    'confidence', // [6] confidence score (0-100)
+    'evidence' // [7] match evidence (name|place|geo)
+  ],
+
   // [REMOVE v5.5.013] MAPS_CACHE SCHEMA ถูกลบออก — MAPS_CACHE sheet ไม่ได้ใช้แล้ว
   //   สูตร Google Maps ใช้ CacheService.getDocumentCache แทน (ดู 15_GoogleMapsAPI.gs)
 
@@ -587,7 +629,11 @@ function validateSchemaConsistency() {
       label: 'SYS_NEGATIVE_SAMPLES (System Learning)'
     },
     // [V6.0.007] เพิ่มการตรวจ SCHEMA vs AUDIT_IDX สำหรับ SHEET.SYS_AUDIT_TRAIL (Audit Trail Critical-Only)
-    { sheetName: SHEET.SYS_AUDIT_TRAIL, idx: AUDIT_IDX, label: 'SYS_AUDIT_TRAIL (Audit Trail)' }
+    { sheetName: SHEET.SYS_AUDIT_TRAIL, idx: AUDIT_IDX, label: 'SYS_AUDIT_TRAIL (Audit Trail)' },
+    // [V6.0.012 P1.6] เพิ่มการตรวจ SCHEMA vs PIPELINE_LOG_IDX สำหรับ SHEET.PIPELINE_RUN_LOG
+    { sheetName: SHEET.PIPELINE_RUN_LOG, idx: PIPELINE_LOG_IDX, label: 'PIPELINE_RUN_LOG (Run Stats)' },
+    // [V6.0.012 P1.7] เพิ่มการตรวจ SCHEMA vs TEST_MATCH_IDX สำหรับ SHEET.TEST_MATCH_RESULTS
+    { sheetName: SHEET.TEST_MATCH_RESULTS, idx: TEST_MATCH_IDX, label: 'TEST_MATCH_RESULTS (Dry Run)' }
   ];
 
   const errors = [];

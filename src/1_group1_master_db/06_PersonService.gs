@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.011
+ * VERSION: 6.0.012
  * FILE: 06_PersonService.gs
  * LMDS V5.5 — Person Master Service
  * ===================================================
@@ -450,8 +450,20 @@ function scorePersonCandidate(queryName, candidate, queryPhone) {
     const p1 = String(queryPhone).replace(/[^0-9]/g, '');
     const p2 = String(candidate.phone).replace(/[^0-9]/g, '');
     if (p1 === p2 && p1.length >= 9) {
-      if (nameScore >= AI_CONFIG.SCORE_MIN_THRESHOLD) {
-        return 95; // phone + name ตรง → AUTO_MATCH
+      // [V6.0.012 P1.4] Lower phone-match gate for short names
+      //   เดิม: phone match ใช้ได้เฉพาะเมื่อ nameScore >= SCORE_MIN_THRESHOLD (60)
+      //   ปัญหา: ชื่อสั้น (4+ ตัว) Levenshtein score มักต่ำกว่า 60 โดยธรรมชาติ
+      //          แม้ชื่อจะ "คล้ายกันมาก" เพราะ Levenshtein sensitive กับความยาว
+      //          ทำให้ phone match ไม่ถูกใช้เลย ทั้งที่ phone เป็นสัญญาณแข็งมาก
+      //   ใหม่: ยอมรับ phone match ถ้า
+      //     - nameScore >= SCORE_MIN_THRESHOLD (60), OR
+      //     - nameScore >= 40 AND cleanName length >= 4 (สั้นเกินไป = noise)
+      //   phone match + ชื่อสั้นเกินไป (< 4) → ยังคง return nameScore เพื่อ REVIEW
+      //     เพราะเบอร์บ้าน/บริษัทใช้ร่วมกันหลายคน เป็น false positive ได้ง่าย
+      const cleanNameLen = nameA.length;
+      const phoneGatePassed = nameScore >= AI_CONFIG.SCORE_MIN_THRESHOLD || (nameScore >= 40 && cleanNameLen >= 4);
+      if (phoneGatePassed) {
+        return 95; // phone + name ตรง (หรือคล้าย) → AUTO_MATCH
       }
       // phone ตรงแต่ชื่อไม่ตรง → คืน nameScore (อาจ < 70 → REVIEW หรือ < 50 → reject)
       //   ไม่ return 95 เพื่อป้องกัน AUTO_MATCH ผิดจากเบอร์บ้าน/บริษัทใช้ร่วมกัน
@@ -475,8 +487,14 @@ function scorePersonCandidate(queryName, candidate, queryPhone) {
   // [V6.0.002] Phonetic match bonus — adds 0-2 points when Double Metaphone matched
   //   (primary=100 → +2, cross=90 → +1, secondary=80 → +0). Only applies to non-phone
   //   matches; phone-match returns above already short-circuit before this line.
+  // [V6.0.012 P1.3] Increase multiplier 0.1 → 0.5 (max bonus 2 → 10)
+  //   เหตุผล: phonetic bonus เดิมให้แค่ +2 max → ไม่พอยกระดับ candidate ที่คะแนนชื่อ
+  //   ใกล้เคียง threshold ให้กลายเป็น AUTO_MATCH หรือ REVIEW
+  //   ปรับเป็น +10 max ทำให้ phonetic match มีน้ำหนักพอที่จะยก candidate
+  //   ข้าม threshold ได้จริง ลดจำนวน rows ที่ตกไป REVIEW โดยไม่จำเป็น
+  //   primary=100 → +10, cross=90 → +5, secondary=80 → +0
   if (candidate._phoneticScore) {
-    finalScore += Math.round((candidate._phoneticScore - 80) * 0.1);
+    finalScore += Math.round((candidate._phoneticScore - 80) * 0.5);
   }
 
   return finalScore;
