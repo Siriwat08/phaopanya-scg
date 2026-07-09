@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.012
+ * VERSION: 6.0.013
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -1148,9 +1148,12 @@ function processOneRow(srcObj) {
   //   ถ้าชื่อซ้ำ + คะแนนใกล้กัน → ใช้ SoldToName เป็น tie-breaker
   const personResult = resolvePerson(srcObj.rawPersonName, null, { soldToName: srcObj.soldToName });
 
-  // [FIX P1] ส่ง rawAddress (ที่อยู่เต็ม) เข้า arg ที่ 2 เพื่อให้ tryMatchBranch
-  //   สามารถใช้ extractProvince_ หาจังหวัด + รหัสไปรษณีย์ได้ครบ
-  const placeResult = resolvePlace(srcObj.rawPlaceName || srcObj.rawAddress, srcObj.rawAddress || '');
+  // [V6.0.013] เปลี่ยนจาก rawPlaceName [18] → rawAddress [24] เป็นตัวเทียบหลัก
+  //   เหตุผล: [18] ที่อยู่ดิบจาก SCG สั้น+มั่ว ("อ.พระประแดง จ.สมุทรปราการ" = 17 ตัวอักษร)
+  //   ส่วน [24] คือ reverse geocode จากพิกัดจริง สมบูรณ์กว่ามาก
+  //   เทียบ [24] กับ M_PLACE.canonical_name → score สูงขึ้น → match rate ดีขึ้น
+  //   [18] ยังเก็บใน srcObj.scgAddress สำหรับ FACT_DELIVERY (ดูข้อมูลดิบได้)
+  const placeResult = resolvePlace(srcObj.rawAddress, srcObj.rawAddress || '');
 
   const geoResult = resolveGeo(srcObj.rawLat, srcObj.rawLng);
 
@@ -1454,7 +1457,11 @@ function calcDynamicWeights_(baseWeights, srcObj, personResult) {
  * @returns {number} confidence (0-100)
  */
 function matchCalcFullScore_(geoConf, personConf, placeConf, srcObj, personResult) {
-  const w = calcDynamicWeights_({ geo: 0.5, person: 0.3, place: 0.2 }, srcObj, personResult);
+  // [V6.0.013 P1.4] เปลี่ยน weight: geo 60% + person 25% + place 15%
+  //   เหตุผล: พิกัดแม่นยำที่สุด (GPS จริง) + ชื่อมั่วจาก SCG + ที่อยู่สั้น
+  //   เดิม: geo=0.5, person=0.3, place=0.2 (พิกัด 50%)
+  //   ใหม่: geo=0.6, person=0.25, place=0.15 (พิกัด 60% — เพราะพิกัดเชื่อถือได้ที่สุด)
+  const w = calcDynamicWeights_({ geo: 0.6, person: 0.25, place: 0.15 }, srcObj, personResult);
   return Math.round(geoConf * w.geo + personConf * w.person + placeConf * w.place);
 }
 

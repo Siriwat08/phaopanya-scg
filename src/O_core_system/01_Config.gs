@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.012
+ * VERSION: 6.0.013
  * FILE: 01_Config.gs
  * LMDS V5.5 — System Configuration & Constants
  * ===================================================
@@ -70,8 +70,8 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.012';
-const SCHEMA_VERSION = '6.0.012';
+const APP_VERSION = '6.0.013';
+const SCHEMA_VERSION = '6.0.013';
 const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
@@ -635,7 +635,7 @@ const AI_CONFIG = Object.freeze({
   BATCH_SIZE: 20,
   RETRIEVAL_LIMIT: 50,
   CACHE_TTL_SEC: 21600,
-  GEO_RADIUS_M: 50,
+  GEO_RADIUS_M: 100, // [V6.0.013] 50→100 — คนขับจอดต่างที่เล็กน้อยทุกครั้ง (จากข้อมูล: 7,732 พิกัดไม่ซ้ำใน 7,807 แถว)
   GEO_GRID_SIZE: 0.01, // [ADD v5.4.003] ~1.1 กม. ต่อ grid cell — ย้ายจาก 08_GeoService.gs
   USE_AI_REASONING: false, // [PH2] Set to false for safety (AI should not guess coordinates)
   TIME_LIMIT_MS: 330000 // [V6.0.012 P1.5] 5.5 นาที (330,000 ms) — was 300000 (5 min)
