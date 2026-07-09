@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.012
+ * VERSION: 6.0.013
  * FILE: 05_NormalizeService.gs
  * LMDS V5.5 — Thai Name & Place Normalization
  * ===================================================
@@ -327,6 +327,27 @@ function normalizePersonNameFull(rawName) {
   working = companyResult.working;
   const isCompany = companyResult.isCompany;
   if (companyResult.notes.length > 0) notes.push(...companyResult.notes);
+
+  // [V6.0.013 P1.2] Step 4.5: แยกเลขสาขาออกจากชื่อ
+  //   "บริษัท บี-ควิก จำกัด (สาขาที่ 51" → "บี-ควิก" + branchNo=51
+  //   รูปแบบที่รองรับ: "สาขา 255", "สาขาที่ 45", "สาขา248", "สาขา 00041"
+  //   เก็บ branchNo ไว้ใน structuredNotes เพื่อใช้ในอนาคต (ไม่เอามาเทียบชื่อ)
+  const branchResult = extractBranchNumber_(working);
+  if (branchResult.branchNo) {
+    working = branchResult.cleanedText;
+    structuredNotes.push({
+      noteType: 'BRANCH',
+      noteValue: branchResult.branchNo,
+      noteRaw: branchResult.rawMatch,
+      source: 'SCG_RAW',
+      confidence: 100
+    });
+  }
+
+  // [V6.0.013 P1.3] Step 4.6: แยก 2 บริษัทที่ติดกัน
+  //   "บจ.พี.ณัฐชัย - บจ.แม็คคานิคส์" → "บจ.พี.ณัฐชัย" (เก็บอันแรกเป็นหลัก)
+  //   แยกด้วย: " - " หรือ " -" ที่มี "บจ." หรือ "บริษัท" หรือ "บจก." หลังเครื่องหมาย
+  working = splitMultiCompany_(working);
 
   // --- Step 5: ตัดคำนำหน้า + Thai Acronyms ---
   if (!isCompany) {
@@ -1343,4 +1364,76 @@ function phoneticMatch(name1, name2) {
   }
 
   return { match: false, score: 0, matchedKey: '' };
+}
+
+// ============================================================
+// [V6.0.013 P1.2] SECTION: Branch Number Extractor
+//   แยกเลขสาขาออกจากชื่อ — "บี-ควิก สาขา 255" → "บี-ควิก" + branchNo=255
+//   รูปแบบที่รองรับ: "สาขา 255", "สาขาที่ 45", "สาขา248", "สาขา 00041"
+// ============================================================
+
+/**
+ * extractBranchNumber_ — [V6.0.013 P1.2] Extract branch number from name
+ *   "บริษัท บี-ควิก จำกัด (สาขาที่ 51" → { cleanedText: "บริษัท บี-ควิก จำกัด", branchNo: "51", rawMatch: "(สาขาที่ 51" }
+ *   "BQUIK สาขา248 บางจาก" → { cleanedText: "BQUIK บางจาก", branchNo: "248", rawMatch: "สาขา248" }
+ * @param {string} text — input text (after company suffix stripping)
+ * @return {{ cleanedText: string, branchNo: string|null, rawMatch: string }}
+ * @private
+ */
+function extractBranchNumber_(text) {
+  const input = String(text || '').trim();
+  if (!input) return { cleanedText: input, branchNo: null, rawMatch: '' };
+
+  // Pattern: optional "(" + "สาขา" + optional "ที่" + optional space + digits + optional ")"
+  // Also handle English "branch" / "BRANCH"
+  const patterns = [/\(?\s*สาขา\s*(?:ที่)?\s*(\d{1,6})\s*\)?/i, /\(?\s*branch\s*(\d{1,6})\s*\)?/i];
+
+  for (let p = 0; p < patterns.length; p++) {
+    const match = input.match(patterns[p]);
+    if (match) {
+      const rawMatch = match[0];
+      const branchNo = match[1].replace(/^0+/, '') || '0'; // strip leading zeros
+      const cleanedText = input.replace(rawMatch, '').replace(/\s+/g, ' ').trim();
+      return { cleanedText: cleanedText, branchNo: branchNo, rawMatch: rawMatch };
+    }
+  }
+
+  return { cleanedText: input, branchNo: null, rawMatch: '' };
+}
+
+// ============================================================
+// [V6.0.013 P1.3] SECTION: Multi-Company Splitter
+//   แยก 2 บริษัทที่ติดกัน — "บจ.พี.ณัฐชัย - บจ.แม็คคานิคส์" → "บจ.พี.ณัฐชัย"
+//   แยกด้วย: " - " ที่มี "บจ." หรือ "บริษัท" หรือ "บจก." หลังเครื่องหมาย
+// ============================================================
+
+/**
+ * splitMultiCompany_ — [V6.0.013 P1.3] Split concatenated company names
+ *   "บจ.พี.ณัฐชัย - บจ.แม็คคานิคส์ เอ็นจิเนียริ่ง เซอร์" → "บจ.พี.ณัฐชัย"
+ *   "บจ.พี.ณัฐชัย (บริษัท มัตซุย (เอเซีย) จำกัด)" → "บจ.พี.ณัฐชัย"
+ *   Keeps the FIRST company (primary), discards the second (secondary).
+ * @param {string} text — input text
+ * @return {string} cleaned text with only the primary company
+ * @private
+ */
+function splitMultiCompany_(text) {
+  const input = String(text || '').trim();
+  if (!input) return input;
+
+  // Pattern 1: " - " followed by company prefix
+  //   "บจ.พี.ณัฐชัย - บจ.แม็คคานิคส์" → "บจ.พี.ณัฐชัย"
+  const dashSplit = input.split(/\s+-\s*(?=บจ\.|บจก\.|บริษัท|หจก\.|บ\.)/);
+  if (dashSplit.length > 1) {
+    return dashSplit[0].trim();
+  }
+
+  // Pattern 2: "(" followed by company prefix (but NOT branch number)
+  //   "บจ.พี.ณัฐชัย (บริษัท มัตซุย (เอเซีย) จำกัด)" → "บจ.พี.ณัฐชัย"
+  //   BUT keep "(สาขา 51" if it wasn't caught by extractBranchNumber_
+  const parenMatch = input.match(/^(.+?)\s*\((?=บจ\.|บจก\.|บริษัท|หจก\.|บ\.)/);
+  if (parenMatch) {
+    return parenMatch[1].trim();
+  }
+
+  return input;
 }
