@@ -1,0 +1,13 @@
+สรุปผลงานครบถ้วนครับ ทั้ง 5 ไฟล์ (2 เอกสาร .md + 3 กราฟ) ตรงตามหัวข้อที่วางแผนไว้ — โดยเฉพาะจุดที่น่าสนใจคือข้อเสนอแนะข้อ 1 (Phonetic Matching) กับข้อ 3 (3-Zone Threshold) นี่ตรงกับสิ่งที่ LMDS v6.0.006 เพิ่งอิมพลีเมนต์ไปแล้ว (Thai Double Metaphone + Dynamic Weighting) พอดี — เป็นสัญญาณที่ดีว่างานวิจัยสอดคล้องกับทิศทางที่โค้ดจริงกำลังไป
+
+ก่อนจะไปต่อ อยากถามว่าต้องการให้ผมทำอะไรกับเอกสารชุดนี้ครับ
+ทำเสร็จแล้วครับ — เอกสารนี้เจาะลึก 4 เรื่องที่ต่อยอดจากรายงานฉบับแรก:
+
+1. **Fellegi-Sunter model** — ทฤษฎีเบื้องหลัง weighted scoring ที่ LMDS ใช้อยู่ พร้อมประเด็นเรื่องการจัดการฟิลด์ว่าง (missing data) ที่ Dynamic Weighting ควรตรวจสอบ
+2. **Cluster-level deduplication** — ส่วนนี้เชื่อมตรงกับบั๊ก HIGH ที่ค้างอยู่ (`createDestination()` skip dedup check) พร้อมข้อเสนอ `safeCreateDestination_()` เป็น single point of entry
+3. **Human-in-the-loop review queue** — มีตัวเลขอ้างอิงจริง (escalation rate 10-15%) ให้เทียบกับ 3-Zone Threshold ที่มีอยู่แล้ว
+4. **Data Quality framework 2026** — แนวคิด data contract ที่แปลงเป็น schema-validation function ได้โดยไม่ต้องเปลี่ยนสถาปัตยกรรม SCHEMA/DATA_IDX เดิม
+
+ตารางสรุปท้ายเอกสารเรียงตาม impact/effort ไว้ให้แล้ว — อันดับ 1 (centralize dedup-check) ตรงกับบั๊กที่ auditor ทุกรอบรายงานมาตลอด จึงน่าจะเป็นจุดเริ่มที่คุ้มค่าที่สุด
+
+ต้องการให้ผมลงมือแก้บั๊ก dedup ตัวนี้เลยไหมครับ (อ่านโค้ดจริงใน `10_MatchEngine.gs` ก่อนแล้วเสนอ patch) หรืออยากให้ต่อยอดวิจัยหัวข้อไหนเพิ่มก่อน
