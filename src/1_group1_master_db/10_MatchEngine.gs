@@ -111,6 +111,21 @@ function runMatchEngine() {
   //   4. finalizeMatchEngine_      — SECTION D: Final flush + cleanup + report
   // Preserve Behavior 100% — same lock, same loop order, same flush triggers, same stats
 
+  // [V6.0.012 FIX] Clear any stale STOP SIGNAL before starting — prevents
+  //   pipeline from immediately stopping at row 0 if a previous Emergency Stop
+  //   signal was left behind (e.g., from a crashed or manually aborted run).
+  //   This is a common issue: user clicks Emergency Stop → pipeline stops →
+  //   signal stays in PropertiesService → next run stops at row 0.
+  if (typeof clearPipelineStopSignal_ === 'function') {
+    clearPipelineStopSignal_();
+  } else {
+    try {
+      PropertiesService.getScriptProperties().deleteProperty('PIPELINE_STOP_REQUESTED');
+    } catch (e) {
+      // ignore
+    }
+  }
+
   const setup = acquireMatchEngineLock_();
   if (!setup) return;
 
