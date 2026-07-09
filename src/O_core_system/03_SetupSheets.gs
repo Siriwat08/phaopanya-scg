@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.011
+ * VERSION: 6.0.012
  * FILE: 03_SetupSheets.gs
  * LMDS V5.5 — Sheet Setup & Configuration Service
  * ===================================================
@@ -195,6 +195,19 @@ function setupSystemSheets_(ss) {
   //     changed_by, changed_at, change_reason, ip_address)
   //   Append-only pattern: ไม่มี operation อื่นลบ row (ยกเว้น cleanupAuditTrail_UI retention pruning)
   createSheetIfMissing_(ss, SHEET.SYS_AUDIT_TRAIL, getSheetHeaders(SHEET.SYS_AUDIT_TRAIL));
+
+  // [V6.0.012 P1.6] PIPELINE_RUN_LOG — stats per pipeline run
+  //   สร้างชีตถ้ายังไม่มี — ใช้สำหรับ before/after comparison เมื่อปรับ matching algorithm
+  //   12 columns (run_id, run_at, app_version, total_rows, processed, auto_matched,
+  //     created_new, queued_review, errors, match_rate, elapsed_sec, notes)
+  //   Append-only pattern: ไม่มี auto-prune (manual cleanup only)
+  createSheetIfMissing_(ss, SHEET.PIPELINE_RUN_LOG, getSheetHeaders(SHEET.PIPELINE_RUN_LOG));
+
+  // [V6.0.012 P1.7] TEST_MATCH_RESULTS — Dry Run output sheet
+  //   สร้างชีตถ้ายังไม่มี — ใช้สำหรับเขียนผลลัพธ์ Dry Run โดยไม่บันทึกลง master sheets
+  //   8 columns (source_row, invoice_no, person_name, place_name, action, reason, confidence, evidence)
+  //   Replace pattern: clear ข้อมูลเก่าก่อนเขียนใหม่ทุกครั้ง
+  createSheetIfMissing_(ss, SHEET.TEST_MATCH_RESULTS, getSheetHeaders(SHEET.TEST_MATCH_RESULTS));
 
   // เพิ่มค่า Config เริ่มต้น
   setupDefaultConfig_(ss);
