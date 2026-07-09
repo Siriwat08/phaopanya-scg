@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.013
+ * VERSION: 6.0.014
  * FILE: 02_Schema.gs
  * LMDS V5.5 — Sheet Schema Definitions
  * ===================================================
@@ -95,7 +95,12 @@ const SCHEMA = Object.freeze({
     'master_uuid', // [13]
     // [V6.0.001] Phonetic keys (Double Metaphone Thai) — used by MatchEngine for fuzzy place match
     'phonetic_primary', // [14]
-    'phonetic_secondary' // [15]
+    'phonetic_secondary', // [15]
+    // [V6.0.014] Reverse geocode columns — store [24] data alongside [18]
+    //   canonical_name / normalized_name above keep [18] (raw SCG address) per REVERT of V6.0.013.
+    //   These new columns store [24] (reverse geocode from GPS) for future matching use.
+    'canonical_reverse_geocode', // [16] raw [24] from SOURCE
+    'normalized_reverse_geocode' // [17] normalized [24]
   ],
 
   M_PLACE_ALIAS: [

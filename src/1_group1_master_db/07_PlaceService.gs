@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.013
+ * VERSION: 6.0.014
  * FILE: 07_PlaceService.gs
  * LMDS V5.5 — Place Master Service
  * ===================================================
@@ -679,7 +679,25 @@ function scorePlaceCandidate(queryPlace, candidate, srcProvince) {
 // SECTION 5: CRUD
 // ============================================================
 
-function createPlace(normResult, province, district, subDistrict, postcode) {
+/**
+ * createPlace — สร้าง Place ใหม่ใน M_PLACE
+ * [V6.0.014] REVERT V6.0.013 — canonical_name / normalized_name กลับมาใช้ [18] (rawPlaceName)
+ *   เป็น primary input อีกครั้ง (normResult.cleanPlace ที่ผ่านการ normalize แล้ว)
+ *   ส่วน [24] (reverse geocode) ถูกเก็บแยกใน canonical_reverse_geocode / normalized_reverse_geocode
+ *   เพื่อใช้สำหรับ matching ในอนาคต
+ * [V6.0.014] เพิ่มพารามิเตอร์ reverseGeocodeAddress (optional, default '') — เก็บ raw [24]
+ *
+ * @param {object} normResult - ผลลัพธ์จาก normalizePlaceName(srcObj.rawPlaceName)
+ * @param {string} province
+ * @param {string} district
+ * @param {string} subDistrict
+ * @param {string} postcode
+ * @param {string} [reverseGeocodeAddress] - raw [24] from SOURCE (ชื่อที่อยู่จาก_LatLong)
+ *   ใช้สำหรับเก็บใน canonical_reverse_geocode (col 16) + normalized_reverse_geocode (col 17)
+ *   ถ้าไม่ส่ง (undefined) → ใช้ '' (backward compat)
+ * @return {string|null} placeId หรือ null ถ้าล้มเหลว
+ */
+function createPlace(normResult, province, district, subDistrict, postcode, reverseGeocodeAddress) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET.M_PLACE);
@@ -698,29 +716,32 @@ function createPlace(normResult, province, district, subDistrict, postcode) {
         ? buildThaiDoubleMetaphone(normResult.cleanPlace)
         : { primary: '', secondary: '' };
 
-    // [FIX V6.0.005 BUG-DUPLICATE-PLACE] ใช้ cleanPlace เป็น canonical ถ้า fullAddress
-    //   เป็นเพียงชื่อเขต/จังหวัด (ไม่มีชื่อสถานที่เฉพาะ)
-    //   สาเหตุ: fullAddress จาก geo enrichment อาจเป็น "เขตบางเขน กรุงเทพมหานคร"
-    //   ทำให้ place นี้ match กับทุกที่อยู่ในเขตบางเขน → false match
-    //   วิธีแก้: ถ้า fullAddress ขึ้นต้นด้วย เขต/อำเภอ/ตำบล/แขวง หรือสั้นกว่า 15 ตัวอักษร
-    //   → ใช้ cleanPlace แทน (เพราะ cleanPlace มาจาก rawPlace ที่มีชื่อสถานที่เฉพาะ)
-    let canonicalName = normResult.fullAddress || normResult.cleanPlace;
-    const checkFull = String(canonicalName || '').trim();
-    const isDistrictLevel =
-      checkFull.startsWith('เขต') ||
-      checkFull.startsWith('อำเภอ') ||
-      checkFull.startsWith('ตำบล') ||
-      checkFull.startsWith('แขวง');
-    const isProvinceOnly =
-      checkFull.length <= 15 && (checkFull.indexOf('จังหวัด') === 0 || checkFull.indexOf('กรุงเทพ') === 0);
-    if ((isDistrictLevel || isProvinceOnly) && normResult.cleanPlace) {
-      canonicalName = normResult.cleanPlace;
+    // [V6.0.014 REVERT V6.0.013] canonical_name ใช้ normResult.cleanPlace ([18]) เป็นหลัก
+    //   ไม่ใช้ normResult.fullAddress อีกต่อไป เพราะ fullAddress อาจมาจาก [24] (reverse geocode)
+    //   ซึ่งจะถูกเก็บแยกใน canonical_reverse_geocode (col 16) แทน
+    //   [V6.0.005 BUG-DUPLICATE-PLACE] district-level fallback ไม่จำเป็นอีกต่อไป
+    //     เพราะ canonical = cleanPlace เสมอ (ไม่มี fullAddress มาเป็น district-level แล้ว)
+    const canonicalName = normResult.cleanPlace || '';
+
+    // [V6.0.014] Reverse geocode data — store raw [24] + normalized [24]
+    //   ใช้สำหรับ matching ในอนาคต (เทียบ [24] กับ M_PLACE.canonical_reverse_geocode)
+    //   ถ้า reverseGeocodeAddress เป็น undefined (backward compat) → ใช้ '' ทั้งคู่
+    const rawReverseGeocode = String(reverseGeocodeAddress || '').trim();
+    let normalizedReverseGeocode = '';
+    if (rawReverseGeocode) {
+      try {
+        const rgNorm = typeof normalizePlaceName === 'function' ? normalizePlaceName(rawReverseGeocode) : null;
+        normalizedReverseGeocode = (rgNorm && rgNorm.cleanPlace) || rawReverseGeocode;
+      } catch (normErr) {
+        // [FIX R13-01 REVIEW15] Rule 13: defensive — fall back to raw if normalizer fails
+        normalizedReverseGeocode = rawReverseGeocode;
+      }
     }
 
     const newRow = [
       newId,
-      canonicalName, // [FIX V6.0.005] canonical name — ใช้ cleanPlace ถ้า fullAddress เป็นชื่อเขต/จังหวัด
-      normResult.cleanPlace, // Normalized
+      canonicalName, // [1] canonical — cleanPlace from [18] (REVERT V6.0.013)
+      normResult.cleanPlace, // [2] Normalized — cleanPlace from [18]
       normResult.placeType || 'other',
       subDistrict || '',
       district || '',
@@ -730,11 +751,14 @@ function createPlace(normResult, province, district, subDistrict, postcode) {
       now,
       1,
       APP_CONST.STATUS_ACTIVE,
-      allNotes.join(','), // [FIX v5.2.002] เก็บลง Note ห้ามทิ้ง
+      allNotes.join(','), // [12] [FIX v5.2.002] เก็บลง Note ห้ามทิ้ง
       universalMasterId,
       // [V6.0.001] Phonetic keys — used by MatchEngine for fuzzy place match
       phoneticKeys.primary,
-      phoneticKeys.secondary
+      phoneticKeys.secondary,
+      // [V6.0.014] Reverse geocode columns — store [24] alongside [18]
+      rawReverseGeocode, // [16] canonical_reverse_geocode — raw [24]
+      normalizedReverseGeocode // [17] normalized_reverse_geocode — normalized [24]
     ];
 
     // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
@@ -745,7 +769,11 @@ function createPlace(normResult, province, district, subDistrict, postcode) {
     // [REMOVED v5.4.001] ไม่เรียก createGlobalAlias() — M_ALIAS เขียนที่ autoEnrich เท่านั้น (Single Writer)
     // autoEnrichAliasesFromFactBatch_() จะเขียน canonical+variant เข้า M_ALIAS เอง
 
-    logDebug('PlaceService', `createPlace: ${newId} — ${normResult.cleanPlace}`);
+    logDebug(
+      'PlaceService',
+      `createPlace: ${newId} — ${normResult.cleanPlace}` +
+        (rawReverseGeocode ? ` (reverseGeocode: ${rawReverseGeocode.substring(0, 50)})` : '')
+    );
     return newId;
   } catch (err) {
     // [FIX B3 v5.5.002] เพิ่ม try-catch ตาม Rule 12

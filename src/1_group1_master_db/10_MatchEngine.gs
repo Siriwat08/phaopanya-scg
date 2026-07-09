@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.013
+ * VERSION: 6.0.014
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -1148,12 +1148,13 @@ function processOneRow(srcObj) {
   //   ถ้าชื่อซ้ำ + คะแนนใกล้กัน → ใช้ SoldToName เป็น tie-breaker
   const personResult = resolvePerson(srcObj.rawPersonName, null, { soldToName: srcObj.soldToName });
 
-  // [V6.0.013] เปลี่ยนจาก rawPlaceName [18] → rawAddress [24] เป็นตัวเทียบหลัก
-  //   เหตุผล: [18] ที่อยู่ดิบจาก SCG สั้น+มั่ว ("อ.พระประแดง จ.สมุทรปราการ" = 17 ตัวอักษร)
-  //   ส่วน [24] คือ reverse geocode จากพิกัดจริง สมบูรณ์กว่ามาก
-  //   เทียบ [24] กับ M_PLACE.canonical_name → score สูงขึ้น → match rate ดีขึ้น
+  // [V6.0.014 REVERT V6.0.013] [18] (rawPlaceName) คือ primary place name อีกครั้ง
+  //   เหตุผล: [24] (rawAddress = reverse geocode) จะถูกเก็บแยกใน M_PLACE คอลัมน์
+  //   canonical_reverse_geocode / normalized_reverse_geocode (V6.0.014) สำหรับ matching ในอนาคต
+  //   ส่วน canonical_name / normalized_name ยังคงเก็บ [18] เพื่อรักษา behavior เดิม
+  //   ถ้า rawPlaceName ว่าง → fallback ไปใช้ rawAddress เพื่อไม่ให้ resolvePlace พัง
   //   [18] ยังเก็บใน srcObj.scgAddress สำหรับ FACT_DELIVERY (ดูข้อมูลดิบได้)
-  const placeResult = resolvePlace(srcObj.rawAddress, srcObj.rawAddress || '');
+  const placeResult = resolvePlace(srcObj.rawPlaceName || srcObj.rawAddress, srcObj.rawAddress || '');
 
   const geoResult = resolveGeo(srcObj.rawLat, srcObj.rawLng);
 
@@ -1655,8 +1656,19 @@ function handleCreateNew_(srcObj, decision, personResult, placeResult, geoId, ge
   }
   if (!placeId && placeResult.normResult) {
     const placeNorm = placeResult.normResult || {};
-    placeNorm.fullAddress = srcObj.rawAddress || srcObj.rawPlaceName || geoEnrich.fullAddress;
-    placeId = createPlace(placeNorm, geoEnrich.province, geoEnrich.district, geoEnrich.subDistrict, geoEnrich.postcode);
+    // [V6.0.014 REVERT V6.0.013] ไม่ override placeNorm.fullAddress เป็น [24] อีกต่อไป
+    //   เหตุผล: createPlace (V6.0.014) ใช้ normResult.cleanPlace เป็น canonical_name เสมอ
+    //   ไม่ใช้ fullAddress อีก → ไม่จำเป็นต้อง set fullAddress ที่นี่
+    //   [24] (rawAddress) จะถูกส่งผ่าน reverseGeocodeAddress parameter แยก ให้ createPlace
+    //   เก็บใน canonical_reverse_geocode / normalized_reverse_geocode (cols 16/17) แทน
+    placeId = createPlace(
+      placeNorm,
+      geoEnrich.province,
+      geoEnrich.district,
+      geoEnrich.subDistrict,
+      geoEnrich.postcode,
+      srcObj.rawAddress
+    );
     // [FIX CRIT-005] เพิ่ม Place ใหม่เข้า alias enrichment context — ป้องกัน stale cache
     if (placeId) {
       const plUuid = typeof convertPlaceIdToUuid === 'function' ? convertPlaceIdToUuid(placeId) : null;
@@ -2799,9 +2811,10 @@ function runTestMatchDryRun_(maxRows) {
     const srcObj = rowsToTest[i];
     try {
       // Mirror processOneRow() resolution calls — but stop BEFORE executeDecision()
-      // [V6.0.013] sync with processOneRow — use rawAddress [24] not rawPlaceName [18]
+      // [V6.0.014 REVERT V6.0.013] sync with processOneRow — use rawPlaceName [18] as primary
+      //   (with fallback to rawAddress [24]) — see processOneRow comment for full rationale
       const personResult = resolvePerson(srcObj.rawPersonName, null, { soldToName: srcObj.soldToName });
-      const placeResult = resolvePlace(srcObj.rawAddress, srcObj.rawAddress || '');
+      const placeResult = resolvePlace(srcObj.rawPlaceName || srcObj.rawAddress, srcObj.rawAddress || '');
       const geoResult = resolveGeo(srcObj.rawLat, srcObj.rawLng);
 
       // [V6.0.002] Tie-breaker — same as processOneRow (mirror logic for accuracy)
