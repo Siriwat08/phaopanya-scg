@@ -61,8 +61,9 @@
 // SECTION 1: onOpen Trigger
 // ============================================================
 
-function onOpen() {
+function onOpen(e) {
   // [ADD v003] ตรวจ Config ทันทีที่เปิด Spreadsheet
+  // [V6.0.012] Accept optional event parameter `e` (used by onInstall delegation)
   try {
     validateConfig();
   } catch (cfgErr) {
