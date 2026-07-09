@@ -135,14 +135,10 @@ function getAllSourceRows() {
     // [REFACTOR-06] RAM cache ก่อน (เร็วสุด, หายเมื่อ execution จบ)
     if (_SOURCE_ROWS_RAM_CACHE) return _SOURCE_ROWS_RAM_CACHE;
 
-    const cache = CacheService.getScriptCache();
-    // ลองอ่านจาก chunked cache
-    const cached = loadSourceRowsFromCache_(cache);
-
-    if (cached) {
-      _SOURCE_ROWS_RAM_CACHE = cached;
-      return cached;
-    }
+    // [V6.0.013b] ไม่ใช้ CacheService สำหรับ SOURCE_ROWS เพื่อป้องกัน stale cache
+    //   ปัญหา: cache ค้างข้อมูลเก่าที่ยังไม่ได้กรอง REVIEW ออก → แถวที่มี REVIEW ถูกประมวลผลซ้ำ
+    //   แก้: อ่านจาก sheet ตรงทุกครั้ง (ช้ากว่าเล็กน้อย แต่ถูกต้อง 100%)
+    //   CacheService ยังใช้สำหรับ PROCESSED_INVOICES (ด้านล่าง) — ไม่กระทบ
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const srcSheet = ss.getSheetByName(SHEET.SOURCE);
@@ -162,11 +158,10 @@ function getAllSourceRows() {
       })
       .map(({ row, sourceRow }) => buildSourceObj_(row, sourceRow));
 
-    // บันทึกล RAM cache
+    // บันทึกล RAM cache (เฉพาะ execution ปัจจุบัน)
     _SOURCE_ROWS_RAM_CACHE = result;
 
-    // บันทึกลง CacheService ด้วย (สำหรับ execution ถัดไป)
-    saveSourceRowsToCache_(result);
+    // [V6.0.013b] ไม่บันทึกลง CacheService อีก — ป้องกัน stale cache ที่ทำให้ประมวลผลซ้ำ
 
     return result;
   } catch (e) {
