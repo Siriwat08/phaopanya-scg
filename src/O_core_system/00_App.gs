@@ -1438,7 +1438,6 @@ function runTestMatchDryRunForceAll_UI() {
  */
 function analyzeRule5PlaceOnlyImpact_UI() {
   try {
-    const ui = SpreadsheetApp.getUi();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET.TEST_MATCH_RESULTS);
 
