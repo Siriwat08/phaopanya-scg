@@ -1333,8 +1333,7 @@ function analyzeRule5PlaceOnlyImpact_UI() {
 
     if (!sheet || sheet.getLastRow() < 2) {
       safeUiAlert_(
-        'ℹ️ ไม่มีข้อมูลใน TEST_MATCH_RESULTS\n\n' +
-          'กรุณารัน "🧪 [V6] Test Match (Dry Run)" ก่อน แล้วค่อยเรียกเมนูนี้'
+        'ℹ️ ไม่มีข้อมูลใน TEST_MATCH_RESULTS\n\n' + 'กรุณารัน "🧪 [V6] Test Match (Dry Run)" ก่อน แล้วค่อยเรียกเมนูนี้'
       );
       return;
     }
@@ -1418,7 +1417,9 @@ function analyzeRule5PlaceOnlyImpact_UI() {
     if (v6015PlaceOnly > 0) {
       lines.push('─── ตัวอย่างแถวที่จะถูก downgrade (สูงสุด 10) ───');
       affectedRows.forEach((r) => {
-        lines.push('• Row ' + r.sourceRow + ' | conf=' + r.confidence + ' | name="' + r.person + '" | place="' + r.place + '"');
+        lines.push(
+          '• Row ' + r.sourceRow + ' | conf=' + r.confidence + ' | name="' + r.person + '" | place="' + r.place + '"'
+        );
       });
       lines.push('');
       lines.push('📝 คำอธิบาย: แถวเหล่านี้ใน V6.0.015 match ด้วย geo+place อย่างเดียว (ไม่มี person)');

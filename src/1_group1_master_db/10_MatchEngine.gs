@@ -1537,7 +1537,7 @@ function calculateWeightedScore(srcObj, personResult, placeResult, geoResult) {
   const placeScore = (placeResult && placeResult.confidence) || 0;
 
   // [V6.0.016] New base weights — name primary, geo reduced (overlaps with [24] in place)
-  const w = calcDynamicWeights_({ geo: 0.35, person: 0.45, place: 0.20 }, srcObj, personResult);
+  const w = calcDynamicWeights_({ geo: 0.35, person: 0.45, place: 0.2 }, srcObj, personResult);
 
   const score = Math.round(geoScore * w.geo + personScore * w.person + placeScore * w.place);
   return Math.min(100, Math.max(0, score));
