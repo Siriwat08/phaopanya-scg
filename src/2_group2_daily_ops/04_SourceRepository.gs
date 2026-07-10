@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.016
+ * VERSION: 6.0.017
  * FILE: 04_SourceRepository.gs
  * LMDS V5.5 — Source Data Repository
  * ===================================================
@@ -198,6 +198,44 @@ function getUnprocessedRows() {
   }
 
   return unprocessed;
+}
+
+/**
+ * getAllSourceRowsForceAll — [V6.0.017] ดึง Source rows ทั้งหมด โดยข้าม SYNC_STATUS filter
+ *
+ * ใช้สำหรับ Dry Run เพื่อทดสอบ algorithm ใหม่ ๆ ซ้ำกับข้อมูลที่ processed แล้ว
+ * โดยไม่ต้องรีเซ็ต SYNC_STATUS ของแถวจริง
+ *
+ * ความแตกต่างจาก getAllSourceRows():
+ *   - ข้าม filter `sync !== SUCCESS && sync !== REVIEW`
+ *   - ข้าม getProcessedInvoiceSet_ check (ทำให้แถวที่อยู่ใน FACT_DELIVERY แล้วก็ถูก test ซ้ำได้)
+ *   - ไม่ update sync status (ปลอดภัย — ไม่แตะข้อมูลจริง)
+ *
+ * @return {Array} Array ของ Source Objects (กรองเฉพาะ row ที่ไม่มี INVOICE_NO ออก)
+ */
+function getAllSourceRowsForceAll() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const srcSheet = ss.getSheetByName(SHEET.SOURCE);
+    if (!srcSheet || srcSheet.getLastRow() < 2) return [];
+
+    const colsToRead = Math.min(SRC_READ_COLS, srcSheet.getLastColumn());
+    const totalRows = srcSheet.getLastRow() - 1;
+    const allData = srcSheet.getRange(2, 1, totalRows, colsToRead).getValues();
+
+    // [V6.0.017] กรองเฉพาะ row ที่ไม่มี INVOICE_NO ออก (row ว่าง)
+    //   ไม่กรอง SYNC_STATUS — ให้ทุกแถว (SUCCESS / REVIEW / ว่าง) ถูก test ได้
+    const result = allData
+      .map((row, i) => ({ row, sourceRow: i + 2 }))
+      .filter(({ row }) => row[SRC_IDX.INVOICE_NO])
+      .map(({ row, sourceRow }) => buildSourceObj_(row, sourceRow));
+
+    logInfo('SourceRepo', `getAllSourceRowsForceAll: โหลด ${result.length} แถว (ข้าม SYNC_STATUS filter)`);
+    return result;
+  } catch (e) {
+    logError('SourceRepo', 'getAllSourceRowsForceAll ล้มเหลว: ' + e.message, e);
+    return [];
+  }
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.016
+ * VERSION: 6.0.017
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -2870,19 +2870,36 @@ function reprocCreateDestinationForReview_(personId, placeId, geoId, rawLat, raw
  *   Use case: compare match rates before/after tweaking matching algorithm
  *   without polluting production data.
  *
+ * [V6.0.017] เพิ่ม param forceAllRows (optional, default false)
+ *   - false (default): ใช้ loadSourceBatch_() — กรองเฉพาะ unprocessed rows (เหมือนเดิม)
+ *   - true: ใช้ getAllSourceRowsForceAll() — ข้าม SYNC_STATUS filter เพื่อทดสอบซ้ำกับข้อมูลที่ processed แล้ว
+ *     ใช้เพื่อเปรียบเทียบ algorithm เก่า vs ใหม่ บนข้อมูลชุดเดิมโดยไม่ต้องรีเซ็ต SYNC_STATUS
+ *
  * @param {number} [maxRows=100] - max rows to test (default 100)
+ * @param {boolean} [forceAllRows=false] - [V6.0.017] ถ้า true → ข้าม SYNC_STATUS filter (ทดสอบได้ซ้ำ)
  * @return {{ tested: number, totalRows: number, autoMatched: number,
  *            createdNew: number, queuedReview: number, errors: number,
- *            matchRate: number, elapsedSec: number }}
+ *            matchRate: number, elapsedSec: number, forceAllRows: boolean }}
  */
-function runTestMatchDryRun_(maxRows) {
+function runTestMatchDryRun_(maxRows, forceAllRows) {
   maxRows = maxRows || 100;
+  forceAllRows = forceAllRows === true; // [V6.0.017] explicit boolean coercion
   const startTime = new Date();
 
-  // Load source rows (unprocessed only — same as runMatchEngine)
+  // Load source rows
   // [V6.0.012 P1.7] Reset cached state — same pattern as prepareMatchEngineContext_
   resetProcessingState_();
-  const allPendingRows = loadSourceBatch_();
+
+  // [V6.0.017] เลือก loader ตาม forceAllRows flag
+  //   - false: loadSourceBatch_() → getUnprocessedRows() → กรอง SYNC_STATUS + PROCESSED_INVOICES
+  //   - true:  getAllSourceRowsForceAll() → ข้ามทั้งคู่ (test ได้ทุกแถว)
+  let allPendingRows;
+  if (forceAllRows) {
+    allPendingRows = typeof getAllSourceRowsForceAll === 'function' ? getAllSourceRowsForceAll() : [];
+    logInfo('MatchEngine', 'runTestMatchDryRun_: forceAllRows=true — ข้าม SYNC_STATUS filter');
+  } else {
+    allPendingRows = loadSourceBatch_();
+  }
 
   if (allPendingRows.length === 0) {
     logInfo('MatchEngine', 'runTestMatchDryRun_: ไม่มีแถวที่ต้องประมวลผล');
@@ -2894,12 +2911,21 @@ function runTestMatchDryRun_(maxRows) {
       queuedReview: 0,
       errors: 0,
       matchRate: 0,
-      elapsedSec: 0
+      elapsedSec: 0,
+      forceAllRows: forceAllRows
     };
   }
 
   const rowsToTest = allPendingRows.slice(0, maxRows);
-  logInfo('MatchEngine', 'runTestMatchDryRun_: testing ' + rowsToTest.length + '/' + allPendingRows.length + ' rows');
+  logInfo(
+    'MatchEngine',
+    'runTestMatchDryRun_: testing ' +
+      rowsToTest.length +
+      '/' +
+      allPendingRows.length +
+      ' rows' +
+      (forceAllRows ? ' (forceAllRows=true)' : '')
+  );
 
   // Initialize counters
   let autoMatched = 0;
@@ -3033,6 +3059,7 @@ function runTestMatchDryRun_(maxRows) {
     queuedReview: queuedReview,
     errors: errors,
     matchRate: matchRate,
-    elapsedSec: elapsedSec
+    elapsedSec: elapsedSec,
+    forceAllRows: forceAllRows // [V6.0.017] expose mode in summary
   };
 }

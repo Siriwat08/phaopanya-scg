@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.016
+ * VERSION: 6.0.017
  * FILE: 00_App.gs
  * LMDS V5.5 — Application Entry Point & Menu Controller
  * ===================================================
@@ -88,6 +88,7 @@ function onOpen(e) {
         .addItem('Step 3 — Match Engine', 'runMatchEngine')
         .addSeparator()
         .addItem('🧪 [V6] Test Match (Dry Run)', 'runTestMatchDryRun_UI')
+        .addItem('🧪 [V6.0.017] Dry Run — Force All Rows', 'runTestMatchDryRunForceAll_UI')
         .addItem('🔍 [V6.0.016] วิเคราะห์ Rule 5 Place-Only Impact', 'analyzeRule5PlaceOnlyImpact_UI')
         .addSeparator()
         .addItem('🛑 [V6] หยุด Pipeline (Emergency Stop)', 'requestPipelineStop_UI')
@@ -1306,6 +1307,116 @@ function runTestMatchDryRun_UI() {
     safeUiAlert_(lines.join('\n'));
   } catch (e) {
     logError('App', 'runTestMatchDryRun_UI failed: ' + e.message, e);
+    safeUiAlert_('❌ ล้มเหลว: ' + e.message);
+  }
+}
+
+// ============================================================
+// SECTION: [V6.0.017] Dry Run — Force All Rows (skip SYNC_STATUS filter)
+// ============================================================
+
+/**
+ * runTestMatchDryRunForceAll_UI — [V6.0.017] Menu wrapper for "force all rows" dry-run
+ *
+ *   ความแตกต่างจาก runTestMatchDryRun_UI ปกติ:
+ *   - ปกติ: โหลดเฉพาะ "unprocessed" rows (SYNC_STATUS ว่าง หรือไม่ใช่ SUCCESS/REVIEW)
+ *   - Force All: โหลดทุกแถวที่มี INVOICE_NO (ข้าม SYNC_STATUS filter ทั้งหมด)
+ *
+ *   ใช้เมื่อ: ทดสอบ algorithm ใหม่ซ้ำกับข้อมูลที่ processed แล้ว
+ *   โดยไม่ต้องรีเซ็ต SYNC_STATUS ของแถวจริงใน SOURCE sheet
+ *
+ *   Safe: ไม่กระทบข้อมูลจริง เหมือน Dry Run ปกติ — ไม่เขียน master sheets
+ *         ไม่อัปเดต SYNC_STATUS ของแถวที่ทดสอบ
+ *
+ *   ขั้นตอน:
+ *     1. ถามจำนวน rows ที่ต้องการทดสอบ (default 100, max 500)
+ *     2. เรียก runTestMatchDryRun_(maxRows, true) — forceAllRows=true
+ *     3. แสดงสรุปผล
+ */
+function runTestMatchDryRunForceAll_UI() {
+  try {
+    // RBAC: require admin to run dry-run (consistency with runFullPipeline)
+    if (typeof requirePermission_ === 'function') requirePermission_('action:run_pipeline');
+
+    const ui = SpreadsheetApp.getUi();
+
+    // [V6.0.017] ถามจำนวน rows ก่อน — default 100, max 500
+    //   เพราะ Force All อาจโหลดหลักแถว → ใช้เวลานาน (100 rows ≈ 1-2 นาที)
+    const rowsInput = ui.prompt(
+      '🧪 [V6.0.017] Dry Run — Force All Rows',
+      'ทดสอบ matching algorithm บนข้อมูลที่ processed แล้ว โดยข้าม SYNC_STATUS filter\n\n' +
+        '⚠️  ใช้เวลานานกว่า Dry Run ปกติ (~1s/row)\n\n' +
+        'กรุณาระบุจำนวนแถวที่ต้องการทดสอบ (1-500):',
+      ui.ButtonSet.OK_CANCEL
+    );
+    if (rowsInput.getSelectedButton() !== ui.Button.OK) {
+      safeUiAlert_('ℹ️ ยกเลิก — ไม่มีการรัน Dry Run');
+      return;
+    }
+
+    let maxRows = parseInt(rowsInput.getResponseText(), 10);
+    if (isNaN(maxRows) || maxRows < 1) {
+      safeUiAlert_('❌ จำนวนแถวไม่ถูกต้อง — ต้องเป็นเลข 1-500');
+      return;
+    }
+    if (maxRows > 500) {
+      maxRows = 500; // cap at 500 to avoid timeout (GAS 6 min limit)
+    }
+
+    const confirm = ui.alert(
+      '🧪 [V6.0.017] Dry Run — Force All Rows',
+      'รัน matching algorithm บนข้อมูลที่ processed แล้ว (ข้าม SYNC_STATUS filter)\n\n' +
+        'สิ่งที่จะทำ:\n' +
+        '• โหลด ' +
+        maxRows +
+        ' rows แรกจาก SOURCE (ทุกแถวที่มี INVOICE_NO)\n' +
+        '• สำหรับแต่ละ row: resolve + makeMatchDecision (NO executeDecision, NO writes)\n' +
+        '• เขียนผลลัพธ์ไป TEST_MATCH_RESULTS sheet (clear ของเก่าก่อน)\n' +
+        '• แสดงสรุป: X rows, Y auto-match, Z review, W create-new\n\n' +
+        '⚠️  ใช้เวลา ~' +
+        Math.ceil(maxRows * 1.5) +
+        's โดยประมาณ\n\n' +
+        'Safe: ไม่กระทบข้อมูลจริง — รันซ้ำได้\n\n' +
+        'ยืนยันการรัน Dry Run (Force All)?',
+      ui.ButtonSet.YES_NO
+    );
+    if (confirm !== ui.Button.YES) {
+      safeUiAlert_('ℹ️ ยกเลิก — ไม่มีการรัน Dry Run');
+      return;
+    }
+
+    if (typeof runTestMatchDryRun_ !== 'function') {
+      safeUiAlert_('❌ ไม่พบฟังก์ชัน runTestMatchDryRun_ — ตรวจสอบว่า 10_MatchEngine.gs โหลดแล้ว');
+      return;
+    }
+
+    SpreadsheetApp.getActiveSpreadsheet().toast('🧪 กำลังรัน Dry Run (Force All)...', APP_NAME, 60);
+
+    const summary = runTestMatchDryRun_(maxRows, true); // forceAllRows=true
+
+    const lines = [];
+    lines.push('🧪 [V6.0.017] Test Match (Dry Run — Force All Rows)\n');
+    lines.push('Mode: ข้าม SYNC_STATUS filter — ทดสอบทุกแถวที่มี INVOICE_NO');
+    lines.push('Rows tested: ' + summary.tested + ' / ' + summary.totalRows + ' (limit ' + maxRows + ')');
+    lines.push('Errors: ' + summary.errors);
+    lines.push('');
+    lines.push('─── Results ───');
+    lines.push('✅ AUTO_MATCH : ' + summary.autoMatched);
+    lines.push('🆕 CREATE_NEW : ' + summary.createdNew);
+    lines.push('👀 REVIEW     : ' + summary.queuedReview);
+    lines.push('');
+    lines.push('📊 Match rate: ' + summary.matchRate + '% (auto_match / tested)');
+    lines.push('⏱️  Elapsed: ' + summary.elapsedSec + 's');
+    lines.push('');
+    lines.push('ผลลัพธ์อยู่ในชีต "TEST_MATCH_RESULTS" — เปรียบเทียบก่อน/หลังเปลี่ยน algorithm ได้');
+    lines.push('');
+    lines.push('💡 เปรียบเทียบกับ Dry Run ปกติ (unprocessed only):');
+    lines.push('   ถ้า match rate เพิ่มขึ้น → algorithm ใหม่ช่วยแถวที่ processed แล้วด้วย');
+    lines.push('   ถ้า match rate เท่าเดิม → algorithm ใหม่ไม่มีผลเพิ่มเติม');
+
+    safeUiAlert_(lines.join('\n'));
+  } catch (e) {
+    logError('App', 'runTestMatchDryRunForceAll_UI failed: ' + e.message, e);
     safeUiAlert_('❌ ล้มเหลว: ' + e.message);
   }
 }
