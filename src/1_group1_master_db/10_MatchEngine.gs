@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.014
+ * VERSION: 6.0.015
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -1267,13 +1267,11 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
 
   // Rule 4: พบครบทั้ง 3 อย่างใน Master -> AUTO_MATCH (Full)
   if (isGeoInMaster && isPersonInMaster && isPlaceInMaster) {
-    const confidence = matchCalcFullScore_(
-      geoResult.confidence,
-      personResult.confidence,
-      placeResult.confidence,
-      srcObj,
-      personResult
-    );
+    // [V6.0.015 P2.2] Use calculateWeightedScore directly (was matchCalcFullScore_)
+    //   Both functions compute the same score now — but calculateWeightedScore is the
+    //   canonical implementation. matchCalcFullScore_ remains as a thin wrapper for
+    //   backward compatibility with any external callers.
+    const confidence = calculateWeightedScore(srcObj, personResult, placeResult, geoResult);
     return {
       action: 'AUTO_MATCH',
       reason: APP_CONST.MATCH_FULL,
@@ -1285,12 +1283,13 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
 
   // Rule 5: พบพิกัดใน Master + อย่างใดอย่างหนึ่ง (คน หรือ สถานที่) -> AUTO_MATCH (Partial)
   if (isGeoInMaster && (isPersonInMaster || isPlaceInMaster)) {
-    let confidence = matchCalcGeoAnchorScore_(
-      geoResult.confidence,
-      personResult.confidence,
-      placeResult.confidence,
-      isPersonInMaster
-    );
+    // [V6.0.015 P2.2] Use calculateWeightedScore directly (was matchCalcGeoAnchorScore_)
+    //   Zero out the missing half (person or place) so that only the matched entity
+    //   contributes to the score. Cap at 95 to preserve the pre-V6.0.015 behavior of
+    //   Rule 5 (geo anchor partial match should never reach 100).
+    const personResultForScore = isPersonInMaster ? personResult : { confidence: 0 };
+    const placeResultForScore = isPlaceInMaster ? placeResult : { confidence: 0 };
+    let confidence = Math.min(95, calculateWeightedScore(srcObj, personResultForScore, placeResultForScore, geoResult));
     let reason = APP_CONST.MATCH_GEO;
     let evidence = isPersonInMaster ? 'name|geo' : 'place|geo';
 
@@ -1478,9 +1477,46 @@ function calcDynamicWeights_(baseWeights, srcObj, personResult) {
 }
 
 /**
+ * calculateWeightedScore — [V6.0.015 P2.2] Single weighted score across geo/person/place
+ *   Replaces the binary per-rule scoring formulas (`matchCalcFullScore_` /
+ *   `matchCalcGeoAnchorScore_`) with a unified weighted approach. Both Rule 4
+ *   (Full Match) and Rule 5 (Geo Anchor) use this function so that confidence
+ *   is always computed with the same dynamic-weight logic, eliminating the
+ *   inconsistency that previously existed between the two rules.
+ *
+ * Weights (from V6.0.013):
+ *   - geo    : 0.60 (GPS is most reliable)
+ *   - person : 0.25 (name from SCG is messy)
+ *   - place  : 0.15 (address is short/messy)
+ *
+ * Dynamic adjustment via `calcDynamicWeights_`:
+ *   - If raw address is thin (< 10 chars) → shift 0.08 from place → person
+ *   - If person confidence is very high (>= 95, phone match) → shift 0.04 from place → person
+ *
+ * @param {Object} srcObj - source row (for dynamic weighting; pass null/undefined to skip)
+ * @param {Object} personResult - resolvePerson result (must have .confidence)
+ * @param {Object} placeResult - resolvePlace result (must have .confidence)
+ * @param {Object} geoResult - resolveGeo result (must have .confidence)
+ * @return {number} weighted confidence score (0-100, clamped)
+ */
+function calculateWeightedScore(srcObj, personResult, placeResult, geoResult) {
+  const geoScore = (geoResult && geoResult.confidence) || 0;
+  const personScore = (personResult && personResult.confidence) || 0;
+  const placeScore = (placeResult && placeResult.confidence) || 0;
+
+  // Dynamic weight adjustment (reuse existing calcDynamicWeights_)
+  const w = calcDynamicWeights_({ geo: 0.6, person: 0.25, place: 0.15 }, srcObj, personResult);
+
+  const score = Math.round(geoScore * w.geo + personScore * w.person + placeScore * w.place);
+  return Math.min(100, Math.max(0, score));
+}
+
+/**
  * matchCalcFullScore_ — [F-8] Confidence for Rule 4 (Full Match: geo + person + place)
  * [UPGRADE v5.5.046] รับ srcObj/personResult เพิ่มเติมเพื่อ Dynamic Weighting (2.2) — optional, backward compatible
- * Base Weight: geo=0.5, person=0.3, place=0.2
+ * [V6.0.015 P2.2] Delegates to `calculateWeightedScore` — backward compatible for existing callers
+ *   that pass (geoConf, personConf, placeConf, srcObj, personResult) directly.
+ * Base Weight: geo=0.60, person=0.25, place=0.15 (V6.0.013)
  * @param {number} geoConf - geoResult.confidence
  * @param {number} personConf - personResult.confidence
  * @param {number} placeConf - placeResult.confidence
@@ -1489,16 +1525,22 @@ function calcDynamicWeights_(baseWeights, srcObj, personResult) {
  * @returns {number} confidence (0-100)
  */
 function matchCalcFullScore_(geoConf, personConf, placeConf, srcObj, personResult) {
-  // [V6.0.013 P1.4] เปลี่ยน weight: geo 60% + person 25% + place 15%
-  //   เหตุผล: พิกัดแม่นยำที่สุด (GPS จริง) + ชื่อมั่วจาก SCG + ที่อยู่สั้น
-  //   เดิม: geo=0.5, person=0.3, place=0.2 (พิกัด 50%)
-  //   ใหม่: geo=0.6, person=0.25, place=0.15 (พิกัด 60% — เพราะพิกัดเชื่อถือได้ที่สุด)
-  const w = calcDynamicWeights_({ geo: 0.6, person: 0.25, place: 0.15 }, srcObj, personResult);
-  return Math.round(geoConf * w.geo + personConf * w.person + placeConf * w.place);
+  // [V6.0.015 P2.2] Delegate to unified calculateWeightedScore for consistency with Rule 5
+  return calculateWeightedScore(
+    srcObj,
+    personResult ? Object.assign({}, personResult, { confidence: personConf }) : { confidence: personConf },
+    { confidence: placeConf },
+    { confidence: geoConf }
+  );
 }
 
 /**
  * matchCalcGeoAnchorScore_ — [F-8] Confidence for Rule 5 (Geo Anchor: geo + one of person/place)
+ * [V6.0.015 P2.2] Delegates to `calculateWeightedScore` — backward compatible for existing callers
+ *   that pass (geoConf, personConf, placeConf, hasPerson) directly. The unused half (person or
+ *   place) is zeroed out so that only the matched entity contributes to the final score.
+ *   The result is capped at 95 to preserve the pre-V6.0.015 behavior of Rule 5 (geo anchor
+ *   partial match should never reach 100 since one signal is missing).
  * Weight: geo=0.60, person=0.25, place=0.15 (capped at 95)
  * @param {number} geoConf - geoResult.confidence
  * @param {number} personConf - personResult.confidence (0 if not found)
@@ -1507,10 +1549,15 @@ function matchCalcFullScore_(geoConf, personConf, placeConf, srcObj, personResul
  * @returns {number} confidence (0-95)
  */
 function matchCalcGeoAnchorScore_(geoConf, personConf, placeConf, hasPerson) {
-  return Math.min(
-    95,
-    Math.round(geoConf * 0.6 + (hasPerson ? personConf : 0) * 0.25 + (hasPerson ? 0 : placeConf) * 0.15)
+  const personScore = hasPerson ? personConf : 0;
+  const placeScore = hasPerson ? 0 : placeConf;
+  const raw = calculateWeightedScore(
+    null,
+    { confidence: personScore },
+    { confidence: placeScore },
+    { confidence: geoConf }
   );
+  return Math.min(95, raw);
 }
 
 // ============================================================
@@ -1652,6 +1699,28 @@ function handleCreateNew_(srcObj, decision, personResult, placeResult, geoId, ge
         personResult.canonical || '',
         personResult.normalized || ''
       );
+
+      // [V6.0.015 P2.5] Immediately store raw name as alias for faster matching
+      //   เดิม: alias ถูกสร้างที่ flush time โดย autoEnrichAliasesFromFactBatch_ เท่านั้น
+      //         ทำให้ row ถัดไปใน batch เดียวกัน (ที่มี SCG raw name ซ้ำ) ยังคงต้องเข้า
+      //         matching pipeline ใหม่ทั้งหมด → match rate ต่ำใน batch แรก
+      //   ใหม่: เก็บ alias ทันทีหลัง createPerson → row ถัดไปใน batch เดียวกันจะ match
+      //         ผ่าน M_ALIAS ได้ทันที (skip fuzzy matching)
+      //   Non-fatal: try-catch เพื่อไม่ให้ alias failure ทำลาย CREATE_NEW flow
+      //   Note: ใช้ srcObj.rawPersonName (SCG raw) ไม่ใช่ normResult.cleanName เพราะ
+      //         alias ต้องเก็บ "ชื่อที่เขียนผิด/สกปรก" ตาม design ของ M_ALIAS
+      if (typeof createGlobalAlias === 'function' && srcObj.rawPersonName) {
+        try {
+          const personUuid = typeof getPersonMasterUuid_ === 'function' ? getPersonMasterUuid_(personId) : pUuid;
+          if (personUuid) {
+            createGlobalAlias(personUuid, srcObj.rawPersonName, 'PERSON', 95, 'AUTO_ENRICH_FACT', '', '');
+          }
+        } catch (aliasErr) {
+          // [V6.0.015 P2.5] Non-fatal — don't break CREATE_NEW if alias creation fails
+          //   autoEnrichAliasesFromFactBatch_ จะเก็บ alias อีกครั้งที่ flush time อยู่แล้ว
+          logWarn('MatchEngine', 'handleCreateNew_: createGlobalAlias failed (non-fatal) — ' + aliasErr.message);
+        }
+      }
     }
   }
   if (!placeId && placeResult.normResult) {

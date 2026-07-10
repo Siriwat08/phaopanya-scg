@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.014
+ * VERSION: 6.0.015
  * FILE: 06_PersonService.gs
  * LMDS V5.5 — Person Master Service
  * ===================================================
@@ -21,6 +21,7 @@
  *     - 03_SetupSheets.gs     (logDebug, logWarn, logError)
  *     - 05_NormalizeService.gs (normalizePersonNameFull, normalizeForCompare)
  *     - 14_Utils.gs           (generateShortId, generateUUID, diceCoefficient, levenshteinDistance)
+ *     - 14_Utils.gs           (ensembleNameMatch [V6.0.015 P2.3] — used in calculateNameScore_)
  *   CALLS (Invokes):
  *     - resolveMasterUuidViaGlobalAlias() → 21_AliasService.gs (findPersonCandidates)
  *     - convertUuidToPersonId()           → 21_AliasService.gs (findPersonCandidates)
@@ -506,6 +507,12 @@ function scorePersonCandidate(queryName, candidate, queryPhone) {
  *   เพื่อให้ phone match branch สามารถตรวจ nameScore ก่อนตัดสินใจ return 95 ได้
  *   คืน raw rounded score (0-100) — ยังไม่ผ่าน SCORE_MIN_THRESHOLD check (caller จัดการเอง)
  *
+ * [V6.0.015 P2.3] Use ensembleNameMatch as PRIMARY scoring method
+ *   เดิม: diceScore * 0.5 + levScore * 0.3 + ratioScore * 0.2 (length-sensitive blend)
+ *   ใหม่: ensembleNameMatch (Jaro-Winkler 30% + Levenshtein 20% + Dice 20% + Phonetic 30%)
+ *   Backward compat: ถ้า ensembleNameMatch คืน 0 (เช่น ชื่อสั้นเกินไปที่ buildThaiDoubleMetaphone
+ *   จะ return empty) → ใช้สูตรเดิม (levScore/diceScore/ratioScore) เป็น fallback
+ *
  * Algorithm (เดิมจาก scorePersonCandidate):
  *   - Levenshtein distance → levScore (similarity ratio)
  *   - Dice coefficient (bigram overlap) → diceScore
@@ -519,6 +526,21 @@ function scorePersonCandidate(queryName, candidate, queryPhone) {
  * @private
  */
 function calculateNameScore_(nameA, nameB) {
+  // [V6.0.015 P2.3] Primary: ensembleNameMatch (combines Jaro-Winkler + Levenshtein + Dice + Phonetic)
+  //   Pass the raw normalized names — ensembleNameMatch handles its own normalization gracefully.
+  if (typeof ensembleNameMatch === 'function') {
+    try {
+      const ensembleScore = ensembleNameMatch(nameA, nameB);
+      if (ensembleScore > 0) return ensembleScore;
+    } catch (ensErr) {
+      // Non-fatal — fall back to old formula below
+      logDebug('PersonService', 'calculateNameScore_: ensembleNameMatch failed, using fallback — ' + ensErr.message);
+    }
+  }
+
+  // [V6.0.015 P2.3] Fallback: original dice/lev/ratio formula (used if ensemble returns 0 or throws)
+  //   เหตุผลที่ต้อง fallback: กรณีชื่อสั้นมาก (< 2 chars) ที่ buildThaiDoubleMetaphone จะ return empty
+  //   → phoneticScore = 0 → ensemble อาจคืน 0 ได้ แม้จะมี dice/lev อยู่บ้าง
   const levDist = levenshteinDistance(nameA, nameB);
   const maxLen = Math.max(nameA.length, nameB.length);
   const levScore = maxLen > 0 ? Math.max(0, (1 - levDist / maxLen) * 100) : 0;

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.014
+ * VERSION: 6.0.015
  * FILE: 14_Utils.gs
  * LMDS V5.5 — Utility Functions
  * ===================================================
@@ -35,7 +35,9 @@
  *   ┌──────────────────────────────────────────────┐
  *   │  String Similarity                           │
  *   │  ├─ levenshteinDistance (edit distance)       │
- *   │  └─ diceCoefficient / buildBigramSet_        │
+ *   │  ├─ diceCoefficient / buildBigramSet_        │
+ *   │  ├─ jaroWinklerDistance [V6.0.015 P2.1]       │
+ *   │  └─ ensembleNameMatch [V6.0.015 P2.3]         │
  *   │  GPS & Distance                              │
  *   │  ├─ haversineDistanceM (meters)              │
  *   │  ├─ haversineDistanceKm (kilometers)         │
@@ -126,6 +128,121 @@ function buildBigramSet_(str) {
     set.add(str.substring(i, i + 2));
   }
   return set;
+}
+
+/**
+ * jaroWinklerDistance — [V6.0.015 P2.1] Jaro-Winkler similarity for Thai names
+ *   Better than Levenshtein for names with typos at the END (prefix bonus)
+ *   because Thai names often share long common prefixes ("บริษัท", "นาย", etc.)
+ *   while differing only at the suffix (typo / abbreviation).
+ *
+ * Algorithm:
+ *   1. Compute Jaro similarity (matches + transpositions)
+ *   2. Apply Winkler prefix bonus: sim + l * p * (1 - sim)
+ *      - l = length of common prefix (max 4)
+ *      - p = prefix scale = 0.1 (standard Winkler constant)
+ *
+ * @param {string} s1 - first string (raw, will be coerced)
+ * @param {string} s2 - second string (raw, will be coerced)
+ * @return {number} similarity score 0-1 (1 = exact match)
+ */
+function jaroWinklerDistance(s1, s2) {
+  const str1 = String(s1 || '');
+  const str2 = String(s2 || '');
+  if (str1 === str2) return 1;
+  if (str1.length === 0 || str2.length === 0) return 0;
+
+  // Jaro core: count matching chars within match window = floor(max(len1, len2) / 2) - 1
+  const matchWindow = Math.floor(Math.max(str1.length, str2.length) / 2) - 1;
+  const safeWindow = Math.max(0, matchWindow);
+
+  const matches1 = new Array(str1.length).fill(false);
+  const matches2 = new Array(str2.length).fill(false);
+  let matchCount = 0;
+
+  for (let i = 0; i < str1.length; i++) {
+    const start = Math.max(0, i - safeWindow);
+    const end = Math.min(i + safeWindow + 1, str2.length);
+    for (let j = start; j < end; j++) {
+      if (matches2[j]) continue;
+      if (str1[i] !== str2[j]) continue;
+      matches1[i] = true;
+      matches2[j] = true;
+      matchCount++;
+      break;
+    }
+  }
+
+  // No matches → similarity = 0
+  if (matchCount === 0) return 0;
+
+  // Count transpositions (matched chars out of order, half-counted per Jaro def)
+  let transpositions = 0;
+  let k = 0;
+  for (let i = 0; i < str1.length; i++) {
+    if (!matches1[i]) continue;
+    while (!matches2[k]) k++;
+    if (str1[i] !== str2[k]) transpositions++;
+    k++;
+  }
+  transpositions = Math.floor(transpositions / 2);
+
+  const m = matchCount;
+  const jaro = (m / str1.length + m / str2.length + (m - transpositions) / m) / 3;
+
+  // Winkler prefix bonus — common prefix up to 4 chars
+  const maxPrefix = 4;
+  let prefixLen = 0;
+  while (prefixLen < maxPrefix && str1[prefixLen] === str2[prefixLen]) {
+    prefixLen++;
+  }
+
+  const winklerScale = 0.1; // standard Winkler prefix scale
+  return jaro + prefixLen * winklerScale * (1 - jaro);
+}
+
+/**
+ * ensembleNameMatch — [V6.0.015 P2.3] Combine 4 algorithms into a single name-matching score
+ *   Replaces the old `diceScore * 0.6 + levScore * 0.4` heuristic in scorePersonCandidate
+ *   with a weighted ensemble that is more robust to:
+ *     - Thai name typos at the end (Jaro-Winkler prefix bonus)
+ *     - General edit distance (Levenshtein)
+ *     - Token / bigram overlap (Dice coefficient)
+ *     - Thai ล/ร confusion + consonant-class collapse (Double Metaphone phonetic)
+ *
+ * Weights (sum = 1.0):
+ *   - Jaro-Winkler : 0.30 (prefix matches, very common in Thai names)
+ *   - Levenshtein  : 0.20 (general edit distance)
+ *   - Dice         : 0.20 (token/bigram overlap)
+ *   - Phonetic     : 0.30 (ล/ร + consonant-class confusion via Double Metaphone)
+ *
+ * @param {string} nameA - first name (raw — will be normalized via normalizeForCompare)
+ * @param {string} nameB - second name (raw — will be normalized via normalizeForCompare)
+ * @return {number} ensemble score 0-100 (rounded)
+ */
+function ensembleNameMatch(nameA, nameB) {
+  const normA = normalizeForCompare(nameA);
+  const normB = normalizeForCompare(nameB);
+  if (!normA || !normB) return 0;
+  if (normA === normB) return 100;
+
+  const jwScore = jaroWinklerDistance(normA, normB) * 100;
+  const levScore = (1 - levenshteinDistance(normA, normB) / Math.max(normA.length, normB.length)) * 100;
+  const diceScore = diceCoefficient(normA, normB) * 100;
+
+  // Phonetic: check if Double Metaphone keys match (handles ล/ร confusion)
+  let phoneticScore = 0;
+  const phA =
+    typeof buildThaiDoubleMetaphone === 'function' ? buildThaiDoubleMetaphone(nameA) : { primary: '', secondary: '' };
+  const phB =
+    typeof buildThaiDoubleMetaphone === 'function' ? buildThaiDoubleMetaphone(nameB) : { primary: '', secondary: '' };
+  if (phA.primary && phB.primary) {
+    if (phA.primary === phB.primary) phoneticScore = 100;
+    else if (phA.primary === phB.secondary || phA.secondary === phB.primary) phoneticScore = 90;
+    else if (phA.secondary && phB.secondary && phA.secondary === phB.secondary) phoneticScore = 80;
+  }
+
+  return Math.round(jwScore * 0.3 + levScore * 0.2 + diceScore * 0.2 + phoneticScore * 0.3);
 }
 
 /**
