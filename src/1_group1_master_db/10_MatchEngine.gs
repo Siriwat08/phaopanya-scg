@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.015
+ * VERSION: 6.0.016
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -1281,17 +1281,23 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
     };
   }
 
-  // Rule 5: พบพิกัดใน Master + อย่างใดอย่างหนึ่ง (คน หรือ สถานที่) -> AUTO_MATCH (Partial)
-  if (isGeoInMaster && (isPersonInMaster || isPlaceInMaster)) {
+  // Rule 5: [V6.0.016] พบพิกัดใน Master + **person** → AUTO_MATCH (Geo + Person anchor)
+  //   เดิม (V6.0.015): geo + (person OR place) → AUTO_MATCH
+  //   ใหม่ (V6.0.016): เฉพาะ geo + person เท่านั้นที่ AUTO_MATCH ได้
+  //   เหตุผล: [24] (reverse geocode) มาจากพิกัด [4] → place score ที่ใช้ [24]
+  //   ไม่ใช่หลักฐานอิสระจาก geo แล้ว การ auto-match จาก geo + place อย่างเดียว
+  //   เท่ากับนับ "พิกัดตรง" ซ้ำสองรอบ ไม่ใช่ 2 หลักฐานอิสระ — จึงเสี่ยงตอน
+  //   ห้าง/ปั๊มที่มีหลายร้านในพิกัดใกล้กัน (ร้าน A และร้าน B จะ match ผิด)
+  //   กรณี geo + place อย่างเดียว → ตก REVIEW เสมอ (ดูล่าง)
+  if (isGeoInMaster && isPersonInMaster) {
     // [V6.0.015 P2.2] Use calculateWeightedScore directly (was matchCalcGeoAnchorScore_)
-    //   Zero out the missing half (person or place) so that only the matched entity
-    //   contributes to the score. Cap at 95 to preserve the pre-V6.0.015 behavior of
-    //   Rule 5 (geo anchor partial match should never reach 100).
-    const personResultForScore = isPersonInMaster ? personResult : { confidence: 0 };
-    const placeResultForScore = isPlaceInMaster ? placeResult : { confidence: 0 };
-    let confidence = Math.min(95, calculateWeightedScore(srcObj, personResultForScore, placeResultForScore, geoResult));
+    //   Zero out the missing half (place) so that only geo + person contribute to score.
+    //   Cap at 95 to preserve the pre-V6.0.015 behavior of Rule 5 (geo anchor partial
+    //   match should never reach 100).
+    const placeResultForScore = { confidence: 0 }; // place ไม่ได้ match — ไม่มีใน Master
+    let confidence = Math.min(95, calculateWeightedScore(srcObj, personResult, placeResultForScore, geoResult));
     let reason = APP_CONST.MATCH_GEO;
-    let evidence = isPersonInMaster ? 'name|geo' : 'place|geo';
+    let evidence = 'name|geo';
 
     // [V6.0.012 P1.2] Geo-distance guard for Rule 5 (same pattern as Rule 6 in V6.0.011)
     //   เดิม Rule 5: AUTO_MATCH เมื่อ geo + (person|place) โดยไม่ดูระยะห่างพิกัด
@@ -1338,6 +1344,26 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
       return { action: 'REVIEW', reason: reason, confidence: confidence, priority: 1, evidence: evidence };
     }
     return { action: 'AUTO_MATCH', reason: reason, confidence: confidence, priority: 0, evidence: evidence };
+  }
+
+  // [V6.0.016] Rule 5b: geo + place อย่างเดียว (ไม่มี person ยืนยัน) → REVIEW เสมอ
+  //   เดิม: กรณีนี้เป็น AUTO_MATCH (Rule 5 evidence='place|geo')
+  //   ใหม่: ตก REVIEW เสมอ ไม่ว่า place score จะสูงแค่ไหน
+  //   เหตุผล: [24] มาจากพิกัด [4] → place + geo เป็นสัญญาณเดียวกัน ไม่ใช่ 2 หลักฐานอิสระ
+  //   ป้องกัน false-positive ในห้าง/ปั๊มที่มีหลายร้านในพิกัดเดียวกัน
+  //   ใช้ชื่อ [12] เป็นตัวยืนยันร้าน "ร้านไหน" เท่านั้น — place บอกแค่ "ตรงไหน"
+  if (isGeoInMaster && isPlaceInMaster && !isPersonInMaster) {
+    // คำนวณ confidence สำหรับนำไปแสดงใน Q_REVIEW (ปรับให้สูงสุด 70 = ต่ำกว่า THRESHOLD_AUTO)
+    //   เพื่อให้ reviewer เห็นว่า "ใกล้จะ match" แต่ต้องมีคนยืนยันชื่อร้านจริง
+    const personResultForScore = { confidence: 0 }; // ไม่มี person
+    const confidence = Math.min(70, calculateWeightedScore(srcObj, personResultForScore, placeResult, geoResult));
+    return {
+      action: 'REVIEW',
+      reason: 'GEO_ANCHOR_PLACE_ONLY_NO_NAME',
+      confidence: confidence,
+      priority: 1,
+      evidence: 'place|geo|no_person'
+    };
   }
 
   // Rule 6: มีความกำกวม (Fuzzy Match / Needs Review)
@@ -1484,10 +1510,16 @@ function calcDynamicWeights_(baseWeights, srcObj, personResult) {
  *   is always computed with the same dynamic-weight logic, eliminating the
  *   inconsistency that previously existed between the two rules.
  *
- * Weights (from V6.0.013):
- *   - geo    : 0.60 (GPS is most reliable)
- *   - person : 0.25 (name from SCG is messy)
- *   - place  : 0.15 (address is short/messy)
+ * [V6.0.016] Re-balanced weights — name [12] is now the primary decision maker.
+ *   Rationale: ที่อยู่ ([18]+[24]) กับพิกัด [4] ล้วนบอกแค่ "ตรงไหน" ไม่บอก "ร้านไหน"
+ *   เฉพาะชื่อ [12] เท่านั้นที่แยกร้านในห้าง/ปั๊มที่มีหลายร้านในพิกัดใกล้กันได้
+ *   นอกจากนี้ [24] มาจากพิกัด [4] อยู่แล้ว ไม่ใช่ข้อมูลอิสระ — ถ้าให้ geo กับ place
+ *   (ที่มาจาก [24]) น้ำหนักเต็ม ๆ พร้อมกัน จะเท่ากับนับสัญญาณเดียวซ้ำสองรอบ
+ *
+ * Weights (V6.0.016):
+ *   - person : 0.45 (PRIMARY — เพิ่มจาก 0.25 — ตัวเดียวที่บอก "ร้านไหน")
+ *   - geo    : 0.35 (ลดจาก 0.60 — ซ้ำกับ [24] ที่อยู่ใน place score)
+ *   - place  : 0.20 (เพิ่มจาก 0.15 — ตอนนี้ใช้ better of [18]/[24])
  *
  * Dynamic adjustment via `calcDynamicWeights_`:
  *   - If raw address is thin (< 10 chars) → shift 0.08 from place → person
@@ -1504,8 +1536,8 @@ function calculateWeightedScore(srcObj, personResult, placeResult, geoResult) {
   const personScore = (personResult && personResult.confidence) || 0;
   const placeScore = (placeResult && placeResult.confidence) || 0;
 
-  // Dynamic weight adjustment (reuse existing calcDynamicWeights_)
-  const w = calcDynamicWeights_({ geo: 0.6, person: 0.25, place: 0.15 }, srcObj, personResult);
+  // [V6.0.016] New base weights — name primary, geo reduced (overlaps with [24] in place)
+  const w = calcDynamicWeights_({ geo: 0.35, person: 0.45, place: 0.20 }, srcObj, personResult);
 
   const score = Math.round(geoScore * w.geo + personScore * w.person + placeScore * w.place);
   return Math.min(100, Math.max(0, score));
@@ -1516,7 +1548,7 @@ function calculateWeightedScore(srcObj, personResult, placeResult, geoResult) {
  * [UPGRADE v5.5.046] รับ srcObj/personResult เพิ่มเติมเพื่อ Dynamic Weighting (2.2) — optional, backward compatible
  * [V6.0.015 P2.2] Delegates to `calculateWeightedScore` — backward compatible for existing callers
  *   that pass (geoConf, personConf, placeConf, srcObj, personResult) directly.
- * Base Weight: geo=0.60, person=0.25, place=0.15 (V6.0.013)
+ * [V6.0.016] Base Weight: person=0.45, geo=0.35, place=0.20 (name primary, geo reduced)
  * @param {number} geoConf - geoResult.confidence
  * @param {number} personConf - personResult.confidence
  * @param {number} placeConf - placeResult.confidence
@@ -1541,7 +1573,7 @@ function matchCalcFullScore_(geoConf, personConf, placeConf, srcObj, personResul
  *   place) is zeroed out so that only the matched entity contributes to the final score.
  *   The result is capped at 95 to preserve the pre-V6.0.015 behavior of Rule 5 (geo anchor
  *   partial match should never reach 100 since one signal is missing).
- * Weight: geo=0.60, person=0.25, place=0.15 (capped at 95)
+ * [V6.0.016] Weight: person=0.45, geo=0.35, place=0.20 (capped at 95)
  * @param {number} geoConf - geoResult.confidence
  * @param {number} personConf - personResult.confidence (0 if not found)
  * @param {number} placeConf - placeResult.confidence (0 if not found)
@@ -1640,16 +1672,18 @@ function handleAutoMatch_(srcObj, decision, personId, placeId, geoId) {
   if (placeId) statsToDefer.placeIds.push(placeId);
   if (geoId) statsToDefer.geoIds.push(geoId);
 
-  // [FIX Phase-B #13] Flag incomplete destination for Rule 5 (geo + one of person/place)
-  //   Rule 5 (geo+person only OR geo+place only) สร้าง destination ที่ placeId='' หรือ personId='' (by design)
-  //   เดิม: ไม่มี flag บอกว่า incomplete → reviewer เห็น GEO_ANCHOR ธรรมดา ไม่รู้ว่าขาด place หรือ person
-  //   ตอนนี้: enrich reason/evidence ด้วย PARTIAL_MATCH_NO_PLACE / PARTIAL_MATCH_NO_PERSON
+  // [FIX Phase-B #13] Flag incomplete destination for Rule 5 (geo + person only — V6.0.016)
+  //   [V6.0.016] Rule 5 ตอนนี้ AUTO_MATCH เฉพาะ geo+person (place อาจตกไป REVIEW)
+  //   ดังนั้น partial ที่เข้าถึงตรงนี้คือ "มี person แต่ไม่มี place" เท่านั้น
+  //   Rule 5 (geo+person, place missing) สร้าง destination ที่ placeId='' (by design)
+  //   เดิม: ไม่มี flag บอกว่า incomplete → reviewer เห็น GEO_ANCHOR ธรรมดา ไม่รู้ว่าขาด place
+  //   ตอนนี้: enrich reason/evidence ด้วย PARTIAL_MATCH_NO_PLACE
   //   ไม่เปลี่ยน logic การทำงาน — แค่เพิ่ม flag ใน MATCH_REASON column ของ FACT_DELIVERY เพื่อ audit
   let enrichedDecision = decision;
   const hasPerson = !!personId;
   const hasPlace = !!placeId;
   if (hasPerson !== hasPlace) {
-    // XOR — only one of person/place present (Rule 5 partial)
+    // XOR — only one of person/place present (Rule 5 partial — geo+person, no place)
     enrichedDecision = Object.assign({}, decision);
     const flagStr = hasPerson ? 'PARTIAL_MATCH_NO_PLACE' : 'PARTIAL_MATCH_NO_PERSON';
     enrichedDecision.reason = (decision.reason || '') + '|' + flagStr;

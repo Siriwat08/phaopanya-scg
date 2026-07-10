@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.015
+ * VERSION: 6.0.016
  * FILE: 07_PlaceService.gs
  * LMDS V5.5 — Place Master Service
  * ===================================================
@@ -95,11 +95,25 @@ function resolvePlace(rawName, rawAddress) {
     return { placeId: null, status: 'NOT_FOUND', confidence: 0, normResult };
   }
 
+  // [V6.0.016] Normalize rawAddress ([24]) เพื่อใช้เป็น query ที่สองสำหรับ reverse-geocode matching
+  //   เปรียบเทียบ source [24] กับ M_PLACE.normalized_reverse_geocode แล้วเอาคะแนนที่สูงกว่า
+  //   ช่วยเคสที่ [18] สั้นเกินไป แต่ [24] สมบูรณ์กว่า (เพราะ [24] มาจาก GPS จริง)
+  let cleanReverseGeocode = '';
+  if (rawAddress && rawAddress.length >= 2) {
+    try {
+      const rgNorm = normalizePlaceName(rawAddress);
+      cleanReverseGeocode = (rgNorm && rgNorm.cleanPlace) || '';
+    } catch (normErr) {
+      cleanReverseGeocode = ''; // fallback — ใช้ [18]-only matching
+    }
+  }
+
   let bestPlace = null;
   let bestScore = 0;
 
   candidates.forEach((candidate) => {
-    const score = scorePlaceCandidate(cleanPlace, candidate, srcProvince);
+    // [V6.0.016] scorePlaceCandidate ตอนนี้คำนวณ 2 คะแนน (from [18], from [24]) แล้วเอา max
+    const score = scorePlaceCandidate(cleanPlace, candidate, srcProvince, cleanReverseGeocode);
     if (score > bestScore) {
       bestScore = score;
       bestPlace = candidate;
@@ -607,14 +621,54 @@ function formatEnrichedAddress_(house, sub, dist, prov, post) {
  *   ให้ลด score 15 points (province mismatch penalty)
  *   ป้องกัน false-positive ข้ามจังหวัด (เช่น "หจก.รุ่งเรือง" มี 2 ที่ คนละจังหวัด)
  *
- * @param {string} queryPlace - cleanPlace จาก normalizePlaceName
+ * [V6.0.016] เพิ่ม reverse-geocode matching — เทียบ source [24] กับ
+ *   M_PLACE.normalized_reverse_geocode แล้วเอาคะแนนที่สูงกว่า (max of [18], [24])
+ *   ช่วยเคสที่ [18] สั้นเกินไปแต่ [24] สมบูรณ์กว่า (เพราะ [24] มาจาก GPS จริง)
+ *
+ * @param {string} queryPlace - cleanPlace จาก normalizePlaceName([18])
  * @param {Object} candidate - place object จาก loadAllPlaces_
  * @param {string} [srcProvince] - จังหวัดจาก source (optional, จาก extractProvince_)
+ * @param {string} [queryReverseGeocode] - cleanPlace จาก normalizePlaceName([24]) (optional)
+ *   ถ้าส่งมา → คำนวณ score จาก [24] ด้วย แล้วเอา max(score18, score24)
+ *   ถ้าไม่ส่ง หรือ candidate ไม่มี normalizedReverseGeocode → ใช้ score18 อย่างเดียว (backward compat)
  * @return {number} score 0-100
  */
-function scorePlaceCandidate(queryPlace, candidate, srcProvince) {
-  const nameA = normalizeForCompare(queryPlace);
-  const nameB = normalizeForCompare(candidate.normalized || candidate.canonical);
+function scorePlaceCandidate(queryPlace, candidate, srcProvince, queryReverseGeocode) {
+  const score18 = computePlaceScore_(queryPlace, candidate.normalized || candidate.canonical, candidate, srcProvince);
+
+  // [V6.0.016] Compute score24 — เทียบ [24] กับ M_PLACE.normalized_reverse_geocode
+  //   ถ้าไม่มี queryReverseGeocode หรือ candidate ไม่มี normalizedReverseGeocode → ข้าม
+  let score24 = 0;
+  if (queryReverseGeocode && queryReverseGeocode.length >= 2 && candidate.normalizedReverseGeocode) {
+    score24 = computePlaceScore_(
+      queryReverseGeocode,
+      candidate.normalizedReverseGeocode,
+      candidate,
+      srcProvince,
+      true // isReverseGeocode — skip district-level penalty (reverse geocode มักมี "ตำบล/อำเภอ" prefix)
+    );
+  }
+
+  // Take max — เอาคะแนนที่สูงกว่าระหว่าง [18] และ [24]
+  return Math.max(score18, score24);
+}
+
+/**
+ * computePlaceScore_ — [V6.0.016] Internal helper — คำนวณ place score สำหรับ query คู่เดียว
+ *   ถูกเรียก 2 ครั้งโดย scorePlaceCandidate (ครั้งที่ 1: [18] vs normalized_name,
+ *   ครั้งที่ 2: [24] vs normalized_reverse_geocode)
+ *
+ * @param {string} queryA - normalized query (cleanPlace จาก [18] หรือ [24])
+ * @param {string} candidateB - normalized candidate value (candidate.normalized หรือ normalizedReverseGeocode)
+ * @param {Object} candidate - place object (สำหรับตรวจ province และ district-level penalty)
+ * @param {string} [srcProvince] - จังหวัดจาก source (optional)
+ * @param {boolean} [isReverseGeocode=false] - true = skip district-level penalty (reverse geocode มี "ตำบล/อำเภอ" prefix)
+ * @return {number} score 0-100
+ * @private
+ */
+function computePlaceScore_(queryA, candidateB, candidate, srcProvince, isReverseGeocode) {
+  const nameA = normalizeForCompare(queryA);
+  const nameB = normalizeForCompare(candidateB);
   if (!nameA || !nameB) return 0;
 
   const levDist = levenshteinDistance(nameA, nameB);
@@ -658,17 +712,21 @@ function scorePlaceCandidate(queryPlace, candidate, srcProvince) {
   //   ปัญหา: place ที่มีชื่อ "เขตเขตบางเขน กรุงเทพมหานคร" match กับทุกที่อยู่ในกรุงเทพฯ
   //   แก้: ถ้าชื่อ place เริ่มต้นด้วย "เขต" หรือเป็นเพียงชื่อจังหวัด → ลด score ลง 30 points
   //   นี่จะทำให้ place ที่มีชื่อเฉพาะ (เช่น "ร้าน ABC", "บริษัท XYZ") ได้ score สูงกว่า
-  const checkName = String(candidate.normalized || candidate.canonical || '').trim();
-  if (checkName) {
-    const isDistrictLevel =
-      checkName.startsWith('เขต') ||
-      checkName.startsWith('อำเภอ') ||
-      checkName.startsWith('ตำบล') ||
-      checkName.startsWith('แขวง');
-    const isProvinceOnly =
-      checkName.length <= 15 && (checkName.indexOf('จังหวัด') === 0 || checkName.indexOf('กรุงเทพ') === 0);
-    if (isDistrictLevel || isProvinceOnly) {
-      returnScore = Math.max(0, returnScore - 30);
+  // [V6.0.016] ข้าม penalty นี้สำหรับ reverse-geocode matching เพราะ [24] มักเริ่มด้วย "ตำบล/อำเภอ"
+  //   โดยธรรมชาติ — ถ้าใช้ penalty นี้จะทำให้ score24 ต่ำเกินไปทุกครั้ง
+  if (!isReverseGeocode) {
+    const checkName = String(candidate.normalized || candidate.canonical || '').trim();
+    if (checkName) {
+      const isDistrictLevel =
+        checkName.startsWith('เขต') ||
+        checkName.startsWith('อำเภอ') ||
+        checkName.startsWith('ตำบล') ||
+        checkName.startsWith('แขวง');
+      const isProvinceOnly =
+        checkName.length <= 15 && (checkName.indexOf('จังหวัด') === 0 || checkName.indexOf('กรุงเทพ') === 0);
+      if (isDistrictLevel || isProvinceOnly) {
+        returnScore = Math.max(0, returnScore - 30);
+      }
     }
   }
 
@@ -939,7 +997,12 @@ function loadAllPlaces_() {
       postcode: String(r[PLACE_IDX.POSTCODE] || ''),
       usageCount: Number(r[PLACE_IDX.USAGE_COUNT] || 0),
       note: String(r[PLACE_IDX.NOTE] || ''),
-      masterUuid: String(r[PLACE_IDX.MASTER_UUID] || '')
+      masterUuid: String(r[PLACE_IDX.MASTER_UUID] || ''),
+      // [V6.0.016] Reverse geocode fields — used by scorePlaceCandidate for [24] matching
+      //   ใช้สำหรับเทียบ srcObj.rawAddress ([24]) กับ M_PLACE.normalized_reverse_geocode
+      //   ถ้า column ไม่มี (legacy sheet) → ใช้ '' (fallback to [18]-only matching)
+      canonicalReverseGeocode: String(r[PLACE_IDX.CANONICAL_REVERSE_GEOCODE] || ''),
+      normalizedReverseGeocode: String(r[PLACE_IDX.NORMALIZED_REVERSE_GEOCODE] || '')
     }));
 
   // [FIX v5.5.010 HOTFIX #2] บังคับใช้ saveChunkedCache_ — ลบ fallback ที่ใช้ cache.put ตรง
