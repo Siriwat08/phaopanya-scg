@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.014
+ * VERSION: 6.0.015
  * FILE: 01_Config.gs
  * LMDS V5.5 — System Configuration & Constants
  * ===================================================
@@ -70,8 +70,8 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.014';
-const SCHEMA_VERSION = '6.0.014';
+const APP_VERSION = '6.0.015';
+const SCHEMA_VERSION = '6.0.015';
 const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
@@ -631,8 +631,8 @@ const SCG_CONFIG = Object.freeze({
 // ============================================================
 
 const AI_CONFIG = Object.freeze({
-  THRESHOLD_AUTO: 90, // >= 90 → Auto Match
-  THRESHOLD_REVIEW: 70, // 70-89 → Q_REVIEW
+  THRESHOLD_AUTO: 85, // [V6.0.015 P2.4] 90→85 — give borderline matches a chance
+  THRESHOLD_REVIEW: 70, // 70-84 → Q_REVIEW (was 70-89 before V6.0.015)
   THRESHOLD_IGNORE: 50, // < 50  → ไม่พิจารณา [FIX v5.1.001: 70→50]
   SCORE_MIN_THRESHOLD: 60, // min score สำหรับ Person
   PLACE_SCORE_MIN: 55, // min score สำหรับ Place
