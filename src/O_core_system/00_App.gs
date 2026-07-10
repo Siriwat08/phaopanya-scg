@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.015
+ * VERSION: 6.0.016
  * FILE: 00_App.gs
  * LMDS V5.5 — Application Entry Point & Menu Controller
  * ===================================================
@@ -88,6 +88,7 @@ function onOpen(e) {
         .addItem('Step 3 — Match Engine', 'runMatchEngine')
         .addSeparator()
         .addItem('🧪 [V6] Test Match (Dry Run)', 'runTestMatchDryRun_UI')
+        .addItem('🔍 [V6.0.016] วิเคราะห์ Rule 5 Place-Only Impact', 'analyzeRule5PlaceOnlyImpact_UI')
         .addSeparator()
         .addItem('🛑 [V6] หยุด Pipeline (Emergency Stop)', 'requestPipelineStop_UI')
         .addItem('🟢 [V6] ยกเลิก Stop Signal', 'clearPipelineStopSignal_UI')
@@ -1305,6 +1306,139 @@ function runTestMatchDryRun_UI() {
     safeUiAlert_(lines.join('\n'));
   } catch (e) {
     logError('App', 'runTestMatchDryRun_UI failed: ' + e.message, e);
+    safeUiAlert_('❌ ล้มเหลว: ' + e.message);
+  }
+}
+
+// ============================================================
+// SECTION: [V6.0.016] Rule 5 Place-Only Impact Analyzer
+// ============================================================
+
+/**
+ * analyzeRule5PlaceOnlyImpact_UI — [V6.0.016] Menu wrapper
+ *   อ่าน TEST_MATCH_RESULTS sheet ที่เกิดจาก Dry Run ล่าสุด แล้วรายงาน:
+ *     - แถวที่เป็น AUTO_MATCH + GEO_ANCHOR + evidence='place|geo' (V6.0.015 behavior)
+ *       จะถูก downgrade เป็น REVIEW ทั้งหมดเมื่อ merge V6.0.016
+ *     - แถวที่เป็น REVIEW + reason='GEO_ANCHOR_PLACE_ONLY_NO_NAME' (V6.0.016 behavior ใหม่)
+ *
+ *   วิธีใช้:
+ *     1. รัน Dry Run บน V6.0.015 (main branch) → กดเมนูนี้ → ดู count แถวที่จะถูก downgrade
+ *     2. Merge PR V6.0.016 → รัน Dry Run อีกครั้ง → กดเมนูนี้ → ดู count แถวใหม่ใน REVIEW
+ */
+function analyzeRule5PlaceOnlyImpact_UI() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.TEST_MATCH_RESULTS);
+
+    if (!sheet || sheet.getLastRow() < 2) {
+      safeUiAlert_(
+        'ℹ️ ไม่มีข้อมูลใน TEST_MATCH_RESULTS\n\n' + 'กรุณารัน "🧪 [V6] Test Match (Dry Run)" ก่อน แล้วค่อยเรียกเมนูนี้'
+      );
+      return;
+    }
+
+    const lastRow = sheet.getLastRow();
+    const lastCol = Math.max(8, sheet.getLastColumn());
+    const data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+    // Counters
+    let totalRows = 0;
+    let v6015PlaceOnly = 0; // AUTO_MATCH + GEO_ANCHOR + evidence starts with 'place|geo'
+    let v6016PlaceOnlyReview = 0; // REVIEW + reason='GEO_ANCHOR_PLACE_ONLY_NO_NAME'
+    let v6015GeoPersonAnchor = 0; // AUTO_MATCH + GEO_ANCHOR + evidence starts with 'name|geo' (unchanged)
+    let autoMatchTotal = 0;
+    let reviewTotal = 0;
+    let createNewTotal = 0;
+    let errorTotal = 0;
+
+    // Detail rows (up to 10 for display)
+    const affectedRows = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const sourceRow = row[TEST_MATCH_IDX.SOURCE_ROW];
+      if (!sourceRow) continue;
+      totalRows++;
+
+      const action = String(row[TEST_MATCH_IDX.ACTION] || '').trim();
+      const reason = String(row[TEST_MATCH_IDX.REASON] || '').trim();
+      const evidence = String(row[TEST_MATCH_IDX.EVIDENCE] || '').trim();
+      const confidence = row[TEST_MATCH_IDX.CONFIDENCE] || 0;
+      const personName = String(row[TEST_MATCH_IDX.PERSON_NAME] || '').trim();
+      const placeName = String(row[TEST_MATCH_IDX.PLACE_NAME] || '').trim();
+
+      if (action === 'AUTO_MATCH') autoMatchTotal++;
+      else if (action === 'REVIEW') reviewTotal++;
+      else if (action === 'CREATE_NEW') createNewTotal++;
+      else if (action === 'ERROR') errorTotal++;
+
+      // V6.0.015 pattern: AUTO_MATCH + GEO_ANCHOR + evidence starts with 'place|geo'
+      //   (no 'name' in evidence = person didn't match, only place+geo did)
+      if (action === 'AUTO_MATCH' && reason === 'GEO_ANCHOR' && evidence.indexOf('place|geo') === 0) {
+        v6015PlaceOnly++;
+        if (affectedRows.length < 10) {
+          affectedRows.push({
+            sourceRow: sourceRow,
+            person: personName.substring(0, 40),
+            place: placeName.substring(0, 40),
+            confidence: confidence
+          });
+        }
+      }
+
+      // V6.0.015 pattern: AUTO_MATCH + GEO_ANCHOR + evidence starts with 'name|geo'
+      //   (person matched + geo — this is UNCHANGED in V6.0.016)
+      if (action === 'AUTO_MATCH' && reason === 'GEO_ANCHOR' && evidence.indexOf('name|geo') === 0) {
+        v6015GeoPersonAnchor++;
+      }
+
+      // V6.0.016 pattern: REVIEW + GEO_ANCHOR_PLACE_ONLY_NO_NAME
+      //   (this is the new behavior after V6.0.016 is merged)
+      if (action === 'REVIEW' && reason === 'GEO_ANCHOR_PLACE_ONLY_NO_NAME') {
+        v6016PlaceOnlyReview++;
+      }
+    }
+
+    const lines = [];
+    lines.push('🔍 [V6.0.016] Rule 5 Place-Only Impact Analyzer\n');
+    lines.push('อ่านจาก TEST_MATCH_RESULTS: ' + totalRows + ' แถว\n');
+    lines.push('─── สรุปผลรวม ───');
+    lines.push('✅ AUTO_MATCH : ' + autoMatchTotal);
+    lines.push('👀 REVIEW     : ' + reviewTotal);
+    lines.push('🆕 CREATE_NEW : ' + createNewTotal);
+    if (errorTotal > 0) lines.push('❌ ERROR      : ' + errorTotal);
+    lines.push('');
+    lines.push('─── Rule 5 Breakdown ───');
+    lines.push('📌 V6.0.015 AUTO_MATCH (geo+person) [ไม่เปลี่ยน]: ' + v6015GeoPersonAnchor + ' แถว');
+    lines.push('⚠️  V6.0.015 AUTO_MATCH (geo+place only) → V6.0.016 REVIEW: ' + v6015PlaceOnly + ' แถว');
+    lines.push('📌 V6.0.016 REVIEW (GEO_ANCHOR_PLACE_ONLY_NO_NAME): ' + v6016PlaceOnlyReview + ' แถว');
+    lines.push('');
+    if (v6015PlaceOnly > 0) {
+      lines.push('─── ตัวอย่างแถวที่จะถูก downgrade (สูงสุด 10) ───');
+      affectedRows.forEach((r) => {
+        lines.push(
+          '• Row ' + r.sourceRow + ' | conf=' + r.confidence + ' | name="' + r.person + '" | place="' + r.place + '"'
+        );
+      });
+      lines.push('');
+      lines.push('📝 คำอธิบาย: แถวเหล่านี้ใน V6.0.015 match ด้วย geo+place อย่างเดียว (ไม่มี person)');
+      lines.push('   ใน V6.0.016 จะถูก downgrade เป็น REVIEW เพราะ [24] มาจากพิกัด [4]');
+      lines.push('   ทำให้ place+geo เป็นสัญญาณเดียวกัน ไม่ใช่ 2 หลักฐานอิสระ');
+      lines.push('   ต้องมีชื่อ [12] เป็นตัวยืนยัน "ร้านไหน" ด้วยจึงจะ AUTO_MATCH ได้');
+    } else if (v6016PlaceOnlyReview > 0) {
+      lines.push('✅ ตรวจพบแถว V6.0.016 ใหม่ (GEO_ANCHOR_PLACE_ONLY_NO_NAME): ' + v6016PlaceOnlyReview + ' แถว');
+      lines.push('   แสดงว่า V6.0.016 ทำงานแล้ว — แถวเหล่านี้เคยเป็น AUTO_MATCH ใน V6.0.015');
+      lines.push('   แต่ถูก downgrade เป็น REVIEW เพื่อความถูกต้องใน V6.0.016');
+    } else {
+      lines.push('ℹ️ ไม่พบแถวที่เกี่ยวข้อง — อาจจะ:');
+      lines.push('   - ยังไม่ได้รัน Dry Run บน V6.0.015 หรือ V6.0.016');
+      lines.push('   - ข้อมูลใน SOURCE ไม่มีเคส geo+place only');
+    }
+
+    safeUiAlert_(lines.join('\n'));
+  } catch (e) {
+    logError('App', 'analyzeRule5PlaceOnlyImpact_UI failed: ' + e.message, e);
     safeUiAlert_('❌ ล้มเหลว: ' + e.message);
   }
 }
