@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.019
+ * VERSION: 6.0.020
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -110,6 +110,25 @@ function runMatchEngine() {
   //   3. runMatchEngineLoop_       — SECTION C: Main loop with Time Guard + batch flush
   //   4. finalizeMatchEngine_      — SECTION D: Final flush + cleanup + report
   // Preserve Behavior 100% — same lock, same loop order, same flush triggers, same stats
+
+  // [V6.0.020 FIX] Clear any stale STOP SIGNAL before starting — prevents
+  //   pipeline from immediately stopping at row 0 if a previous Emergency Stop
+  //   signal was left behind (e.g., from a crashed or manually aborted run).
+  //   This is a common issue: user clicks Emergency Stop → pipeline stops →
+  //   signal stays in PropertiesService → next run stops at row 0.
+  //   Note: This fix existed in commit 3eb4fc8 (branch fix/v6.0.012-phase1-matching)
+  //   but was never merged to main — re-applied here.
+  //   The stop signal is still functional DURING the run — if user clicks
+  //   Emergency Stop during a run, the running loop checks it every 10 rows.
+  if (typeof clearPipelineStopSignal_ === 'function') {
+    clearPipelineStopSignal_();
+  } else {
+    try {
+      PropertiesService.getScriptProperties().deleteProperty('PIPELINE_STOP_REQUESTED');
+    } catch (e) {
+      // ignore — non-fatal
+    }
+  }
 
   const setup = acquireMatchEngineLock_();
   if (!setup) return;
