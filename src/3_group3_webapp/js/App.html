@@ -333,6 +333,16 @@
             showError_('LiveFeedView not loaded');
           }
           break;
+        case 'mobile-actions':
+          // [V6.0.021] Mobile Actions view — full menu like Google Sheet
+          if (globalThis.MobileActionsView) {
+            globalThis.MobileActionsView.render(currentData, viewContainer);
+            renderIcons_();
+          } else {
+            console.error('[app] MobileActionsView not loaded!');
+            showError_('MobileActionsView not loaded');
+          }
+          break;
         default:
           renderNotFound_();
       }
@@ -574,6 +584,79 @@
       refresh: () => refresh_(false),
       showToast: showToast_
     };
+
+    // [V6.0.021] Mobile menu dropdown toggle — quick navigation shortcuts
+    //   Opens a dropdown with shortcuts to all views + "เมนูการทำงาน" (Mobile Actions)
+    globalThis.toggleMobileMenu_ = function () {
+      const dropdown = document.getElementById('mobileMenuDropdown');
+      const content = document.getElementById('mobileMenuContent');
+      if (!dropdown || !content) return;
+
+      if (!dropdown.classList.contains('hidden')) {
+        // Close
+        dropdown.classList.add('hidden');
+        return;
+      }
+
+      // Build menu items — mirror sidebar nav + link to Mobile Actions
+      const menuItems = [
+        { route: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' },
+        { route: 'qreview', icon: 'check-square', label: 'Q_REVIEW' },
+        { route: 'fact', icon: 'database', label: 'FACT_DELIVERY' },
+        { route: 'source', icon: 'file-text', label: 'Source Sheet' },
+        { route: 'match', icon: 'git-merge', label: 'Match Engine' },
+        { route: 'search', icon: 'search', label: 'Search' },
+        { route: 'map', icon: 'map-pin', label: 'Map Analytics' },
+        { route: 'livefeed', icon: 'activity', label: 'Live Feed' },
+        { route: null, icon: null, label: null, divider: true },
+        { route: 'mobile-actions', icon: 'smartphone', label: '⚙️ เมนูการทำงาน (ทั้งหมด)', highlight: true }
+      ];
+
+      let html = '';
+      menuItems.forEach(function (item) {
+        if (item.divider) {
+          html += '<hr class="my-1 border-gray-200" />';
+          return;
+        }
+        const highlightClass = item.highlight
+          ? 'bg-blue-50 text-blue-700 font-medium'
+          : 'text-gray-700 hover:bg-gray-100';
+        html +=
+          '<button type="button" onclick="globalThis.navigateTo_(\'' +
+          item.route +
+          '\'); globalThis.toggleMobileMenu_();" class="flex items-center gap-2 w-full px-3 py-2 rounded text-sm transition-colors ' +
+          highlightClass +
+          '">';
+        if (item.icon) {
+          html += '<i data-lucide="' + item.icon + '" class="w-4 h-4"></i>';
+        }
+        html += '<span>' + item.label + '</span>';
+        html += '</button>';
+      });
+
+      content.innerHTML = html;
+      dropdown.classList.remove('hidden');
+
+      // Render icons
+      if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+      }
+
+      // Close on outside click
+      setTimeout(function () {
+        document.addEventListener('click', closeMobileMenuOnOutside_);
+      }, 0);
+    };
+
+    function closeMobileMenuOnOutside_(e) {
+      const dropdown = document.getElementById('mobileMenuDropdown');
+      const toggleBtn = document.getElementById('mobileMenuToggleBtn');
+      if (!dropdown) return;
+      if (dropdown.contains(e.target)) return;
+      if (toggleBtn && toggleBtn.contains(e.target)) return;
+      dropdown.classList.add('hidden');
+      document.removeEventListener('click', closeMobileMenuOnOutside_);
+    }
   })();
 
   console.log('[app] App script loaded');

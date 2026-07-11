@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.020
+ * VERSION: 6.0.021
  * FILE: 22_WebApp.gs
  * LMDS V5.5 — Web App Server (Dashboard)
  * ===================================================
@@ -2077,3 +2077,10 @@ function getMatchEngineLiveStatus() {
     recentMatches: JSON.parse(props.getProperty('MATCH_ENGINE_RECENT') || '[]')
   };
 }
+
+// ============================================================
+// [V6.0.021] Mobile Actions — see 28_WebAppActions.gs
+//   getWebAppActionRegistry() and runWebAppAction(actionId, params)
+//   are defined in 28_WebAppActions.gs and available globally
+//   via google.script.run (no duplicate declarations here)
+// ============================================================
