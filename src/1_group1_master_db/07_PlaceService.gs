@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.020
+ * VERSION: 6.0.021
  * FILE: 07_PlaceService.gs
  * LMDS V5.5 — Place Master Service
  * ===================================================

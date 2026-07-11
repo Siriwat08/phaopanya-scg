@@ -216,6 +216,20 @@
        */
       getMatchEngineLiveStatus: () => promisify_('getMatchEngineLiveStatus'),
 
+      /**
+       * getWebAppActionRegistry — [V6.0.021] ดึง action registry สำหรับ render mobile menu
+       * @return {Promise<Array<{id,label,group,danger,confirmMsg,description,serverFn,icon}>>}
+       */
+      getWebAppActionRegistry: () => promisify_('getWebAppActionRegistry'),
+
+      /**
+       * runWebAppAction — [V6.0.021] dispatcher สำหรับ execute action จาก mobile menu
+       * @param {string} actionId — id จาก registry (e.g., 'runFullPipeline')
+       * @param {Object} [params] — optional parameters (e.g., { maxRows: 100 } for Dry Run)
+       * @return {Promise<{ok, actionId, result, message, elapsedMs}>}
+       */
+      runWebAppAction: (actionId, params) => promisify_('runWebAppAction', actionId, params),
+
       // [V6.0.008 P1.1] Expose diagnostic stats for debugging
       getStats: getStats
     };
