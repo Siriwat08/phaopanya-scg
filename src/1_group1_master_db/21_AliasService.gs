@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.017
+ * VERSION: 6.0.019
  * FILE: 21_AliasService.gs
  * LMDS V5.5 — Hybrid Alias Architecture (Global M_ALIAS + Entity-Specific Views)
  * ===================================================
@@ -369,9 +369,26 @@ function backfillAliasAuditFields() {
 /**
  * loadGlobalAliasesMap_ — โหลด M_ALIAS เป็น Map: { "PERSON_uuid": ["variant1","variant2"] }
  * ใช้ CacheService เพื่อลดการอ่านชีต
+ * [V6.0.019 FIX] cacheKey ReferenceError — เดิมใช้ตัวแปร cacheKey โดยไม่ได้ประกาศ
+ *   ทำให้ createGlobalAlias ล้มเหลวทุกครั้ง (logged เป็น ERROR ใน pipeline)
+ *   แก้: ประกาศ const cacheKey = CACHE_KEY.GLOBAL_ALIAS_ALL ก่อนเรียกใช้
+ *   และเพิ่ม cache read layer (loadChunkedCache_) ก่อนอ่าน sheet เพื่อความเร็ว
  * @return {Object} aliasMap
  */
 function loadGlobalAliasesMap_() {
+  // [V6.0.019 FIX] ประกาศ cacheKey ก่อนใช้ (เดิมหายไป → ReferenceError)
+  const cacheKey =
+    typeof CACHE_KEY !== 'undefined' && CACHE_KEY.GLOBAL_ALIAS_ALL ? CACHE_KEY.GLOBAL_ALIAS_ALL : 'M_GLOBAL_ALIAS_ALL';
+  const cache = CacheService.getScriptCache();
+
+  // [V6.0.019] อ่านจาก cache ก่อน (เร็วกว่าอ่าน sheet มาก)
+  if (typeof loadChunkedCache_ === 'function') {
+    const cached = loadChunkedCache_(cache, cacheKey);
+    if (cached && typeof cached === 'object') {
+      return cached;
+    }
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET.M_ALIAS);
   const resultObj = {};
@@ -393,7 +410,12 @@ function loadGlobalAliasesMap_() {
   });
 
   // [FIX CRIT-001] ใช้ chunked cache saver แทน cache.put ตรง — ป้อนกัน 100KB limit
-  saveAliasCacheChunked_(cacheKey, resultObj);
+  // [V6.0.019 FIX] cacheKey ถูกประกาศแล้วที่ด้านบนของฟังก์ชัน
+  if (typeof saveAliasCacheChunked_ === 'function') {
+    saveAliasCacheChunked_(cacheKey, resultObj);
+  } else {
+    logError('AliasService', 'saveAliasCacheChunked_ ไม่พร้อม — skip cache write for ' + cacheKey);
+  }
   return resultObj;
 }
 
