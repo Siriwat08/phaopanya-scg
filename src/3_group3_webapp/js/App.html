@@ -588,8 +588,8 @@
     // [V6.0.021] Mobile menu dropdown toggle — quick navigation shortcuts
     //   Opens a dropdown with shortcuts to all views + "เมนูการทำงาน" (Mobile Actions)
     globalThis.toggleMobileMenu_ = function () {
-      var dropdown = document.getElementById('mobileMenuDropdown');
-      var content = document.getElementById('mobileMenuContent');
+      const dropdown = document.getElementById('mobileMenuDropdown');
+      const content = document.getElementById('mobileMenuContent');
       if (!dropdown || !content) return;
 
       if (!dropdown.classList.contains('hidden')) {
@@ -599,7 +599,7 @@
       }
 
       // Build menu items — mirror sidebar nav + link to Mobile Actions
-      var menuItems = [
+      const menuItems = [
         { route: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' },
         { route: 'qreview', icon: 'check-square', label: 'Q_REVIEW' },
         { route: 'fact', icon: 'database', label: 'FACT_DELIVERY' },
@@ -612,13 +612,13 @@
         { route: 'mobile-actions', icon: 'smartphone', label: '⚙️ เมนูการทำงาน (ทั้งหมด)', highlight: true }
       ];
 
-      var html = '';
+      let html = '';
       menuItems.forEach(function (item) {
         if (item.divider) {
           html += '<hr class="my-1 border-gray-200" />';
           return;
         }
-        var highlightClass = item.highlight
+        const highlightClass = item.highlight
           ? 'bg-blue-50 text-blue-700 font-medium'
           : 'text-gray-700 hover:bg-gray-100';
         html +=
@@ -649,8 +649,8 @@
     };
 
     function closeMobileMenuOnOutside_(e) {
-      var dropdown = document.getElementById('mobileMenuDropdown');
-      var toggleBtn = document.getElementById('mobileMenuToggleBtn');
+      const dropdown = document.getElementById('mobileMenuDropdown');
+      const toggleBtn = document.getElementById('mobileMenuToggleBtn');
       if (!dropdown) return;
       if (dropdown.contains(e.target)) return;
       if (toggleBtn && toggleBtn.contains(e.target)) return;

@@ -54,7 +54,7 @@
  *
  * @type {Array<Object>}
  */
-var WEB_APP_ACTION_REGISTRY = [
+const WEB_APP_ACTION_REGISTRY = [
   // ─── TOP (เมนูหลักด้านบน) ───
   {
     id: 'runFullPipeline',

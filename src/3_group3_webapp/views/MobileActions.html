@@ -146,18 +146,18 @@
 
     function renderActions_(container, registryData) {
       // Group actions by their group field
-      var groups = {};
+      const groups = {};
       registryData.forEach(function (action) {
         if (!groups[action.group]) groups[action.group] = [];
         groups[action.group].push(action);
       });
 
       // Sort groups by order
-      var sortedGroupKeys = Object.keys(groups).sort(function (a, b) {
+      const sortedGroupKeys = Object.keys(groups).sort(function (a, b) {
         return groupOrder_(a) - groupOrder_(b);
       });
 
-      var html = '';
+      let html = '';
       html += '<div class="p-4 space-y-6">';
 
       // Header
@@ -175,13 +175,13 @@
         '</div>';
 
       sortedGroupKeys.forEach(function (groupKey) {
-        var actions = groups[groupKey];
+        const actions = groups[groupKey];
         html += '<div>';
         html += '<h3 class="text-sm font-semibold text-gray-700 mb-2 px-1">' + groupLabel_(groupKey) + '</h3>';
         html += '<div class="space-y-2">';
 
         actions.forEach(function (action) {
-          var colors = dangerColor_(action.danger);
+          const colors = dangerColor_(action.danger);
           html += '<button type="button" data-action-id="' + escapeHtml_(action.id) + '" ';
           html +=
             'class="mobile-action-btn w-full text-left p-3 border rounded-lg transition-colors ' +
@@ -225,10 +225,10 @@
       container.innerHTML = html;
 
       // Bind click handlers
-      var btns = container.querySelectorAll('.mobile-action-btn');
+      const btns = container.querySelectorAll('.mobile-action-btn');
       btns.forEach(function (btn) {
         btn.addEventListener('click', function () {
-          var actionId = btn.dataset.actionId;
+          const actionId = btn.dataset.actionId;
           handleActionClick_(actionId, btn);
         });
       });
@@ -242,7 +242,7 @@
     // ──────────────────────────────────────────────────────────
 
     function handleActionClick_(actionId, btn) {
-      var action = registry.filter(function (a) {
+      const action = registry.filter(function (a) {
         return a.id === actionId;
       })[0];
       if (!action) {
@@ -267,11 +267,11 @@
         pendingAction = actionId;
         pendingBtn = btn;
 
-        var confirmText = action.confirmMsg || 'กดอีกครั้งเพื่อยืนยัน';
-        var originalHTML = btn.innerHTML;
+        const confirmText = action.confirmMsg || 'กดอีกครั้งเพื่อยืนยัน';
+        const originalHTML = btn.innerHTML;
         btn.dataset.originalHtml = originalHTML;
 
-        var warnColor =
+        const warnColor =
           action.danger === 'danger'
             ? 'bg-red-600 text-white hover:bg-red-700'
             : 'bg-yellow-500 text-white hover:bg-yellow-600';
@@ -307,11 +307,11 @@
       if (pendingBtn && restoreBtn && pendingBtn.dataset.originalHtml) {
         pendingBtn.innerHTML = pendingBtn.dataset.originalHtml;
         // Restore class — find action to get danger color
-        var action = registry.filter(function (a) {
+        const action = registry.filter(function (a) {
           return a.id === pendingAction;
         })[0];
         if (action) {
-          var colors = dangerColor_(action.danger);
+          const colors = dangerColor_(action.danger);
           pendingBtn.className =
             'mobile-action-btn w-full text-left p-3 border rounded-lg transition-colors ' +
             colors.bg +
@@ -331,7 +331,7 @@
 
     async function executeAction_(action, btn) {
       // Disable button + show loading
-      var originalHTML = btn.innerHTML;
+      const originalHTML = btn.innerHTML;
       btn.disabled = true;
       btn.className = 'mobile-action-btn w-full text-left p-3 border rounded-lg bg-gray-100 text-gray-500 cursor-wait';
       btn.innerHTML =
@@ -343,7 +343,7 @@
         '</div>';
 
       // Full-screen overlay (block UI during long-running actions)
-      var overlay = document.createElement('div');
+      const overlay = document.createElement('div');
       overlay.id = 'mobile-action-overlay';
       overlay.style.cssText =
         'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
@@ -361,31 +361,31 @@
       document.addEventListener('click', dismissPendingOnOutside_, true);
 
       try {
-        var params = {};
+        const params = {};
         // Special case: Force All Dry Run — default maxRows=100
         if (action.id === 'runTestMatchDryRunForceAll') {
           params.maxRows = 100;
         }
 
-        var result = await globalThis.api.runWebAppAction(action.id, params);
+        const result = await globalThis.api.runWebAppAction(action.id, params);
 
         if (result && result.ok) {
           showToast_('✅ สำเร็จ', result.message || action.label, 'success', 5000);
         } else {
-          var errMsg = (result && result.message) || 'ไม่ทราบสาเหตุ';
+          const errMsg = (result && result.message) || 'ไม่ทราบสาเหตุ';
           showToast_('❌ ล้มเหลว', errMsg, 'error', 8000);
         }
       } catch (err) {
         showToast_('❌ ล้มเหลว', err.message || 'Network error', 'error', 8000);
       } finally {
         // Remove overlay
-        var ov = document.getElementById('mobile-action-overlay');
+        const ov = document.getElementById('mobile-action-overlay');
         if (ov) ov.remove();
 
         // Restore button
         btn.disabled = false;
         btn.innerHTML = originalHTML;
-        var colors = dangerColor_(action.danger);
+        const colors = dangerColor_(action.danger);
         btn.className =
           'mobile-action-btn w-full text-left p-3 border rounded-lg transition-colors ' + colors.bg + ' ' + colors.text;
         renderIcons_();
