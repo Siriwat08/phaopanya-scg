@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.022
+ * VERSION: 6.0.023
  * FILE: 28_WebAppActions.gs
  * LMDS V6.0 — Web App Actions Server (Mobile Menu)
  * ===================================================
@@ -459,9 +459,9 @@ function runWebAppAction(actionId, params) {
 
   try {
     // 1. ค้น registry
-    const action = WEB_APP_ACTION_REGISTRY.filter(function (a) {
+    const action = WEB_APP_ACTION_REGISTRY.find(function (a) {
       return a.id === actionId;
-    })[0];
+    });
 
     if (!action) {
       return {
