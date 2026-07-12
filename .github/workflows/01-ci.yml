@@ -22,10 +22,10 @@ jobs:
 
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: 🟢 Use Node.js 18
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
@@ -51,7 +51,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: 🔍 Validate Google Apps Script syntax
         run: |
@@ -219,7 +219,7 @@ jobs:
     needs: syntax-check
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: 🏛️ ตรวจสอบการแบ่ง Domain (3 กลุ่ม)
         run: |
@@ -277,7 +277,7 @@ jobs:
     timeout-minutes: 3
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: 📋 ตรวจสอบ 16 Immutable Laws
         run: |

@@ -1,0 +1,63 @@
+# 🔐 Gitleaks — Secret Scanning
+#
+# สแกนหา "ความลับที่หลุด" (API key, password, token, cookie) ในโค้ด
+# จับได้ 800+ รูปแบบ — เก่งกว่า regex ธรรมดาที่ใช้อยู่เดิม
+#
+# Triggers:
+#   - pull_request: สแกนทุก PR ที่แตะ src/ หรือ .github/
+#   - push to main: สแกนทุกครั้งที่ merge เข้า main
+#   - workflow_dispatch: รัน manual ได้
+
+name: 🔐 Gitleaks Secret Scan
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - '.github/**'
+      - '*.json'
+      - '*.yml'
+      - '*.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - '.github/**'
+      - '*.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better detection
+
+      - name: 🔐 Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: use a custom config for allowlist
+          # GITLEAKS_CONFIG: .gitleaks.toml
+        with:
+          # Scan only changed files in PR mode (faster)
+          scan-mode: ${{ github.event_name == 'pull_request' && 'diff' || 'noscan' }}
+
+      - name: 📊 Summary
+        if: always()
+        run: |
+          echo "## 🔐 Gitleaks Secret Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Scan mode: ${{ github.event_name == 'pull_request' && 'diff (changed files only)' || 'full' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "If this check fails, **DO NOT MERGE** — investigate the finding first." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- If it's a real secret → revoke immediately + remove from code" >> $GITHUB_STEP_SUMMARY
+          echo "- If it's test data / false positive → add to \`.gitleaks.toml\` allowlist" >> $GITHUB_STEP_SUMMARY

@@ -10,6 +10,7 @@ ignorePatterns:
 # ─── Plugins ───
 plugins:
   - html # เพื่อให้ ESLint lint script blocks ใน .html files
+  - googleappsscript # [V6.0.041] GAS-specific linting — รู้จัก SpreadsheetApp, CacheService, etc.
 
 env:
   browser: true
