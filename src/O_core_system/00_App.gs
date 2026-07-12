@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.027
+ * VERSION: 6.0.028
  * FILE: 00_App.gs
  * LMDS V5.5 — Application Entry Point & Menu Controller
  * ===================================================
@@ -151,6 +151,10 @@ function onOpen(e) {
         .addSeparator()
         .addItem('📜 [V6] Prune Audit Trail (90 วัน)', 'cleanupAuditTrail_UI')
         .addItem('📖 ดู Version Info', 'showVersionInfo')
+        .addSeparator()
+        .addItem('📸 [V6.0.028] Snapshot — Save Baseline', 'snapshotSaveBaseline_UI')
+        .addItem('📸 [V6.0.028] Snapshot — Compare', 'snapshotCompare_UI')
+        .addItem('📸 [V6.0.028] Snapshot — Clear Baseline', 'snapshotClearBaseline_UI')
     )
 
     .addToUi();
@@ -1549,6 +1553,142 @@ function analyzeRule5PlaceOnlyImpact_UI() {
     safeUiAlert_(lines.join('\n'));
   } catch (e) {
     logError('App', 'analyzeRule5PlaceOnlyImpact_UI failed: ' + e.message, e);
+    safeUiAlert_('❌ ล้มเหลว: ' + e.message);
+  }
+}
+
+// ============================================================
+// SECTION: [V6.0.028] Snapshot Test UI (Phase 2 refactoring safety)
+// ============================================================
+
+/**
+ * snapshotSaveBaseline_UI — [V6.0.028] Menu wrapper — save current TEST_MATCH_RESULTS as baseline
+ *   ใช้ก่อน refactor — บันทึก decisions ปัจจุบันเป็น "golden output"
+ *   หลัง refactor ให้รัน Dry Run ใหม่ + กด Compare เพื่อตรวจ regression
+ */
+function snapshotSaveBaseline_UI() {
+  try {
+    if (typeof requirePermission_ === 'function') requirePermission_('action:run_pipeline');
+
+    const ui = SpreadsheetApp.getUi();
+    const confirm = ui.alert(
+      '📸 [V6.0.028] Snapshot — Save Baseline',
+      'บันทึก TEST_MATCH_RESULTS ปัจจุบันเป็น baseline\n\n' +
+        '⚠️  ถ้ามี baseline เดิมอยู่ → จะถูก overwrite\n\n' +
+        'วิธีใช้:\n' +
+        '1. รัน Dry Run (Force All 400 rows) บนเวอร์ชันปัจจุบัน\n' +
+        '2. กดเมนูนี้เพื่อบันทึก baseline\n' +
+        '3. Refactor code (เช่น แตก makeMatchDecision)\n' +
+        '4. รัน Dry Run (Force All 400 rows) อีกครั้ง\n' +
+        '5. กด "Snapshot — Compare" เพื่อตรวจ regression\n\n' +
+        'ยืนยันบันทึก baseline?',
+      ui.ButtonSet.YES_NO
+    );
+    if (confirm !== ui.Button.YES) {
+      safeUiAlert_('ℹ️ ยกเลิก — ไม่บันทึก baseline');
+      return;
+    }
+
+    const result = snapshotSaveBaseline_();
+    if (result.ok) {
+      safeUiAlert_('✅ ' + result.message);
+    } else {
+      safeUiAlert_('❌ ' + result.message);
+    }
+  } catch (e) {
+    logError('App', 'snapshotSaveBaseline_UI failed: ' + e.message, e);
+    safeUiAlert_('❌ ล้มเหลว: ' + e.message);
+  }
+}
+
+/**
+ * snapshotCompare_UI — [V6.0.028] Menu wrapper — compare current vs baseline
+ *   หลัง refactor — เปรียบเทียบ decisions ว่าเหมือนเดิมหรือไม่
+ */
+function snapshotCompare_UI() {
+  try {
+    if (typeof requirePermission_ === 'function') requirePermission_('action:run_pipeline');
+
+    const result = snapshotCompare_();
+    if (!result.ok && result.message.indexOf('ไม่พบ baseline') === 0) {
+      safeUiAlert_('❌ ' + result.message);
+      return;
+    }
+
+    const lines = [];
+    lines.push('📸 [V6.0.028] Snapshot — Compare Results\n');
+    lines.push('─── Baseline ───');
+    lines.push('Version: ' + (result.baselineVersion || 'unknown'));
+    lines.push('Saved at: ' + (result.baselineSavedAt || 'unknown'));
+    lines.push('Rows: ' + result.baselineRows);
+    lines.push('');
+    lines.push('─── Current ───');
+    lines.push('Rows: ' + result.currentRows);
+    lines.push('');
+    lines.push('─── Result ───');
+    lines.push(result.message);
+    lines.push('');
+
+    if (result.differences.length > 0) {
+      lines.push('─── Differences (สูงสุด 20) ───');
+      const showCount = Math.min(20, result.differences.length);
+      for (let i = 0; i < showCount; i++) {
+        const d = result.differences[i];
+        if (d.type === 'CHANGED') {
+          lines.push('• Row ' + d.sourceRow + ' [CHANGED]:');
+          lines.push(
+            '    baseline: ' + d.baseline.action + '/' + d.baseline.reason + ' (conf=' + d.baseline.confidence + ')'
+          );
+          lines.push(
+            '    current:  ' + d.current.action + '/' + d.current.reason + ' (conf=' + d.current.confidence + ')'
+          );
+        } else if (d.type === 'NEW_IN_CURRENT') {
+          lines.push('• Row ' + d.sourceRow + ' [NEW — not in baseline]: ' + d.current[1] + '/' + d.current[2]);
+        } else if (d.type === 'MISSING_IN_CURRENT') {
+          lines.push('• Row ' + d.sourceRow + ' [MISSING — was in baseline]: ' + d.baseline[1] + '/' + d.baseline[2]);
+        }
+      }
+      if (result.differences.length > 20) {
+        lines.push('... และอีก ' + (result.differences.length - 20) + ' differences');
+      }
+      lines.push('');
+      lines.push('⚠️  พบ regression — อย่า merge จนกว่าจะแก้ครบ');
+    } else {
+      lines.push('✅ ปลอดภัย — สามารถ merge refactor ได้');
+    }
+
+    safeUiAlert_(lines.join('\n'));
+  } catch (e) {
+    logError('App', 'snapshotCompare_UI failed: ' + e.message, e);
+    safeUiAlert_('❌ ล้มเหลว: ' + e.message);
+  }
+}
+
+/**
+ * snapshotClearBaseline_UI — [V6.0.028] Menu wrapper — clear baseline
+ *   ใช้หลัง merge refactor PR — ล้าง baseline เก่าเพื่อเริ่ม cycle ใหม่
+ */
+function snapshotClearBaseline_UI() {
+  try {
+    if (typeof requirePermission_ === 'function') requirePermission_('action:run_pipeline');
+
+    const ui = SpreadsheetApp.getUi();
+    const confirm = ui.alert(
+      '📸 [V6.0.028] Snapshot — Clear Baseline',
+      'ล้าง baseline ออกจาก PropertiesService\n\n' +
+        'ใช้หลัง merge refactor PR — เพื่อเริ่ม cycle ใหม่\n\n' +
+        'ยืนยันล้าง baseline?',
+      ui.ButtonSet.YES_NO
+    );
+    if (confirm !== ui.Button.YES) {
+      safeUiAlert_('ℹ️ ยกเลิก — ไม่ล้าง baseline');
+      return;
+    }
+
+    const result = snapshotClearBaseline_();
+    safeUiAlert_(result.ok ? '✅ ' + result.message : '❌ ' + result.message);
+  } catch (e) {
+    logError('App', 'snapshotClearBaseline_UI failed: ' + e.message, e);
     safeUiAlert_('❌ ล้มเหลว: ' + e.message);
   }
 }
