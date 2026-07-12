@@ -1,78 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 26_AuditTrailService.gs
  * LMDS V6.0 — Audit Trail (Critical-Only Scope)
  * ===================================================
  * PURPOSE:
- *   Record all CREATE/UPDATE/DELETE/MERGE operations on M_ALIAS + Q_REVIEW
- *   into SYS_AUDIT_TRAIL sheet for change tracking + compliance.
+ *   Record CREATE/UPDATE/DELETE/MERGE operations on M_ALIAS + Q_REVIEW
+ *   into SYS_AUDIT_TRAIL sheet for change tracking + compliance
+ *   Retention: keep last 90 days; older rows auto-pruned by cleanupAuditTrail_UI()
  *
- *   Scope (V6.0.007 — Critical Only):
- *     - M_ALIAS: createGlobalAlias, cleanupStaleCanonicalAliases_, learnAliasFromReviewDecision
- *     - Q_REVIEW: applyReviewDecision (all 4 decisions: CREATE_NEW/MERGE_TO_CANDIDATE/ESCALATE/IGNORE)
- *   Not in scope (deferred): M_PERSON, M_PLACE, M_GEO_POINT, M_DESTINATION CRUD
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
  *
- *   Retention: keep last 90 days in SYS_AUDIT_TRAIL; older rows auto-pruned by cleanupAuditTrail_UI()
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v6.0.007 (2026-07-08) — INITIAL: SYS_AUDIT_TRAIL sheet + logAuditTrail + 4 hook points + retention cleanup
- *     v6.0.006 (2026-07-07) — Stable (audit trail was pending)
- *     v6.0.004 (2026-07-06) — Stable (audit trail was pending)
- * ===================================================
  * DEPENDENCIES:
- *   REQUIRES:
- *     - 01_Config (SHEET, AUDIT_IDX, APP_CONST)
- *     - 02_Schema (SCHEMA.SYS_AUDIT_TRAIL)
- *     - 03_SetupSheets (logInfo, logWarn, logError, safeUiAlert_)
- *     - 14_Utils (generateShortId)
- *   CALLS:
- *     - SpreadsheetApp.getActiveSpreadsheet() — write to SYS_AUDIT_TRAIL
- *     - Session.getEffectiveUser().getEmail() — record who changed what
- *     - PropertiesService.getScriptProperties() — read retention days
- *   EXPORTS TO:
- *     - 21_AliasService.gs (createGlobalAlias → logAuditTrail)
- *     - 12_ReviewService.gs (applyReviewDecision → logAuditTrail)
- *     - 10_MatchEngine.gs (cleanupStaleCanonicalAliases_ → logAuditTrail)
- *     - 00_App.gs (cleanupAuditTrail_UI — menu entry)
- *   SHEETS ACCESSED:
- *     - SHEET.SYS_AUDIT_TRAIL (Write: append-only; Read: retention pruning)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils
+ *   CALLED BY: 10_MatchEngine (alias writes), 12_ReviewService (applyReviewDecision), 21_AliasService (alias CRUD)
+ *
  * ARCHITECTURE:
- *   ┌──────────────────────────────────────────────────────────┐
- *   │                26_AuditTrailService.gs                   │
- *   │           Audit Trail (V6.0.007 — Critical Only)         │
- *   ├──────────────────────────────────────────────────────────┤
- *   │                                                          │
- *   │  logAuditTrail(entityType, entityId, action, ...)        │
- *   │       │                                                  │
- *   │       ├── Validate args (entityType, entityId, action)   │
- *   │       ├── Get caller email from Session                  │
- *   │       ├── Truncate old_value/new_value to 500 chars      │
- *   │       ├── Append row to SYS_AUDIT_TRAIL (batched write)  │
- *   │       └── Failsafe: logWarn + return (never throw)       │
- *   │                                                          │
- *   │  Hook Points (4 — Critical Only):                        │
- *   │   - createGlobalAlias() in 21_AliasService.gs            │
- *   │       → action='CREATE', entity_type='ALIAS'             │
- *   │   - applyReviewDecision() in 12_ReviewService.gs         │
- *   │       → action='CREATE'/'MERGE'/'UPDATE'/'DELETE'        │
- *   │   - cleanupStaleCanonicalAliases_() in 10_MatchEngine.gs │
- *   │       → action='DELETE', entity_type='ALIAS' (batch)     │
- *   │   - learnAliasFromReviewDecision() in 12_ReviewService   │
- *   │       → action='CREATE', entity_type='ALIAS' (verified)  │
- *   │                                                          │
- *   │  cleanupAuditTrail_UI() — retention pruning              │
- *   │   - Default: keep last 90 days                           │
- *   │   - Reads AUDIT_RETENTION_DAYS script property (override)│
- *   │   - Prunes rows where changed_at < now - retention_days  │
- *   │                                                          │
- *   │  Failsafe Pattern:                                       │
- *   │   - logAuditTrail NEVER throws — wraps everything in     │
- *   │     try/catch and logs warning on failure                │
- *   │   - Reason: audit failure must NOT break the operation   │
- *   │     that triggered it (defense in depth)                 │
- *   └──────────────────────────────────────────────────────────┘
+ *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)
  * ===================================================
  */
 

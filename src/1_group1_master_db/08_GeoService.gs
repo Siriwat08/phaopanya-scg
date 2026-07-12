@@ -1,58 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 08_GeoService.gs
- * LMDS V5.5 — Geo Point Master Service
+ * LMDS V6.0 — Geo Point Master Service
  * ===================================================
  * PURPOSE:
  *   จัดการ Master Geo Point — ฐานข้อมูลพิกัด GPS ที่ตรวจสอบแล้ว
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   รวม resolveGeo (grid-based proximity), createGeoPoint, findNearbyGeos
+ *   และ RAM + CacheService memoization (loadAllGeos_)
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config (SHEET.M_GEO_POINT, GEO_IDX.*, AI_CONFIG.GEO_RADIUS_M, AI_CONFIG.CACHE_TTL_SEC, APP_CONST.*)
- *     - 02_Schema (SCHEMA)
- *     - 15_GoogleMapsAPI (geocode / reverse geocode)
- *     - 14_Utils (haversineDistanceM, generateShortId)
- *     - 11_TransactionService (invalidateGeoLatLngCache_) [V5.5.007 P1 #5]
- *   CALLS (Invokes):
- *     - haversineDistanceM() → 14_Utils
- *     - generateShortId() → 14_Utils
- *     - lookupPlaceAdminById_() → 07_PlaceService
- *     - invalidateGeoLatLngCache_() → 11_TransactionService (called from
- *       invalidateGeoCache_ to clear _GEO_LATLNG_RAM_CACHE) [V5.5.007 P1 #5]
- *     - logError/logDebug/logWarn() → 03_SetupSheets
- *   EXPORTS TO:
- *     - 10_MatchEngine (resolveGeo, createGeoPoint, updateGeoStats, loadAllGeos_, findNearbyGeos)
- *     - 12_ReviewService (resolveGeo, createGeoPoint)
- *     - 11_TransactionService (loadAllGeos_)
- *     - 00_App
- *   SHEETS ACCESSED:
- *     - SHEET.M_GEO_POINT (Read+Write: geo point master data)
- *     - SHEET.MAPS_CACHE (Read: cached geocode results)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 15_GoogleMapsAPI, 14_Utils, 07_PlaceService, 11_TransactionService
+ *   CALLED BY: 10_MatchEngine, 12_ReviewService, 11_TransactionService, 00_App, 19_Hardening, 22b_WebAppViews
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────┐
- *   │              Geo Master Hub                     │
- *   ├─────────────────────────────────────────────────┤
- *   │  resolveGeo                                     │
- *   │    └─► findGeoCandidates_ (grid-based proximity)│
- *   │  createGeoPoint                                 │
- *   │    └─► Plus Code fallback via lookupPlaceAdminById_
- *   │  updateGeoStats                                 │
- *   │  loadAllGeos_ (RAM+CacheService memoization)    │
- *   │  findNearbyGeos (haversine radius search)       │
- *   │  invalidateGeoCache_                            │
- *   │    └─► also calls invalidateGeoLatLngCache_()   │
- *   │        on 11_TransactionService to clear        │
- *   │        _GEO_LATLNG_RAM_CACHE [V5.5.007 P1 #5]   │
- *   │  haversineDistance (public alias)                │
- *   └─────────────────────────────────────────────────┘
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

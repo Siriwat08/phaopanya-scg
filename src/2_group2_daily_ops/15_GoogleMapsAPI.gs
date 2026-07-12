@@ -1,47 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 15_GoogleMapsAPI.gs
- * LMDS V5.5 — Google Maps Custom Functions (@customFunction)
+ * LMDS V6.0 — Google Maps Custom Functions (@customFunction)
  * ===================================================
  * PURPOSE:
  *   ให้บริการสูตร Google Maps สำหรับพิมพ์ใน Google Sheet โดยตรง
  *   สูตรทั้งหมดมี @customFunction annotation → พิมพ์ในเซลล์ได้เลย
  *   มีระบบ Cache (CacheService 6 ชม.) เพื่อลดการเรียก API
  *
- *   ต้นฉบับ: Amit Agarwal — https://labnol.org/google-maps-formulas-for-sheets-200817
- *   ปรับใช้ใน LMDS V5.5.013 — ลบระบบ 3-layer cache + MAPS_CACHE sheet ออก
- *   เพราะระบบ LMDS ไม่ได้เรียก Google Maps API ผ่าน code อีกต่อไป
- *   (DIST_FROM_WH และ RESOLVED_ADDR มาจาก AppSheet ที่ผู้ใช้ทำไว้แล้ว)
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config.gs          (AI_CONFIG.CACHE_TTL_SEC)
- *     - 03_SetupSheets.gs     (logError — ใช้ใน GOOGLEMAPS_* เผื่อ error)
- *   CALLS (Invokes):
- *     - Google Maps API via Maps.newGeocoder / Maps.newDirectionFinder / Maps.newElevationSampler
- *   EXPORTS TO:
- *     - Google Sheet users (พิมพ์สูตรในเซลล์ได้โดยตรง)
- *   SHEETS ACCESSED:
- *     - (ไม่มี — ไม่ใช้ MAPS_CACHE sheet อีกต่อไป)
- * ===================================================
+ *   REQUIRES: 01_Config, 14_Utils
+ *   CALLED BY: 08_GeoService (geocode / reverse geocode), Google Sheets cells (DIST_FROM_WH, RESOLVED_ADDR @customFunction), 22c_WebAppActions (map data)
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────────────────┐
- *   │  15_GoogleMapsAPI.gs (Amit Agarwal Custom Functions)        │
- *   │  ├── Cache helpers: _mapsMd5, _mapsGetCache, _mapsSetCache │
- *   │  ├── GOOGLEMAPS_DISTANCE()   — ระยะทางระหว่าง 2 จุด         │
- *   │  ├── GOOGLEMAPS_DURATION()   — เวลาเดินทางระหว่าง 2 จุด     │
- *   │  ├── GOOGLEMAPS_LATLONG()    — ที่อยู่ → lat,lng             │
- *   │  ├── GOOGLEMAPS_ADDRESS()    — รหัสไปรษณีย์/ที่อยู่บางส่วน → ที่อยู่เต็ม │
- *   │  ├── GOOGLEMAPS_REVERSEGEOCODE() — lat,lng → ที่อยู่         │
- *   │  ├── GOOGLEMAPS_COUNTRY()    — ที่อยู่ → ประเทศ               │
- *   │  └── GOOGLEMAPS_DIRECTIONS() — เส้นทางขับขี่ระหว่าง 2 จุด     │
- *   └─────────────────────────────────────────────────────────────┘
+ *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)
  * ===================================================
  */
 

@@ -1,75 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 24_PipelineManager.gs
- * LMDS V5.5 — Pipeline Manager (Standalone Module)
+ * LMDS V6.0 — Pipeline Manager (Standalone Module)
  * ===================================================
  * PURPOSE:
  *   จัดการการรัน runMatchEngine() แบบ batch สำหรับข้อมูลหลักหมื่นแถว
- *   โดยไม่ให้เกิน quota รายวันของ Google Apps Script (Free tier: 90 นาที/วัน)
+ *   ไม่ให้เกิน quota รายวันของ Google Apps Script (Free tier: 90 นาที/วัน)
+ *   STANDALONE — ใช้ Script Properties เก็บ state ของตัวเอง (prefix: PIPELINE_*)
  *
- *   ฟีเจอร์หลัก:
- *   1. Auto-run ทุก 1 ชม ตั้งแต่ 08:00-22:00 (15 รอบ/วัน)
- *   2. หยุดเองถ้า quota รายวันใกล้เต็ม (เหลือ buffer 15 นาที)
- *   3. รันต่อเองเมื่อ quota รีเซ็ต (วันใหม่)
- *   4. Circuit Breaker — หยุดถ้า error ซ้ำ 3 ครั้งติด
- *   5. Checkpoint/Resume — บันทึกตำแหน่งเสมอ รันต่อได้
- *   6. ไม่แตะไฟล์เดิม — เรียก runMatchEngine() แบบ wrapper
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
  *
- *   STANDALONE MODULE:
- *   - ไม่ depend บับ ฟังก์ชันอื่นในระบบ (ยกเว้น runMatchEngine ที่เรียกใช้)
- *   - ใช้ Script Properties เก็บ state ของตัวเอง (prefix: PIPELINE_*)
- *   - ไม่ import/export กับ module อื่น
- *   - copy ไฟล์นี้ไป Apps Script ได้เลย ไม่ต้องแก้ไฟล์อื่น
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-28) — Initial Pipeline Manager (standalone module)
- * ===================================================
  * DEPENDENCIES:
- *   REQUIRES:
- *     - runMatchEngine() (from 10_MatchEngine.gs) — ฟังก์ชันหลักที่จะเรียก
- *     - ScriptApp, SpreadsheetApp, PropertiesService (built-in GAS services)
- *   DEFINES:
- *     - PIPELINE_CONFIG (configuration constants)
- *     - State Management: getPipelineState_(), setPipelineState_(), etc.
- *     - Quota Tracker: checkAndResetDailyQuota_(), isQuotaAvailable_()
- *     - Circuit Breaker: recordBatchSuccess_(), recordBatchError_()
- *     - Checkpoint: saveCheckpoint_(), loadCheckpoint_()
- *     - Trigger Manager: installPipelineTriggers(), removeAllPipelineTriggers_()
- *     - Main entry: runPipelineBatch()
- *     - Admin actions: startPipeline(), pausePipeline(), resumePipeline(),
- *                      resetPipeline(), showPipelineStatus(), resetCircuitBreakerMenu()
- * ===================================================
+ *   REQUIRES: 10_MatchEngine (runMatchEngine only)
+ *   CALLED BY: Time-driven trigger (auto-run 08:00-22:00 every hour), 00_App (manual pipeline menu — optional wrapper)
+ *
  * ARCHITECTURE:
- *   ┌──────────────────────────────────────────────────────────┐
- *   │  Layer 1: Quota Tracker (Script Properties)              │
- *   │  ├── Daily runtime: 75 min max (90 - 15 buffer)          │
- *   │  ├── Daily runs: 15 max                                  │
- *   │  └── Auto-reset at midnight                              │
- *   ├──────────────────────────────────────────────────────────┤
- *   │  Layer 2: Circuit Breaker                                │
- *   │  ├── Max 3 consecutive errors → PAUSE                    │
- *   │  └── Admin reset required to resume                      │
- *   ├──────────────────────────────────────────────────────────┤
- *   │  Layer 3: Checkpoint/Resume                              │
- *   │  ├── Save lastRunAt, runCount, totalRuntimeMs            │
- *   │  └── Resume from last state after pause/quota-stop       │
- *   ├──────────────────────────────────────────────────────────┤
- *   │  Layer 4: Trigger Manager                                │
- *   │  ├── Time-based: every 1 hour, 08:00-22:00 (15 runs)     │
- *   │  ├── Auto-cleanup of MatchEngine auto-resume triggers    │
- *   │  └── Auto-remove when pipeline COMPLETED                 │
- *   └──────────────────────────────────────────────────────────┘
- * ===================================================
- * USAGE:
- *   1. ติดตั้ง triggers: เรียก installPipelineTriggers() ครั้งเดียว
- *      (หรือกดเมนู LMDS > Pipeline Manager > ติดตั้ง — ถ้าเพิ่มเมนู)
- *   2. เริ่ม pipeline: เรียก startPipeline()
- *   3. ระบบจะรันอัตโนมัติทุก 1 ชม จนกว่าจะเสร็จหรือ quota เต็ม
- *   4. ดูสถานะ: เรียก showPipelineStatus()
- *   5. หยุดชั่วคราว: เรียก pausePipeline()
- *   6. ทำต่อ: เรียก resumePipeline()
- *   7. เริ่มใหม่ทั้งหมด: เรียก resetPipeline()
+ *   Group 4 — Pipeline manager (batched runMatchEngine with quota/timeout guards)
  * ===================================================
  */
 

@@ -1,18 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 10d_MatchTestHarness.gs
- * LMDS V6.0 — Match Engine Test Harness (extracted from 10_MatchEngine.gs)
+ * LMDS V6.0 — Match Engine Test Harness
  * ===================================================
  * PURPOSE:
  *   รวม Dry Run + test functions ที่ไม่เขียน master sheets
  *   แยกออกจาก 10_MatchEngine.gs เพื่อลดขนาดไฟล์ (audit 1.2)
+ *   ถูกเรียกโดย 00_App.gs menu (runTestMatchDryRun_UI / runTestMatchDryRunForceAll_UI)
  *
- *   ถูกเรียกโดย:
- *     - runTestMatchDryRun_UI() ใน 00_App.gs
- *     - runTestMatchDryRunForceAll_UI() ใน 00_App.gs
- * ===================================================
  * CHANGELOG:
- *   v6.0.032 (2026-07-12) — INITIAL — extracted from 10_MatchEngine.gs
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
+ * DEPENDENCIES:
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 10_MatchEngine, 04_SourceRepository, 29_SnapshotTest
+ *   CALLED BY: 00_App (Dry Run menu triggers), 29_SnapshotTest (baseline capture)
+ *
+ * ARCHITECTURE:
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

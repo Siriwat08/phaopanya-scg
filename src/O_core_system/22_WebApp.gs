@@ -1,70 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 22_WebApp.gs
- * LMDS V5.5 — Web App Server (Dashboard)
+ * LMDS V6.0 — Web App Server (Dashboard)
  * ===================================================
  * PURPOSE:
  *   ให้บริการ Web App สำหรับดูข้อมูล LMDS แบบ real-time
  *   ใช้ HtmlService + google.script.run pattern
  *   เป็นจุดเชื่อมระหว่าง Frontend (HTML/JS) กับ Backend (Google Sheets)
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config.gs     (APP_VERSION, SHEET, *_IDX, APP_CONST)
- *     - 02_Schema.gs     (SCHEMA definitions)
- *     - 14_Utils.gs      (isAuthorizedUser_, maskReviewerEmail_)
- *     - 03_SetupSheets.gs (logInfo, logError, logWarn)
- *   CALLS:
- *     - SpreadsheetApp.getActiveSpreadsheet()
- *     - PropertiesService.getScriptProperties()
- *     - Session.getActiveUser()
- *   DEFINES:
- *     - doGet(e)                     — Web App entry point
- *     - include_(filename)           — HTML template loader for <?!= include_('...') ?>
- *     - isAuthorizedDashboardUser_() — Dashboard auth check (separate from LMDS_ADMINS)
- *     - getCurrentDashboardUser_()   — Return current user info for frontend
- *     - maskEmailSafe_(email)        — PII masking for logs (defense-in-depth)
- *     - getDashboardData()           — Overview stats for Dashboard view
- *     - computeFactStats_(sheet, stats)         — FACT_DELIVERY stats (internal)
- *     - computeReviewStats_(sheet, stats)       — Q_REVIEW stats (internal)
- *     - computeSourceStats_(sheet, stats)       — Source sheet stats (internal)
- *     - computeTopIssues_(reviewSheet, limit)   — Top issue_type counts (internal)
- *     - isAutoMatchStatus_(status)              — Check auto-match status (internal)
- *     - formatDateForCompare_(date)             — YYYY-MM-DD format (internal)
- *     - ping()                       — Health check endpoint
- *     - getFactDeliveryPage()         — Phase 2 (FACT_DELIVERY pagination + filter)
- *     - getQReviewPage()              — Phase 2 (Q_REVIEW pagination + status filter)
- *     - getMatchEngineMetrics()       — Phase 3 (Match Engine statistics)
- *   USED BY:
- *     - Web App deployment (script.google.com/macros/s/.../exec)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 14_Utils, 03_SetupSheets
+ *   CALLED BY: doGet() — Web App entry point; google.script.run calls from frontend
+ *
  * ARCHITECTURE:
- *   ┌────────────────────────────────────────────────────────────┐
- *   │  22_WebApp.gs (Web App Server)                             │
- *   │  ├── doGet(e) → HtmlService.createTemplateFromFile('Index') │
- *   │  ├── include_(filename) → HtmlService (HTML partial)       │
- *   │  ├── isAuthorizedDashboardUser_() — reuse SEC-002 pattern  │
- *   │  │   (separate whitelist: DASHBOARD_USERS Script Property)  │
- *   │  ├── getCurrentDashboardUser_() — return email + name      │
- *   │  ├── getDashboardData() — overview stats (Phase 1)         │
- *   │  ├── getFactDeliveryPage(offset, limit, filter) — Phase 2  │
- *   │  ├── getQReviewPage(offset, limit, status) — Phase 2       │
- *   │  └── getMatchEngineMetrics() — Phase 3                     │
- *   └────────────────────────────────────────────────────────────┘
- * ===================================================
- * DEPLOYMENT:
- *   1. Apps Script Editor > Deploy > New deployment
- *   2. Type: Web app
- *   3. Execute as: Me (user deploying)
- *   4. Who has access: Anyone with Google Account
- *   5. Authorize scopes when prompted
- *   6. Copy URL: https://script.google.com/macros/s/.../exec
+ *   Group 3 — Web frontend server (dashboard, views, actions, mobile menu)
  * ===================================================
  */
 

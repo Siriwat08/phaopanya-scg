@@ -1,69 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 07_PlaceService.gs
- * LMDS V5.5 — Place Master Service
+ * LMDS V6.0 — Place Master Service
  * ===================================================
  * PURPOSE:
  *   จัดการ Master Place — ฐานข้อมูลสถานที่จัดส่ง
  *   เป็น Single Source of Truth สำหรับข้อมูลสถานที่
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   รวม resolvePlace, findPlaceCandidates (multi-strategy search)
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config.gs          (SHEET.M_PLACE, PLACE_IDX.*, AI_CONFIG)
- *     - 02_Schema.gs          (SCHEMA[SHEET.M_PLACE], SCHEMA[SHEET.M_PLACE_ALIAS])
- *     - 03_SetupSheets.gs     (logDebug, logWarn, logError)
- *     - 05_NormalizeService.gs (normalizePlaceName, normalizeForCompare)
- *     - 14_Utils.gs           (generateShortId, generateUUID, diceCoefficient, levenshteinDistance,
- *                              saveChunkedCache_, loadChunkedCache_ [V5.5.007 P1 #6])
- *   CALLS (Invokes):
- *     - resolveMasterUuidViaGlobalAlias() → 21_AliasService.gs (findPlaceCandidates)
- *     - convertUuidToPlaceId()            → 21_AliasService.gs (findPlaceCandidates)
- *     - extractGeoFromAddress()           → 16_GeoDictionaryBuilder.gs
- *     - scanAddressAgainstDictionary()    → 16_GeoDictionaryBuilder.gs
- *     - lookupPostcodeByArea()            → 20_ThGeoService.gs
- *     - lookupByPostcode()                → 20_ThGeoService.gs
- *   EXPORTS TO:
- *     - 10_MatchEngine.gs     (resolvePlace, createPlace, updatePlaceStats, loadAllPlaces_)
- *     - 11_TransactionService.gs (loadAllPlaces_)
- *     - 17_SearchService.gs   (loadAllPlaces_)
- *     - 21_AliasService.gs    (loadAllPlaces_ — UUID converters)
- *   SHEETS ACCESSED:
- *     - SHEET.M_PLACE         (Read+Write: CRUD, Stats update)
- *     - SHEET.M_PLACE_ALIAS   (Read+Write: Alias lookup, createPlaceAlias)
- *     - SHEET.SYS_TH_GEO      (Read: Geo dictionary lookup)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 16_GeoDictionaryBuilder, 20_ThGeoService, 21_AliasService
+ *   CALLED BY: 10_MatchEngine, 11_TransactionService, 12_ReviewService, 17_SearchService, 19_Hardening, 20_ThGeoService, 21_AliasService, 22b_WebAppViews
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────────────────┐
- *   │  07_PlaceService.gs (Place Master Hub)                      │
- *   │  ├── resolvePlace()         — Match/resolve place           │
- *   │  ├── findPlaceCandidates()  — Multi-strategy search         │
- *   │  │   ├── M_ALIAS Fast Path (resolveMasterUuidViaGlobalAlias) │
- *   │  │   ├── Alias Match (M_PLACE_ALIAS)                        │
- *   │  │   ├── Phonetic / Name Match                              │
- *   │  │   └── Note Search (Deep Match)                           │
- *   │  ├── scorePlaceCandidate()  — Score calculation             │
- *   │  ├── tryMatchBranch()       — Chain store matching          │
- *   │  ├── createPlace()          — Create new place record       │
- *   │  ├── createPlaceAlias()     — Add alternate name            │
- *   │  ├── updatePlaceStats()     — Update usage statistics       │
- *   │  ├── getEnrichedGeoData()   — Orchestrator (calls tier sub-fns)│
- *   │  │   ├── enrichByDictionary_()  — Tier 0+1 (Dict-based)     │
- *   │  │   ├── enrichByRegexFuzzy_()  — Tier 2 (Regex → Fuzzy)    │
- *   │  │   ├── enrichByPostcode_()    — Tier 3 (Postcode fallback)│
- *   │  │   └── buildEnrichedResult_() — Result builder + source   │
- *   │  ├── loadAllPlaces_()       — Load all places (cached)      │
- *   │  │   └── saveChunkedCache_/loadChunkedCache_ for            │
- *   │  │       CACHE_KEY.PLACE_ALL / PLACE_ALIAS_ALL [V5.5.007 #6]│
- *   │  ├── loadAllPlaceAliases_() — Load all place aliases (cached)│
- *   │  │   └── chunked cache migration [V5.5.007 P1 #6]           │
- *   └─────────────────────────────────────────────────────────────┘
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

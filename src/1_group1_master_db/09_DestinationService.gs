@@ -1,48 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 09_DestinationService.gs
- * LMDS V5.5 — Destination Master Service
+ * LMDS V6.0 — Destination Master Service
  * ===================================================
  * PURPOSE:
  *   จัดการ Master Destination — จับคู่ Person+Place+Geo เป็นจุดหมายปลายทาง
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   รวม resolveDestination (Trinity check), createDestination, updateDestinationStats
+ *   และ query helpers + cached loader (loadAllDestinations_)
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config (SHEET.M_DESTINATION, DEST_IDX.*, AI_CONFIG.CACHE_TTL_SEC, APP_CONST.*)
- *     - 02_Schema (SCHEMA)
- *   CALLS (Invokes):
- *     - generateShortId() → 14_Utils
- *     - logDebug/logWarn/logError() → 03_SetupSheets
- *   EXPORTS TO:
- *     - 10_MatchEngine (resolveDestination, createDestination, updateDestinationStats, loadAllDestinations_)
- *     - 17_SearchService (getDestsByPersonId, getDestsByPersonAndPlace, getDestsByPlaceId)
- *     - 21_AliasService (destination lookups)
- *   SHEETS ACCESSED:
- *     - SHEET.M_DESTINATION (Read+Write: destination master data)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 14_Utils, 03_SetupSheets
+ *   CALLED BY: 10_MatchEngine, 17_SearchService, 21_AliasService, 19_Hardening, 22b_WebAppViews
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────┐
- *   │           Destination Master Hub                 │
- *   ├─────────────────────────────────────────────────┤
- *   │  resolveDestination                              │
- *   │    └─► Trinity check: personId+placeId+geoId     │
- *   │  createDestination                               │
- *   │  updateDestinationStats                          │
- *   │  Query Helpers:                                  │
- *   │    ├─► getDestsByPersonId                        │
- *   │    ├─► getDestsByPlaceId                         │
- *   │    ├─► getDestsByPersonAndPlace                  │
- *   │    └─► getDominantDestByGeo                      │
- *   │  Data Loader:                                    │
- *   │    └─► loadAllDestinations_ (cached)             │
- *   └─────────────────────────────────────────────────┘
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

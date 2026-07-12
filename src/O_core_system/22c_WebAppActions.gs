@@ -1,22 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 22c_WebAppActions.gs
- * LMDS V6.0 — Web App Actions (extracted from 22_WebApp.gs)
+ * LMDS V6.0 — Web App Actions
  * ===================================================
  * PURPOSE:
  *   รวม action + search + map functions สำหรับ WebApp
  *   แยกออกจาก 22_WebApp.gs เพื่อลดขนาดไฟล์ (audit 1.2)
+ *   ถูกเรียกโดย frontend ผ่าน google.script.run (ping, submitReviewDecision, searchLocations, etc.)
  *
- *   ถูกเรียกโดย frontend ผ่าน google.script.run:
- *     - ping() — health check
- *     - submitReviewDecision() — Q_REVIEW approve/reject
- *     - getReviewDetail() — review detail modal
- *     - searchLocations() — Search view
- *     - getMapAnalyticsData() — Map Analytics view
- *     - getMatchEngineLiveStatus() — Live Feed view
- * ===================================================
  * CHANGELOG:
- *   v6.0.033 (2026-07-12) — INITIAL — extracted from 22_WebApp.gs
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
+ * DEPENDENCIES:
+ *   REQUIRES: 01_Config, 02_Schema, 14_Utils, 22_WebApp, 12_ReviewService, 17_SearchService, 15_GoogleMapsAPI
+ *   CALLED BY: Frontend (MobileActions, Search, MapAnalytics, LiveFeed views)
+ *
+ * ARCHITECTURE:
+ *   Group 3 — Web frontend server (dashboard, views, actions, mobile menu)
  * ===================================================
  */
 

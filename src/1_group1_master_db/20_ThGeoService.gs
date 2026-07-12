@@ -1,74 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 20_ThGeoService.gs
- * LMDS V5.5 — Thai Geo Service
+ * LMDS V6.0 — Thai Geo Service
  * ===================================================
  * PURPOSE:
- *   ให้บริการค้นหาข้อมูลภูมิศาสตร์ไทย — ค้นหาจังหวัด/อำเภอ/ตำบล
+ *   ให้บริการค้นหาข้อมูลภูมิศาสตร์ไทย — จังหวัด/อำเภอ/ตำบล
  *   จากรหัสไปรษณีย์ หรือชื่อพื้นที่
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   รวม extractGeoFromAddress (3-tier search) + populateGeoMetadata (batch fill 16 cols)
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config (SHEET.SYS_TH_GEO, TH_GEO_IDX.*)
- *     - 02_Schema (SCHEMA)
- *     - 05_NormalizeService (normalizeForCompare)
- *     - 16_GeoDictionaryBuilder (loadCachedGeoRows_)
- *     - 14_Utils (diceCoefficient)
- *     - 07_PlaceService (invalidatePlaceCache_) [V5.5.008 P2 #12]
- *     - 16_GeoDictionaryBuilder (invalidateGeoDictCache) [V5.5.008 P2 #12]
- *     - 03_SetupSheets (flushLogBuffer_) [V5.5.008 P2 #11]
- *   CALLS (Invokes):
- *     - normalizeForCompare() → 05_NormalizeService
- *     - loadCachedGeoRows_() → 16_GeoDictionaryBuilder
- *     - invalidateGeoDictCache() → 16_GeoDictionaryBuilder (replaces manual
- *       nulling of _GLOBAL_GEO_DICT_SEARCH_KEY_INDEX in populateGeoMetadata) [V5.5.008 P2 #12]
- *     - invalidatePlaceCache_() → 07_PlaceService (replaces 3 redundant manual
- *       cache nullings in populateGeoMetadata) [V5.5.008 P2 #12]
- *     - flushLogBuffer_() → 03_SetupSheets (populateGeoMetadata finally) [V5.5.008 P2 #11]
- *     - safeUiAlert_() → 14_Utils
- *     - logInfo() → 03_SetupSheets
- *   EXPORTS TO:
- *     - 07_PlaceService (getEnrichedGeoData — uses extractGeoFromAddress)
- *     - 16_GeoDictionaryBuilder (populateGeoMetadata — shared function)
- *     - 17_SearchService (geo search utilities)
- *   SHEETS ACCESSED:
- *     - SHEET.SYS_TH_GEO (Read: dictionary lookup for geo extraction)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 07_PlaceService, 16_GeoDictionaryBuilder
+ *   CALLED BY: 07_PlaceService (getEnrichedGeoData), 16_GeoDictionaryBuilder (populateGeoMetadata — shared function), 17_SearchService (geo search utilities)
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────────┐
- *   │             20_ThGeoService.gs                      │
- *   │         Thai Geography Extraction                   │
- *   ├─────────────────────────────────────────────────────┤
- *   │                                                     │
- *   │  extractGeoFromAddress ── 3-tier search:            │
- *   │       ├── Tier 1: postal_key match                  │
- *   │       ├── Tier 2: search_key match                  │
- *   │       └── Tier 3: norm column fuzzy match           │
- *   │                                                     │
- *   │  populateGeoMetadata ── Batch fill 16 metadata      │
- *   │       │                  columns for all            │
- *   │       │                  SYS_TH_GEO rows            │
- *   │       │                                             │
- *   │       │   [V5.5.008 P2 #12] uses invalidate*Cache_*│
- *   │       │     instead of 3 manual cache nullings     │
- *   │       │     (invalidateGeoDictCache +                │
- *   │       │      invalidatePlaceCache_)                │
- *   │       │   [V5.5.008 P2 #11] flushLogBuffer_() in   │
- *   │       │     finally block                          │
- *   │       │                                             │
- *   │       └── Columns: sub_district_clean,              │
- *   │           district_clean, labels, norms,            │
- *   │           search_key, postal_key, note_type,        │
- *   │           note_scope                                │
- *   │                                                     │
- *   └─────────────────────────────────────────────────────┘
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

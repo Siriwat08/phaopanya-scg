@@ -1,51 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 03_SetupSheets.gs
- * LMDS V5.5 — Sheet Setup & Configuration Service
+ * LMDS V6.0 — Sheet Setup & Configuration Service
  * ===================================================
  * PURPOSE:
  *   สร้างโครงสร้างชีตเริ่มต้นทั้งหมดในระบบ LMDS
  *   เป็น Single Source of Truth สำหรับโครงสร้าง Spreadsheet
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   ยังเป็นที่ตั้งของ logInfo/logWarn/logError/logDebug (System Logger)
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config.gs     (SHEET.*, REVIEW_IDX, SCHEMA_VERSION)
- *     - 02_Schema.gs     (SCHEMA, getSheetHeaders, validateSheetHeaders)
- *   CALLS (Invokes):
- *     - validateSchemaConsistency() → 02_Schema.gs
- *     - generateShortId()          → 14_Utils.gs
- *   EXPORTS TO:
- *     - 00_App.gs          (setupAllSheets trigger)
- *     - All Service files  (getSheetByName — sheets must exist first)
- *   SHEETS ACCESSED (Write — Creates all sheets):
- *     - SHEET.M_PERSON, M_PERSON_ALIAS, M_PLACE, M_PLACE_ALIAS, M_ALIAS
- *     - SHEET.M_GEO_POINT, M_DESTINATION, FACT_DELIVERY, Q_REVIEW
- *     - SHEET.RPT_QUALITY, MAPS_CACHE
- *     - SHEET.DAILY_JOB, INPUT, EMPLOYEE
- *     - SHEET.OWNER_SUMMARY, SHIPMENT_SUM
- *     - SHEET.SYS_LOG, SYS_CONFIG, SYS_TH_GEO
- *   SHARED FUNCTIONS (Exported):
- *     - logInfo(), logWarn(), logError(), logDebug() — Used by ALL modules
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 14_Utils
+ *   CALLED BY: 00_App, All Service files (getSheetByName, log functions)
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────────────────┐
- *   │  03_SetupSheets.gs (Sheet Bootstrapper + System Logger)    │
- *   │  ├── setupAllSheets()      — Create all required sheets    │
- *   │  │   ├── setupGroupOneSheets_() — Master + Fact + Alias    │
- *   │  │   ├── setupGroupTwoSheets_() — Daily Ops                │
- *   │  │   └── setupSystemSheets_()   — SYS_LOG, SYS_CONFIG     │
- *   │  ├── createSheetIfMissing_() — Create sheet + validate     │
- *   │  ├── setupReviewDropdowns_() — Q_REVIEW dropdowns          │
- *   │  ├── setupInputSheet_()      — Vertical form layout        │
- *   │  └── logInfo/Warn/Error/Debug — System Logger (shared)     │
- *   └─────────────────────────────────────────────────────────────┘
+ *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)
  * ===================================================
  */
 

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 29_SnapshotTest.gs
  * LMDS V6.0 — Snapshot Test Harness for Refactoring Safety
  * ===================================================
@@ -8,25 +8,17 @@
  *   เปรียบเทียบ TEST_MATCH_RESULTS หลัง refactor กับ baseline
  *   เพื่อยืนยันว่า refactoring ไม่เปลี่ยนแปลง decision ของแต่ละ row
  *
- *   ใช้สำหรับ Phase 2 refactoring (makeMatchDecision split, persistResult split)
- *
- * USAGE:
- *   1. รัน Dry Run (Force All 400 rows) บน main ก่อน refactor
- *   2. กดเมนู "📸 [V6.0.028] Snapshot — Save Baseline"
- *   3. Refactor makeMatchDecision / persistResult
- *   4. รัน Dry Run (Force All 400 rows) อีกครั้ง
- *   5. กดเมนู "📸 [V6.0.028] Snapshot — Compare"
- *   6. ดูผล: ถ้า 0 differences → refactor ปลอดภัย, ถ้า > 0 → มี regression
- * ===================================================
  * CHANGELOG:
- *   v6.0.028 (2026-07-12) — INITIAL — Phase 2 snapshot test harness
- * ===================================================
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES:
- *     - 01_Config.gs (SHEET.TEST_MATCH_RESULTS, TEST_MATCH_IDX)
- *     - 03_SetupSheets.gs (logInfo, logWarn, logError)
- *   USED BY:
- *     - 00_App.gs menu (snapshotSaveBaseline_UI, snapshotCompare_UI)
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 10d_MatchTestHarness
+ *   CALLED BY: 00_App (menu triggers: snapshot save / compare)
+ *
+ * ARCHITECTURE:
+ *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)
  * ===================================================
  */
 

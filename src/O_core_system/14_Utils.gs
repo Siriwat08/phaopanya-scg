@@ -1,65 +1,23 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 14_Utils.gs
- * LMDS V5.5 — Utility Functions
+ * LMDS V6.0 — Utility Functions
  * ===================================================
  * PURPOSE:
  *   รวบรวมฟังก์ชันช่วยทั่วไปที่ใช้ร่วมกันทั่วระบบ
- *   เช่น ID Generator, Hash, String similarity, LatLng parser
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   เช่น ID Generator, Hash, String similarity, LatLng parser, chunked cache helpers
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config (SHEET.SOURCE, SRC_IDX.SYNC_STATUS, AI_CONFIG.MODEL)
- *   CALLS (Invokes):
- *     - logError/logInfo/logWarn() → 03_SetupSheets
- *     - getGeminiApiKey() → 01_Config
- *   EXPORTS TO:
- *     - ALL modules (06-21) — Most widely used utility module
- *     - safeCacheGet_/safeCachePut_/safeCacheRemoveAll_ — try-catch wrappers around
- *         CacheService.get/put/removeAll (NEW V5.5.007 P1 #9); consumed by 04/07/16/21
- *     - saveChunkedCache_/loadChunkedCache_/invalidateChunkedCache_ — centralized
- *         chunked-cache helpers (byte-based chunking + putAll/getAll + orphan cleanup);
- *         consumed by 04/07/16/21 [V5.5.007 P1 #7, V5.5.008 P2 #13]
- *   SHEETS ACCESSED:
- *     - SHEET.SOURCE (Write: resetSourceSyncStatus clears sync column)
- * ===================================================
+ *   REQUIRES: 01_Config, 03_SetupSheets
+ *   CALLED BY: All modules (06-21) — most widely used utility module
+ *
  * ARCHITECTURE:
- *   Shared Utility Library
- *   ┌──────────────────────────────────────────────┐
- *   │  String Similarity                           │
- *   │  ├─ levenshteinDistance (edit distance)       │
- *   │  ├─ diceCoefficient / buildBigramSet_        │
- *   │  ├─ jaroWinklerDistance [V6.0.015 P2.1]       │
- *   │  └─ ensembleNameMatch [V6.0.015 P2.3]         │
- *   │  GPS & Distance                              │
- *   │  ├─ haversineDistanceM (meters)              │
- *   │  ├─ haversineDistanceKm (kilometers)         │
- *   │  ├─ isValidLatLng (Thailand bounds check)    │
- *   │  └─ parseLatLng (string → object)            │
- *   │  ID Generation                               │
- *   │  ├─ generateShortId (12-char UUID prefix)    │
- *   │  └─ generateMd5Hash (cache key)              │
- *   │  AI Integration                              │
- *   │  ├─ callGeminiAPI (Gemini REST API)          │
- *   │  └─ cleanAIResponse_ (strip markdown)        │
- *   │  Infrastructure                              │
- *   │  ├─ callSpreadsheetWithRetry (exponential bf)│
- *   │  ├─ toThaiDateStr (Buddhist calendar)        │
- *   │  ├─ normalizeInvoiceNo (e-notation safe)     │
- *   │  └─ resetSourceSyncStatus (UI-driven reset)  │
- *   │  Cache Helpers (SECTIONS 9-12)               │
- *   │  ├─ saveChunkedCache_ / loadChunkedCache_    │
- *   │  │   + cleanupOrphanedChunks_ (V5.5.008 #13) │
- *   │  ├─ invalidateChunkedCache_ (ramVarResetFn)  │
- *   │  └─ safeCacheGet_/Put_/RemoveAll_ (V5.5.007) │
- *   └──────────────────────────────────────────────┘
+ *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)
  * ===================================================
  */
 
