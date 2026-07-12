@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.025
+ * VERSION: 6.0.026
  * FILE: 28_WebAppActions.gs
  * LMDS V6.0 — Web App Actions Server (Mobile Menu)
  * ===================================================
