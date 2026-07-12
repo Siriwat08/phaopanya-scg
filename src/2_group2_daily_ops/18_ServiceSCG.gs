@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.035
+ * VERSION: 6.0.036
  * FILE: 18_ServiceSCG.gs
  * LMDS V5.5 — SCG API Service (Group 2 Commander)
  * ===================================================
@@ -213,9 +213,17 @@ function fetchDataFromSCGJWD() {
 // ============================================================
 
 /**
- * readInputConfig_ — [REFACTOR-01] อ่านข้อมูล Input จากชีต Input
- * [REVERTED v5.5.022-hotfix] อ่าน Cookie จากเซลล์ B1 ตรงๆ เหมือน V5.0
- *   ผู้ใช้วาง Cookie ใน B1 โดยตรง — ไม่ใช้ PropertiesService migration
+ * readInputConfig_ — [V6.0.036 SECURITY FIX] อ่านข้อมูล Input จากชีต Input
+ *   [V6.0.036] เปลี่ยนจาก cell-primary → PropertiesService-primary (เหมือน getSCGCookie_)
+ *     เหตุผล: cell B1 เป็น plain text → ใครที่มี edit access เห็น cookie ตรง ๆ
+ *     ทั้งที่ไม่จำเป็นต้องเป็น admin (แตกต่างจาก API key ที่ป้องกันดีอยู่แล้ว)
+ *   ใหม่: เรียก getSCGCookie_() ซึ่งอ่าน PropertiesService ก่อน → fallback cell B1
+ *     ถ้าเจอใน cell B1 → auto-migrate ไป PropertiesService + clear cell ทันที
+ *
+ *   [V6.0.026] แก้ getSCGCookie_() ถูกแล้ว แต่ readInputConfig_ ไม่ได้เรียกใช้มัน
+ *     → ฟังก์ชันที่ใช้จริง (readInputConfig_) ยังอ่าน cell เป็น primary
+ *     PR นี้แก้ให้ readInputConfig_ เรียก getSCGCookie_() แทน
+ *
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
  * @return {{cookie: string, shipmentString: string}}
  */
@@ -224,26 +232,15 @@ function readInputConfig_(ss) {
   const dataSheet = ss.getSheetByName(SCG_CONFIG.SHEET_DATA);
   if (!inputSheet || !dataSheet) throw new Error('CRITICAL: ไม่พบชีต Input หรือ Data');
 
-  // [REVERTED v5.5.022-hotfix] อ่าน Cookie จากเซลล์ B1 ตรงๆ (เหมือน V5.0)
-  //   ถ้า B1 ว่าง → ค่อย fallback ไป Script Properties (ยังรองรับ SEC-001 แบบ optional)
-  const rawCookie = String(inputSheet.getRange(SCG_CONFIG.COOKIE_CELL).getValue() || '').trim();
-  let cookie = '';
-  if (rawCookie) {
-    // มี Cookie ใน B1 — sanitize minimal แล้วใช้ได้เลย
-    cookie = sanitizeCookie_(rawCookie);
-  } else {
-    // Fallback: อ่านจาก Script Properties (สำหรับผู้ใช้ที่ตั้งผ่านเมนู setSCGCookie_UI)
-    const fromProps = PropertiesService.getScriptProperties().getProperty('SCG_COOKIE');
-    if (fromProps) {
-      cookie = fromProps;
-      logInfo('ServiceSCG', 'อ่าน Cookie จาก Script Properties (B1 ว่าง)');
-    }
-  }
+  // [V6.0.036] ใช้ getSCGCookie_() แทนการอ่าน cell ตรง ๆ
+  //   getSCGCookie_() อ่าน PropertiesService เป็น primary → fallback cell B1
+  //   ถ้าเจอใน cell B1 → auto-migrate ไป PropertiesService + clear cell
+  //   ป้องกัน cookie รั่วใน sheet เป็น plain text
+  const cookie = getSCGCookie_();
   if (!cookie) {
     throw new Error(
-      '❌ กรุณาวาง Cookie ในช่อง ' +
-        SCG_CONFIG.COOKIE_CELL +
-        ' ของชีต Input หรือตั้งค่าผ่านเมนู LMDS > ระบบ > ตั้งค่า SCG Cookie'
+      '❌ ไม่พบ SCG Cookie — กรุณาตั้งค่าผ่านเมนู LMDS > ระบบ > ตั้งค่า SCG Cookie\n' +
+        '(Cookie จะถูกเก็บใน Script Properties — ปลอดภัยกว่า cell B1)'
     );
   }
 
@@ -271,9 +268,12 @@ function readInputConfig_(ss) {
 // ============================================================
 
 /**
- * setSCGCookie_UI — [REVERTED v5.5.022-hotfix] ตั้งค่า SCG Cookie ผ่าน UI Prompt
- *   เขียนลงเซลล์ B1 ในชีต Input (เหมือน V5.0) แทน PropertiesService
- *   ผู้ใช้สามารถวาง Cookie ใน B1 โดยตรง หรือใช้เมนูนี้ก็ได้
+ * setSCGCookie_UI — [V6.0.036 SECURITY FIX] ตั้งค่า SCG Cookie ผ่าน UI Prompt
+ *   [V6.0.036] เปลี่ยนจาก cell-primary → PropertiesService-primary
+ *     เหตุผล: cell B1 เป็น plain text → ใครที่มี edit access เห็น cookie ตรง ๆ
+ *     ทั้งที่ไม่จำเป็นต้องเป็น admin (แตกต่างจาก API key ที่ป้องกันดีอยู่แล้ว)
+ *   ใหม่: เก็บใน PropertiesService (เหมือน API key), cell B1 เป็นแค่ transient input
+ *     สำหรับผู้ที่วาง cookie ทิ้งไว้ (backward compat) — อ่านแล้ว clear ทันที
  */
 function setSCGCookie_UI() {
   // [SEC-002] Authorization Guard — เฉพาะ Admin เท่านั้นที่ตั้งค่า Cookie ได้
@@ -286,9 +286,7 @@ function setSCGCookie_UI() {
     const result = ui.prompt(
       '🔐 ตั้งค่า SCG Cookie',
       'วาง Cookie จาก Browser (DevTools > Network > Request Headers > cookie):\n\n' +
-        '(Cookie จะถูกเก็บในเซลล์ ' +
-        SCG_CONFIG.COOKIE_CELL +
-        ' ของชีต Input)',
+        '(Cookie จะถูกเก็บใน Script Properties — ปลอดภัยกว่า cell B1)',
       ui.ButtonSet.OK_CANCEL
     );
 
@@ -303,26 +301,32 @@ function setSCGCookie_UI() {
     // [SEC-003 minimal] Sanitize — เอาเฉพาะ CRLF/control chars ออก
     const cleanCookie = sanitizeCookie_(rawCookie);
 
-    // [REVERTED v5.5.022-hotfix] เขียนลงเซลล์ B1 แทน PropertiesService
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const inputSheet = ss.getSheetByName(SCG_CONFIG.SHEET_INPUT);
-    if (!inputSheet) {
-      throw new Error('ไม่พบชีต Input');
-    }
-    inputSheet.getRange(SCG_CONFIG.COOKIE_CELL).setValue(cleanCookie);
+    // [V6.0.036] Store in PropertiesService (PRIMARY — secure, not visible in sheet)
+    PropertiesService.getScriptProperties().setProperty('SCG_COOKIE', cleanCookie);
 
-    // ล้าง SCG_COOKIE ใน Script Properties ด้วย (กัน conflict)
+    // [V6.0.036] Clear cell B1 if it has any cookie value — prevent plaintext leak
+    //   (กันกรณีผู้ใช้วาง cookie ใน B1 ตรง ๆ แล้วใช้เมนูนี้ทับ)
     try {
-      PropertiesService.getScriptProperties().deleteProperty('SCG_COOKIE');
-    } catch (e) {
-      /* ignore */
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const inputSheet = ss.getSheetByName(SCG_CONFIG.SHEET_INPUT);
+      if (inputSheet) {
+        const cellValue = String(inputSheet.getRange(SCG_CONFIG.COOKIE_CELL).getValue() || '').trim();
+        if (cellValue) {
+          inputSheet.getRange(SCG_CONFIG.COOKIE_CELL).clearContent();
+          logInfo(
+            'ServiceSCG',
+            'Cleared cookie from cell ' + SCG_CONFIG.COOKIE_CELL + ' (migrated to PropertiesService)'
+          );
+        }
+      }
+    } catch (clearErr) {
+      // Non-fatal — cookie is already in PropertiesService
+      logWarn('ServiceSCG', 'Could not clear cell ' + SCG_CONFIG.COOKIE_CELL + ': ' + clearErr.message);
     }
 
-    logInfo('ServiceSCG', 'ตั้งค่า SCG Cookie สำเร็จ (เซลล์ ' + SCG_CONFIG.COOKIE_CELL + ')');
+    logInfo('ServiceSCG', 'ตั้งค่า SCG Cookie สำเร็จ (PropertiesService)');
     // [FIX v5.5.021 C7] ไม่ echo ค่า cookie กลับให้ User ป้องกัน PII Leak
-    safeUiAlert_(
-      '✅ ตั้งค่า SCG Cookie สำเร็จ!\n\nCookie ถูกเก็บในเซลล์ ' + SCG_CONFIG.COOKIE_CELL + ' ของชีต Input แล้ว'
-    );
+    safeUiAlert_('✅ ตั้งค่า SCG Cookie สำเร็จ!\n\nCookie ถูกเก็บใน Script Properties แล้ว (ปลอดภัยกว่า cell)');
   } catch (e) {
     logError('ServiceSCG', 'setSCGCookie_UI ล้มเหลว: ' + e.message, e);
     safeUiAlert_('❌ ตั้งค่า Cookie ล้มเหลว: ' + e.message);
