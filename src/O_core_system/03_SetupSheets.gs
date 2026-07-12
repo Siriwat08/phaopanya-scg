@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.025
+ * VERSION: 6.0.026
  * FILE: 03_SetupSheets.gs
  * LMDS V5.5 — Sheet Setup & Configuration Service
  * ===================================================
