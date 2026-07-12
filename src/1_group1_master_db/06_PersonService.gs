@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.024
+ * VERSION: 6.0.025
  * FILE: 06_PersonService.gs
  * LMDS V5.5 — Person Master Service
  * ===================================================
@@ -94,9 +94,23 @@ function resolvePerson(rawName, preNormResult, contextHint) {
   let secondBestPerson = null;
   let secondBestScore = 0;
 
+  // [V6.0.025] Extract source branchNo from structuredNotes — pass to scorePersonCandidate
+  //   so it can compare with candidate.branchNo and prevent false-positive matches
+  //   between different branches of the same chain
+  let sourceBranchNo = '';
+  if (normResult.structuredNotes && Array.isArray(normResult.structuredNotes)) {
+    const branchNote = normResult.structuredNotes.find(function (n) {
+      return n.noteType === 'BRANCH' && n.noteValue;
+    });
+    if (branchNote) {
+      sourceBranchNo = String(branchNote.noteValue);
+    }
+  }
+
   candidates.forEach((candidate) => {
     // [UPGRADE v5.1.001] ส่งข้อมูลว่า match ด้วยเบอร์โทรหรือไม่
-    const score = scorePersonCandidate(cleanName, candidate, normResult.extractedPhone);
+    // [V6.0.025] ส่ง sourceBranchNo เพื่อเทียบ branch number กัน
+    const score = scorePersonCandidate(cleanName, candidate, normResult.extractedPhone, sourceBranchNo);
     if (score > bestScore) {
       secondBestPerson = bestPerson;
       secondBestScore = bestScore;
@@ -434,7 +448,7 @@ function findByAlias_(cleanName) {
  *        phone match + name mismatch → return nameScore (force REVIEW หรือ reject)
  *   เหตุผล: เบอร์บ้าน/บริษัทใช้ร่วมกันหลายคน → AUTO_MATCH ผิด
  */
-function scorePersonCandidate(queryName, candidate, queryPhone) {
+function scorePersonCandidate(queryName, candidate, queryPhone, sourceBranchNo) {
   const nameA = normalizeForCompare(queryName);
   const nameB = normalizeForCompare(candidate.normalized || candidate.canonical);
 
@@ -442,6 +456,23 @@ function scorePersonCandidate(queryName, candidate, queryPhone) {
 
   // [Fix Phase-C #7] คำนวณ nameScore ก่อน — ใช้สำหรับ phone match gate
   const nameScore = calculateNameScore_(nameA, nameB);
+
+  // [V6.0.025] Branch number comparison — prevent false-positive between different branches
+  //   of the same chain (e.g., "FIT Auto สาขา 51" vs "FIT Auto สาขา 24")
+  //   - Both have branchNo + MATCH → +5 bonus (same branch confirmed)
+  //   - Both have branchNo + DIFFER → -25 penalty (different branches, likely false positive)
+  //   - Only one has branchNo → neutral (can't compare)
+  //   - Neither has branchNo → neutral
+  const candidateBranchNo = String(candidate.branchNo || '').trim();
+  const srcBranchNo = String(sourceBranchNo || '').trim();
+  let branchAdjustment = 0;
+  if (srcBranchNo && candidateBranchNo) {
+    if (srcBranchNo === candidateBranchNo) {
+      branchAdjustment = 5; // same branch — small boost
+    } else {
+      branchAdjustment = -25; // different branches — significant penalty
+    }
+  }
 
   // [Fix Phase-C #7] Phone match name-score gate
   //   เดิม: if (phone match) return 95;  (skip name check ทั้งหมด)
@@ -464,7 +495,10 @@ function scorePersonCandidate(queryName, candidate, queryPhone) {
       const cleanNameLen = nameA.length;
       const phoneGatePassed = nameScore >= AI_CONFIG.SCORE_MIN_THRESHOLD || (nameScore >= 40 && cleanNameLen >= 4);
       if (phoneGatePassed) {
-        return 95; // phone + name ตรง (หรือคล้าย) → AUTO_MATCH
+        // [V6.0.025] Apply branch adjustment to phone match too — different branches
+        //   shouldn't auto-match even if phone is same (shared business phone)
+        const phoneMatchScore = 95 + branchAdjustment;
+        return Math.max(0, phoneMatchScore);
       }
       // phone ตรงแต่ชื่อไม่ตรง → คืน nameScore (อาจ < 70 → REVIEW หรือ < 50 → reject)
       //   ไม่ return 95 เพื่อป้องกัน AUTO_MATCH ผิดจากเบอร์บ้าน/บริษัทใช้ร่วมกัน
@@ -498,7 +532,10 @@ function scorePersonCandidate(queryName, candidate, queryPhone) {
     finalScore += Math.round((candidate._phoneticScore - 80) * 0.5);
   }
 
-  return finalScore;
+  // [V6.0.025] Apply branch number adjustment
+  finalScore += branchAdjustment;
+
+  return Math.max(0, finalScore);
 }
 
 /**
@@ -592,6 +629,19 @@ function createPerson(normResult) {
         ? buildThaiDoubleMetaphone(normResult.cleanName)
         : { primary: '', secondary: '' };
 
+    // [V6.0.025] Extract branchNo from structuredNotes — stored in M_PERSON.BRANCH_NO (col 12)
+    //   Used by scorePersonCandidate to prevent false-positive matches between
+    //   different branches of the same chain (e.g., "FIT Auto สาขา 51" vs "สาขา 24")
+    let branchNo = '';
+    if (normResult.structuredNotes && Array.isArray(normResult.structuredNotes)) {
+      const branchNote = normResult.structuredNotes.find(function (n) {
+        return n.noteType === 'BRANCH' && n.noteValue;
+      });
+      if (branchNote) {
+        branchNo = String(branchNote.noteValue);
+      }
+    }
+
     const newRow = [
       newId,
       normResult.cleanName,
@@ -605,7 +655,9 @@ function createPerson(normResult) {
       universalMasterId,
       // [V6.0.001] Phonetic keys — used by MatchEngine for fuzzy name match
       phoneticKeys.primary,
-      phoneticKeys.secondary
+      phoneticKeys.secondary,
+      // [V6.0.025] Branch number — empty string if no branch found
+      branchNo
     ];
 
     // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
@@ -790,7 +842,9 @@ function loadAllPersons_() {
       phone: String(r[PERSON_IDX.PHONE] || '').replace(/^'/, ''),
       usageCount: Number(r[PERSON_IDX.USAGE_COUNT] || 0),
       note: String(r[PERSON_IDX.NOTE] || ''),
-      masterUuid: String(r[PERSON_IDX.MASTER_UUID] || '')
+      masterUuid: String(r[PERSON_IDX.MASTER_UUID] || ''),
+      // [V6.0.025] Branch number — '' for legacy rows that don't have this column yet
+      branchNo: String(r[PERSON_IDX.BRANCH_NO] || '')
     }));
 
   // [PERF-010] สร้าง Note Inverted Index — Map: word → Set<personId>
