@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.034
+ * VERSION: 6.0.035
  * FILE: 01_Config.gs
  * LMDS V5.5 — System Configuration & Constants
  * ===================================================
@@ -70,8 +70,8 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.034';
-const SCHEMA_VERSION = '6.0.034';
+const APP_VERSION = '6.0.035';
+const SCHEMA_VERSION = '6.0.035';
 const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
@@ -209,7 +209,12 @@ const PERSON_IDX = Object.freeze({
   MASTER_UUID: 9,
   // [V6.0.001] Double Metaphone Thai — Phonetic keys for fuzzy name matching
   PHONETIC_PRIMARY: 10,
-  PHONETIC_SECONDARY: 11
+  PHONETIC_SECONDARY: 11,
+  // [V6.0.025] Branch number — used in scorePersonCandidate to prevent false-positive
+  //   matches between different branches of the same chain (e.g., "FIT Auto สาขา 51"
+  //   vs "FIT Auto สาขา 24" — same chain, different branches, nearby GPS)
+  //   [V6.0.035 RE-APPLY] was lost during PR #93 rebase conflict resolution
+  BRANCH_NO: 12
 });
 
 const PERSON_ALIAS_IDX = Object.freeze({

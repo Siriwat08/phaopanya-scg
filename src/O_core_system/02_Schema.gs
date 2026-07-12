@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.034
+ * VERSION: 6.0.035
  * FILE: 02_Schema.gs
  * LMDS V5.5 — Sheet Schema Definitions
  * ===================================================
@@ -66,7 +66,11 @@ const SCHEMA = Object.freeze({
     'master_uuid', // [9]
     // [V6.0.001] Phonetic keys (Double Metaphone Thai) — used by MatchEngine for fuzzy name match
     'phonetic_primary', // [10]
-    'phonetic_secondary' // [11]
+    'phonetic_secondary', // [11]
+    // [V6.0.025] Branch number — extracted from "สาขา XX" pattern, used to prevent
+    //   false-positive matches between different branches of same chain
+    //   [V6.0.035 RE-APPLY] was lost during PR #93 rebase conflict resolution
+    'branch_no' // [12]
   ],
 
   M_PERSON_ALIAS: [
