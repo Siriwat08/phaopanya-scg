@@ -56,6 +56,24 @@ rules:
     - selector: 'EmptyStatement'
       message: 'Empty statement — ลบ semicolon ที่ไม่จำเป็น'
 
+  # ─── [V6.0.027] Complexity Guards — ดัก god functions ไม่ให้แย่ลง ───
+  #   Audit finding 1.2: makeMatchDecision() = 267 บรรทัด, runTestMatchDryRun_ = 190 บรรทัด
+  #   เป้าหมาย: ดักไม่ให้ฟังก์ชันใหม่เกิน threshold โดยไม่รู้ตัว
+  #   ค่า threshold ตั้งสูงพอให้ไม่ break existing code แต่จะ warn สำหรับฟังก์ชันใหม่
+  #   ใช้ 'warn' ไม่ใช่ 'error' — ไม่ block CI แต่ทำให้ developer เห็น
+  max-lines-per-function:
+    - warn
+    - max: 300 # เหตุผล: makeMatchDecision 267 → 300 ให้ buffer เล็กน้อย
+      skipComments: true
+      skipBlankLines: true
+      IIFEs: true
+  complexity:
+    - warn
+    - max: 30 # เหตุผล: cyclomatic complexity มาตรฐาน 10-20, ตั้ง 30 ให้ generous
+  max-params:
+    - warn
+    - max: 6 # เหตุผล: ฟังก์ชันทั่วไปใช้ 3-4 params, 6 = ขีดจำกัดบน
+
   # ─── Style ───
   # NOTE: indent + quotes ปิดไว้ เพราะ Prettier จัดการให้แล้ว (เลี่ยง conflict)
   # Reference: https://prettier.io/docs/en/integrating-with-linters.html
