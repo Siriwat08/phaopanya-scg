@@ -291,7 +291,7 @@
 
 **8 ไฟล์ที่แก้ไข:** `18_ServiceSCG.gs`, `14_Utils.gs`, `00_App.gs`, `01_Config.gs`, `03_SetupSheets.gs`, `19_Hardening.gs`, `21_AliasService.gs`, `12_ReviewService.gs`
 
-ดูรายละเอียดเพิ่มเติมได้ที่: `LMDS_V5.5_SECURITY_code_Report.md`
+ดูรายละเอียดเพิ่มเติมได้ที่: `LMDS_V6.0_SECURITY_code_Report.md`
 
 ---
 

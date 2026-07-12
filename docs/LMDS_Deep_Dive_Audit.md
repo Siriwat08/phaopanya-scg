@@ -397,4 +397,4 @@ Loop แต่ละ DailyJob row อ่าน Source sheet ใหม่ → ถ
 
 ---
 
-*เอกสารนี้รวบรวมจากการ dive deep ของ V5.5.034 — ดูเอกสารที่เกี่ยวข้อง: [LMDS_V5.5_SECURITY_code_Report.md](LMDS_V5.5_SECURITY_code_Report.md) | [LMDS_V5.5_PERFORMANCE_code_Report.md](LMDS_V5.5_PERFORMANCE_code_Report.md) | [cache_audit.md](cache_audit.md) | [system_preflight_audit.md](system_preflight_audit.md)*
+*เอกสารนี้รวบรวมจากการ dive deep ของ V5.5.034 — ดูเอกสารที่เกี่ยวข้อง: [LMDS_V6.0_SECURITY_code_Report.md](LMDS_V6.0_SECURITY_code_Report.md) | [LMDS_V6.0_PERFORMANCE_code_Report.md](LMDS_V6.0_PERFORMANCE_code_Report.md) | [cache_audit.md](cache_audit.md) | [system_preflight_audit.md](system_preflight_audit.md)*

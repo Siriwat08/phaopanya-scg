@@ -387,7 +387,7 @@
 
 **ผลรวม: 7/7 ✅ FIX_CONFIRMED — ไม่พบ Regression**
 
-ดูรายละเอียดเพิ่มเติมได้ที่: `LMDS_V5.5_SECURITY_code_Report.md`
+ดูรายละเอียดเพิ่มเติมได้ที่: `LMDS_V6.0_SECURITY_code_Report.md`
 
 ---
 
