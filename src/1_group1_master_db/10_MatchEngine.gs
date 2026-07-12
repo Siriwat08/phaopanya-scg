@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.030
+ * VERSION: 6.0.031
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -2034,64 +2034,88 @@ function loadSourceBatch_() {
 }
 
 /**
- * persistResult_ — [REF-002] Persist fact delivery + review data to sheets
- * Encapsulates the write logic for FACT_DELIVERY and Q_REVIEW sheets,
- * including alias enrichment and color coding.
+ * persistResult_ — [V6.0.031 REFACTOR] Wrapper สำหรับ backward compatibility
+ *   ถูกแยกเป็น persistFactRows_() + persistReviewRows_() เพื่อ SRP
+ *   (Audit finding 4: persistResult_ ทำ 2 หน้าที่ในฟังก์ชันเดียว)
+ *
+ *   Wrapper นี้คงไว้เพื่อไม่ให้ break existing callers — signature เหมือนเดิม
+ *
  * @param {Array} factData - Array of fact row arrays to write to FACT_DELIVERY
  * @param {Array} reviewData - Array of review row arrays to write to Q_REVIEW
  */
 function persistResult_(factData, reviewData) {
+  persistFactRows_(factData);
+  persistReviewRows_(reviewData);
+}
+
+/**
+ * persistFactRows_ — [V6.0.031 EXTRACTED] เขียน FACT_DELIVERY rows + auto-enrich aliases
+ *   แยกจาก persistResult_ เพื่อ Single Responsibility
+ * @param {Array} factData - Array of fact row arrays (empty array = no-op)
+ * @private
+ */
+function persistFactRows_(factData) {
+  if (!factData || factData.length === 0) return;
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
+  factSheet.getRange(factSheet.getLastRow() + 1, 1, factData.length, factData[0].length).setValues(factData);
 
-  if (factData.length > 0) {
-    const factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
-    factSheet.getRange(factSheet.getLastRow() + 1, 1, factData.length, factData[0].length).setValues(factData);
-    // [FIX CRIT-003] ล้าง FACT invoice RAM cache เพราะมีแถวใหม่ถูกเขียน
-    if (typeof invalidateFactInvoiceCache_ === 'function') invalidateFactInvoiceCache_();
-    // [REMOVED V5.5.044] invalidateSameDayDestCache_ — ลบ dead code (ดู comment ใน SECTION 5)
-    // [UPGRADE v5.2.010] สร้าง Alias อัตโนมัติแบบ Real-time ทันทีที่บันทึก FACT สำเร็จ
-    // [FIX v5.4.001] ห่อด้วย try-catch เพื่อป้องกัน alias error ทำให้ SYNC_STATUS ไม่ถูกอัปเดต
-    try {
-      autoEnrichAliasesFromFactBatch_(factData);
-    } catch (aliasErr) {
-      // [SEC-006 FIX] Mask invoice numbers — log เฉพาะจำนวน + ตัวอย่างแรก (3 ตัวแรก + ***)
-      const failedInvoices = factData
-        .map(function (r) {
-          return normalizeInvoiceNo(r[FACT_IDX.INVOICE_NO]);
-        })
-        .filter(Boolean);
-      const sampleMasked = failedInvoices[0] ? String(failedInvoices[0]).substring(0, 3) + '***' : 'n/a';
-      logError(
-        'MatchEngine',
-        'autoEnrichAliases ล้มเหลว — M_ALIAS ขาดสำหรับ ' +
-          failedInvoices.length +
-          ' invoices ' +
-          '(ตัวอย่างแรก: ' +
-          sampleMasked +
-          '). ' +
-          'กรุณารัน generatePersonAliasesFromHistory เพื่อซ่อมแซม: ' +
-          aliasErr.message,
-        aliasErr
-      );
-    }
+  // [FIX CRIT-003] ล้าง FACT invoice RAM cache เพราะมีแถวใหม่ถูกเขียน
+  if (typeof invalidateFactInvoiceCache_ === 'function') invalidateFactInvoiceCache_();
+  // [REMOVED V5.5.044] invalidateSameDayDestCache_ — ลบ dead code (ดู comment ใน SECTION 5)
+
+  // [UPGRADE v5.2.010] สร้าง Alias อัตโนมัติแบบ Real-time ทันทีที่บันทึก FACT สำเร็จ
+  // [FIX v5.4.001] ห่อด้วย try-catch เพื่อป้องกัน alias error ทำให้ SYNC_STATUS ไม่ถูกอัปเดต
+  try {
+    autoEnrichAliasesFromFactBatch_(factData);
+  } catch (aliasErr) {
+    // [SEC-006 FIX] Mask invoice numbers — log เฉพาะจำนวน + ตัวอย่างแรก (3 ตัวแรก + ***)
+    const failedInvoices = factData
+      .map(function (r) {
+        return normalizeInvoiceNo(r[FACT_IDX.INVOICE_NO]);
+      })
+      .filter(Boolean);
+    const sampleMasked = failedInvoices[0] ? String(failedInvoices[0]).substring(0, 3) + '***' : 'n/a';
+    logError(
+      'MatchEngine',
+      'autoEnrichAliases ล้มเหลว — M_ALIAS ขาดสำหรับ ' +
+        failedInvoices.length +
+        ' invoices ' +
+        '(ตัวอย่างแรก: ' +
+        sampleMasked +
+        '). ' +
+        'กรุณารัน generatePersonAliasesFromHistory เพื่อซ่อมแซม: ' +
+        aliasErr.message,
+      aliasErr
+    );
   }
+}
 
-  if (reviewData.length > 0) {
-    const reviewSheet = ss.getSheetByName(SHEET.Q_REVIEW);
-    const startRow = reviewSheet.getLastRow() + 1;
-    const numCols = reviewData[0].length;
-    reviewSheet.getRange(startRow, 1, reviewData.length, numCols).setValues(reviewData);
+/**
+ * persistReviewRows_ — [V6.0.031 EXTRACTED] เขียน Q_REVIEW rows + ระบายสีตาม issue_type
+ *   แยกจาก persistResult_ เพื่อ Single Responsibility
+ * @param {Array} reviewData - Array of review row arrays (empty array = no-op)
+ * @private
+ */
+function persistReviewRows_(reviewData) {
+  if (!reviewData || reviewData.length === 0) return;
 
-    // [UPGRADE v5.2.005] ระบายสีแถว Q_REVIEW ตาม issue_type
-    const backgrounds = reviewData.map((row) => {
-      const issueType = String(row[REVIEW_IDX.ISSUE_TYPE] || '').trim();
-      let color = null;
-      if (issueType === 'GEO_NEARBY_YELLOW') color = '#fff2cc';
-      else if (issueType === 'GEO_NEARBY_ORANGE') color = '#fce5cd';
-      return new Array(numCols).fill(color);
-    });
-    reviewSheet.getRange(startRow, 1, reviewData.length, numCols).setBackgrounds(backgrounds);
-  }
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const reviewSheet = ss.getSheetByName(SHEET.Q_REVIEW);
+  const startRow = reviewSheet.getLastRow() + 1;
+  const numCols = reviewData[0].length;
+  reviewSheet.getRange(startRow, 1, reviewData.length, numCols).setValues(reviewData);
+
+  // [UPGRADE v5.2.005] ระบายสีแถว Q_REVIEW ตาม issue_type
+  const backgrounds = reviewData.map((row) => {
+    const issueType = String(row[REVIEW_IDX.ISSUE_TYPE] || '').trim();
+    let color = null;
+    if (issueType === 'GEO_NEARBY_YELLOW') color = '#fff2cc';
+    else if (issueType === 'GEO_NEARBY_ORANGE') color = '#fce5cd';
+    return new Array(numCols).fill(color);
+  });
+  reviewSheet.getRange(startRow, 1, reviewData.length, numCols).setBackgrounds(backgrounds);
 }
 
 // ============================================================
