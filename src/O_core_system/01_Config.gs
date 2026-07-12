@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.021
+ * VERSION: 6.0.022
  * FILE: 01_Config.gs
  * LMDS V5.5 — System Configuration & Constants
  * ===================================================
@@ -70,8 +70,8 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.021';
-const SCHEMA_VERSION = '6.0.021';
+const APP_VERSION = '6.0.022';
+const SCHEMA_VERSION = '6.0.022';
 const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
@@ -643,7 +643,12 @@ const AI_CONFIG = Object.freeze({
   GEO_RADIUS_M: 100, // [V6.0.013] 50→100 — คนขับจอดต่างที่เล็กน้อยทุกครั้ง (จากข้อมูล: 7,732 พิกัดไม่ซ้ำใน 7,807 แถว)
   GEO_GRID_SIZE: 0.01, // [ADD v5.4.003] ~1.1 กม. ต่อ grid cell — ย้ายจาก 08_GeoService.gs
   USE_AI_REASONING: false, // [PH2] Set to false for safety (AI should not guess coordinates)
-  TIME_LIMIT_MS: 330000 // [V6.0.012 P1.5] 5.5 นาที (330,000 ms) — was 300000 (5 min)
+  TIME_LIMIT_MS: 280000 // [V6.0.022] 4.67 นาที (280,000 ms) — was 330000 (5.5 min)
+  //   [V6.0.012 P1.5] was 300000 (5 min) → 330000 (5.5 min)
+  //   [V6.0.022] ลดเหลือ 280000 (4.67 min) เพื่อให้มี buffer 80 วินาที
+  //   สำหรับ flush batch + setup auto-resume trigger + cleanup
+  //   ปัญหาเดิม: รันจริง 323-346s + overhead → trigger โดน GAS 6-min limit
+  //   ผู้ใช้เห็น error: "Trigger เวลาประมวลผลเกินขีดจำกัดสูงสุด"
 });
 
 // ============================================================
