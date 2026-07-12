@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.026
+ * VERSION: 6.0.027
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
