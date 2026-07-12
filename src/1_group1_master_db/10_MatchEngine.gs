@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.029
+ * VERSION: 6.0.030
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -1220,265 +1220,83 @@ function processOneRow(srcObj) {
  * [FIX v003] Rule 7: !isPersonOk && !isPlaceOk (เดิม hasPerson ผิด)
  */
 function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
+  // [V6.0.030] Refactored — extracted rules to 10b_MatchDecision.gs
+  //   Audit finding 1.2: was 267 lines (single point of fragility)
+  //   Now: dispatcher that tries each rule in order, returns first non-null
+  //   BACKWARD COMPATIBLE: same signature, same return shape, same decisions
+  //   Verified by snapshot test (V6.0.028) — 0 differences expected
+
   const isGeoInMaster = geoResult.status === 'FOUND';
   const isPersonInMaster = personResult.status === 'FOUND';
   const isPlaceInMaster = placeResult.status === 'FOUND' || placeResult.status === 'BRANCH_MATCH';
-
-  // [FIX v003] เรียก getGeoProvince_ ครั้งเดียวก่อนเข้า Rule
   const geoProvince = isGeoInMaster ? getGeoProvince_(geoResult.geoId) : '';
-
-  // [UPGRADE v5.2.003] ใช้สถานะจาก Source Sheet ประกอบการตัดสินใจ
   const hasGeoInSource = srcObj.hasGeo;
 
-  // Rule 1: ไม่มีพิกัดใน Source Sheet เลย (พิกัดเป็น 0,0 หรือว่าง)
-  if (!hasGeoInSource) {
-    return {
-      action: 'REVIEW',
-      reason: 'INVALID_LATLNG',
-      confidence: 0,
-      priority: 1
-    };
-  }
+  // Try rules in order — first non-null wins
+  // Rule 1: ไม่มีพิกัดใน Source Sheet
+  let decision = evaluateRule1_NoGeoInSource_(srcObj);
+  if (decision) return decision;
 
-  // Rule 2: ชื่อคุณภาพต่ำ (สั้นเกินไปหรือมั่ว)
-  if (personResult.status === 'LOW_QUALITY' || placeResult.status === 'LOW_QUALITY') {
-    return {
-      action: 'REVIEW',
-      reason: 'LOW_QUALITY_DATA',
-      confidence: 0,
-      priority: 2
-    };
-  }
+  // Rule 2: ชื่อคุณภาพต่ำ
+  decision = evaluateRule2_LowQualityData_(personResult, placeResult);
+  if (decision) return decision;
 
-  // Rule 3: ตรวจสอบเรื่องจังหวัดข้ามโซน (ถ้าพิกัดอยู่ใน Master แล้ว)
-  // [FIX Phase-B #14] ใช้ normalizeProvinceForCompare_() แทน string compare ตรง
-  //   เดิม: "กรุงเทพมหานคร" !== "กทม" → REVIEW ผิด (alias ถือว่าตรงกัน)
-  //   ตอนนี้: normalize ทั้งสองค่าผ่าน TH_PROVINCES aliases แล้วค่อยเทียบ
-  //   เก็บ original values ไว้ใน evidence เพื่อ debug
-  if (isGeoInMaster && geoProvince && srcObj.province) {
-    const normalizedGeoProvince =
-      typeof normalizeProvinceForCompare_ === 'function' ? normalizeProvinceForCompare_(geoProvince) : geoProvince;
-    const normalizedSrcProvince =
-      typeof normalizeProvinceForCompare_ === 'function'
-        ? normalizeProvinceForCompare_(srcObj.province)
-        : srcObj.province;
-    if (normalizedGeoProvince !== normalizedSrcProvince) {
-      return {
-        action: 'REVIEW',
-        reason: 'GEO_PROVINCE_CONFLICT',
-        confidence: 50,
-        priority: 2,
-        // [FIX Phase-B #14] เก็บ original values ไว้ใน evidence เพื่อ debug
-        evidence: `geoProvince="${geoProvince}"|srcProvince="${srcObj.province}"|normalizedGeo="${normalizedGeoProvince}"|normalizedSrc="${normalizedSrcProvince}"`
-      };
-    }
-  }
+  // Rule 3: จังหวัดข้ามโซน
+  decision = evaluateRule3_GeoProvinceConflict_(isGeoInMaster, geoProvince, srcObj.province);
+  if (decision) return decision;
 
-  // [UPGRADE v5.2.005] Rule 3.5: Tiered Spatial Fuzzy Matching (รอคนตรวจตัดสินใจรวมพิกัด)
-  if (geoResult.status === 'NEARBY_PENDING') {
-    return {
-      action: 'REVIEW',
-      reason: geoResult.issue_type, // 'GEO_NEARBY_YELLOW' or 'GEO_NEARBY_ORANGE'
-      confidence: 50,
-      priority: 1 // สำคัญระดับ 1 เพราะต้องให้คนตัดสินใจว่าพิกัดเดียวกันไหม
-    };
-  }
+  // Rule 3.5: NEARBY_PENDING (tiered spatial fuzzy)
+  decision = evaluateRule3_5_NearbyPending_(geoResult);
+  if (decision) return decision;
 
-  // Rule 4: พบครบทั้ง 3 อย่างใน Master -> AUTO_MATCH (Full)
-  if (isGeoInMaster && isPersonInMaster && isPlaceInMaster) {
-    // [V6.0.015 P2.2] Use calculateWeightedScore directly (was matchCalcFullScore_)
-    //   Both functions compute the same score now — but calculateWeightedScore is the
-    //   canonical implementation. matchCalcFullScore_ remains as a thin wrapper for
-    //   backward compatibility with any external callers.
-    const confidence = calculateWeightedScore(srcObj, personResult, placeResult, geoResult);
-    return {
-      action: 'AUTO_MATCH',
-      reason: APP_CONST.MATCH_FULL,
-      confidence,
-      priority: 0,
-      evidence: 'name|place|geo' // [NEW v5.2.008]
-    };
-  }
+  // Rule 4: พบครบทั้ง 3 อย่าง → AUTO_MATCH (Full)
+  decision = evaluateRule4_FullMatch_(
+    srcObj,
+    personResult,
+    placeResult,
+    geoResult,
+    isGeoInMaster,
+    isPersonInMaster,
+    isPlaceInMaster
+  );
+  if (decision) return decision;
 
-  // Rule 5: [V6.0.016] พบพิกัดใน Master + **person** → AUTO_MATCH (Geo + Person anchor)
-  //   เดิม (V6.0.015): geo + (person OR place) → AUTO_MATCH
-  //   ใหม่ (V6.0.016): เฉพาะ geo + person เท่านั้นที่ AUTO_MATCH ได้
-  //   เหตุผล: [24] (reverse geocode) มาจากพิกัด [4] → place score ที่ใช้ [24]
-  //   ไม่ใช่หลักฐานอิสระจาก geo แล้ว การ auto-match จาก geo + place อย่างเดียว
-  //   เท่ากับนับ "พิกัดตรง" ซ้ำสองรอบ ไม่ใช่ 2 หลักฐานอิสระ — จึงเสี่ยงตอน
-  //   ห้าง/ปั๊มที่มีหลายร้านในพิกัดใกล้กัน (ร้าน A และร้าน B จะ match ผิด)
-  //   กรณี geo + place อย่างเดียว → ตก REVIEW เสมอ (ดูล่าง)
-  if (isGeoInMaster && isPersonInMaster) {
-    // [V6.0.015 P2.2] Use calculateWeightedScore directly (was matchCalcGeoAnchorScore_)
-    //   Zero out the missing half (place) so that only geo + person contribute to score.
-    //   Cap at 95 to preserve the pre-V6.0.015 behavior of Rule 5 (geo anchor partial
-    //   match should never reach 100).
-    const placeResultForScore = { confidence: 0 }; // place ไม่ได้ match — ไม่มีใน Master
-    let confidence = Math.min(95, calculateWeightedScore(srcObj, personResult, placeResultForScore, geoResult));
-    let reason = APP_CONST.MATCH_GEO;
-    let evidence = 'name|geo';
+  // Rule 5: geo + person → AUTO_MATCH (Geo Anchor) [V6.0.016]
+  decision = evaluateRule5_GeoPersonAnchor_(
+    srcObj,
+    personResult,
+    placeResult,
+    geoResult,
+    isGeoInMaster,
+    isPersonInMaster
+  );
+  if (decision) return decision;
 
-    // [V6.0.012 P1.2] Geo-distance guard for Rule 5 (same pattern as Rule 6 in V6.0.011)
-    //   เดิม Rule 5: AUTO_MATCH เมื่อ geo + (person|place) โดยไม่ดูระยะห่างพิกัด
-    //   ปัญหา: ชื่อคล้ายกันแต่พิกัดห่างกันเกินไป → AUTO_MATCH ผิด (เหมือน bug ของ FUZZY_MATCH ก่อน V6.0.011)
-    //   ใหม่: ตรวจระยะห่างระหว่าง source lat/lng กับ candidate resolved coords
-    //     - > 1 กม. → downgrade เป็น REVIEW (reason='GEO_ANCHOR_FAR_APART') เพราะเป็นคนละที่
-    //     - > 500 ม. → ลด confidence (ยัง AUTO_MATCH ได้แต่คะแนนต่ำลง)
-    if (srcObj.hasGeo && srcObj.rawLat && srcObj.rawLng) {
-      const srcLat = Number(srcObj.rawLat);
-      const srcLng = Number(srcObj.rawLng);
-      if (!isNaN(srcLat) && !isNaN(srcLng) && srcLat !== 0 && srcLng !== 0) {
-        // หา candidate coordinates — ลองทั้ง place และ person
-        let candidateCoords = null;
-        let candidateType = '';
+  // Rule 5b: geo + place only → REVIEW [V6.0.016]
+  decision = evaluateRule5b_GeoPlaceOnlyNoName_(
+    srcObj,
+    personResult,
+    placeResult,
+    geoResult,
+    isGeoInMaster,
+    isPlaceInMaster,
+    isPersonInMaster
+  );
+  if (decision) return decision;
 
-        if (placeResult.placeId) {
-          candidateCoords = getCandidateResolvedCoords_('PLACE', placeResult.placeId);
-          if (candidateCoords) candidateType = 'place';
-        }
+  // Rule 6: Fuzzy Match / Needs Review
+  decision = evaluateRule6_FuzzyMatch_(srcObj, personResult, placeResult);
+  if (decision) return decision;
 
-        if (!candidateCoords && personResult.personId) {
-          candidateCoords = getCandidateResolvedCoords_('PERSON', personResult.personId);
-          if (candidateCoords) candidateType = 'person';
-        }
+  // Rule 7: GPS จริง + ไม่มี geo ใน master → CREATE_NEW
+  decision = evaluateRule7_NewGeoWithGPS_(hasGeoInSource, isGeoInMaster);
+  if (decision) return decision;
 
-        if (candidateCoords && candidateCoords.lat && candidateCoords.lng) {
-          const distM = haversineDistanceM(srcLat, srcLng, candidateCoords.lat, candidateCoords.lng);
-          if (distM > 1000) {
-            // ห่างเกิน 1 กม. → ลด confidence ลงมาก และ downgrade เป็น REVIEW
-            confidence = Math.min(confidence, 50);
-            reason = 'GEO_ANCHOR_FAR_APART';
-            evidence = evidence + '|far_apart|dist=' + Math.round(distM) + 'm|' + candidateType;
-          } else if (distM > 500) {
-            // ห่าง 500-1000 ม. → ลด confidence เล็กน้อย แต่ยัง AUTO_MATCH ได้
-            confidence = Math.min(confidence, 70);
-            evidence = evidence + '|moderate_dist|dist=' + Math.round(distM) + 'm|' + candidateType;
-          }
-        }
-      }
-    }
+  // Rule 8: GPS จริง (default CREATE_NEW)
+  decision = evaluateRule8_NewGeoFromGPS_(hasGeoInSource);
+  if (decision) return decision;
 
-    // If distance guard downgraded confidence below REVIEW threshold → return REVIEW
-    if (reason === 'GEO_ANCHOR_FAR_APART' && confidence < AI_CONFIG.THRESHOLD_REVIEW) {
-      return { action: 'REVIEW', reason: reason, confidence: confidence, priority: 1, evidence: evidence };
-    }
-    return { action: 'AUTO_MATCH', reason: reason, confidence: confidence, priority: 0, evidence: evidence };
-  }
-
-  // [V6.0.016] Rule 5b: geo + place อย่างเดียว (ไม่มี person ยืนยัน) → REVIEW เสมอ
-  //   เดิม: กรณีนี้เป็น AUTO_MATCH (Rule 5 evidence='place|geo')
-  //   ใหม่: ตก REVIEW เสมอ ไม่ว่า place score จะสูงแค่ไหน
-  //   เหตุผล: [24] มาจากพิกัด [4] → place + geo เป็นสัญญาณเดียวกัน ไม่ใช่ 2 หลักฐานอิสระ
-  //   ป้องกัน false-positive ในห้าง/ปั๊มที่มีหลายร้านในพิกัดเดียวกัน
-  //   ใช้ชื่อ [12] เป็นตัวยืนยันร้าน "ร้านไหน" เท่านั้น — place บอกแค่ "ตรงไหน"
-  if (isGeoInMaster && isPlaceInMaster && !isPersonInMaster) {
-    // คำนวณ confidence สำหรับนำไปแสดงใน Q_REVIEW (ปรับให้สูงสุด 70 = ต่ำกว่า THRESHOLD_AUTO)
-    //   เพื่อให้ reviewer เห็นว่า "ใกล้จะ match" แต่ต้องมีคนยืนยันชื่อร้านจริง
-    const personResultForScore = { confidence: 0 }; // ไม่มี person
-    const confidence = Math.min(70, calculateWeightedScore(srcObj, personResultForScore, placeResult, geoResult));
-    return {
-      action: 'REVIEW',
-      reason: 'GEO_ANCHOR_PLACE_ONLY_NO_NAME',
-      confidence: confidence,
-      priority: 1,
-      evidence: 'place|geo|no_person'
-    };
-  }
-
-  // Rule 6: มีความกำกวม (Fuzzy Match / Needs Review)
-  if (personResult.status === 'NEEDS_REVIEW' || placeResult.status === 'NEEDS_REVIEW') {
-    let confidence = Math.max(personResult.confidence, placeResult.confidence);
-    let reason = APP_CONST.MATCH_FUZZY;
-    let evidence = 'fuzzy';
-
-    // [V6.0.011] Geo-distance guard — ถ้า source มีพิกัด + candidate มีพิกัด
-    //   ให้ตรวจระยะห่าง ถ้าห่างเกินไป → ลด confidence (ชื่อคล้ายแต่พิกัดห่าง = คนละที่)
-    if (srcObj.hasGeo && srcObj.rawLat && srcObj.rawLng) {
-      const srcLat = Number(srcObj.rawLat);
-      const srcLng = Number(srcObj.rawLng);
-      if (!isNaN(srcLat) && !isNaN(srcLng) && srcLat !== 0 && srcLng !== 0) {
-        // หา candidate coordinates — ลองทั้ง place และ person
-        let candidateCoords = null;
-        let candidateType = '';
-
-        if (placeResult.placeId) {
-          candidateCoords = getCandidateResolvedCoords_('PLACE', placeResult.placeId);
-          if (candidateCoords) candidateType = 'place';
-        }
-
-        if (!candidateCoords && personResult.personId) {
-          candidateCoords = getCandidateResolvedCoords_('PERSON', personResult.personId);
-          if (candidateCoords) candidateType = 'person';
-        }
-
-        if (candidateCoords && candidateCoords.lat && candidateCoords.lng) {
-          const distM = haversineDistanceM(srcLat, srcLng, candidateCoords.lat, candidateCoords.lng);
-
-          // [V6.0.013b Fix A] ถ้าพิกัดใกล้กันมาก (≤ GEO_RADIUS_M) → เป็นที่เดียวกันแน่ๆ
-          //   ชื่อคล้าย + พิกัดตรง = AUTO_MATCH แทน REVIEW
-          //   แก้ปัญหา: FIT Auto สาขา A match กับ FIT Auto สาขา B → พิกัดห่าง 3 กม. → REVIEW
-          //   แต่ถ้าพิกัดใกล้กัน ≤100 ม. → ที่เดียวกันแน่ๆ → AUTO_MATCH
-          if (distM <= AI_CONFIG.GEO_RADIUS_M) {
-            confidence = Math.max(confidence, 90);
-            reason = APP_CONST.MATCH_FUZZY;
-            evidence = 'fuzzy|geo_close|dist=' + Math.round(distM) + 'm|' + candidateType;
-            return {
-              action: 'AUTO_MATCH',
-              reason: reason,
-              confidence: confidence,
-              priority: 0,
-              evidence: evidence
-            };
-          }
-
-          if (distM > 1000) {
-            // ห่างเกิน 1 กม. → ลด confidence ลงมาก (ชื่อคล้ายแต่พิกัดห่าง = คนละที่)
-            confidence = Math.min(confidence, 50);
-            reason = 'FUZZY_MATCH_FAR_APART';
-            evidence = 'fuzzy|far_apart|dist=' + Math.round(distM) + 'm|' + candidateType;
-          } else if (distM > 500) {
-            // ห่าง 500-1000 ม. → ลด confidence เล็กน้อย
-            confidence = Math.min(confidence, 65);
-            evidence = 'fuzzy|moderate_dist|dist=' + Math.round(distM) + 'm|' + candidateType;
-          }
-        }
-      }
-    }
-
-    return {
-      action: 'REVIEW',
-      reason: reason,
-      confidence: confidence,
-      priority: 2,
-      evidence: evidence
-    };
-  }
-
-  // Rule 7: ทุกอย่างใหม่หมด แต่ Driver ส่งพิกัดมาให้ -> CREATE_NEW
-  // [V6.0.013b Fix B] เดิมต้อง !isGeoInMaster && !isPersonInMaster && !isPlaceInMaster
-  //   แก้เป็น: ถ้ามี GPS จริง + ไม่มี geo ใน master → CREATE_NEW
-  //   เหตุผล: 29 แถวตก NEW_RECORD_PENDING เพราะมี person/place อยู่ใน master
-  //   แต่ geo ไม่อยู่ → ควรสร้างใหม่จาก GPS จริง ไม่ใช่ตก REVIEW
-  if (hasGeoInSource && !isGeoInMaster) {
-    return {
-      action: 'CREATE_NEW',
-      reason: 'NEW_GEO_WITH_GPS',
-      confidence: 100,
-      priority: 0
-    };
-  }
-
-  // Rule 8: Default — มี person/place ใน master แต่ไม่มี geo
-  // [V6.0.013b Fix B] ถ้ามี GPS จริง → CREATE_NEW แทน REVIEW (สร้าง geo ใหม่จาก GPS)
-  if (hasGeoInSource) {
-    return {
-      action: 'CREATE_NEW',
-      reason: 'NEW_GEO_FROM_GPS',
-      confidence: 90,
-      priority: 0
-    };
-  }
-
+  // Default fallback
   return {
     action: 'REVIEW',
     reason: 'NEW_RECORD_PENDING',
