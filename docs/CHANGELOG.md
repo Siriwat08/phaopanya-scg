@@ -1,12 +1,39 @@
-# Changelog — LMDS V5.5 + V6.0
+# Changelog — LMDS V6.0
 
-All notable changes to LMDS V5.5 and V6.0 (Logistics Master Data System) are documented here.
+All notable changes to LMDS V6.0 (Logistics Master Data System) are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## Versions Summary
 
 | Version | Date | Cycle | Issues |
 |---------|------|-------|--------|
+| 6.0.038 | 2026-07-13 | DOCS SYNC | Rename V5.5 docs → V6.0 + CHANGELOG sync V6.0.012-038 |
+| 6.0.037 | 2026-07-13 | HEADER SYNC | Unified header format for all 35 .gs files (VERSION/PURPOSE/CHANGELOG/DEPENDENCIES/ARCHITECTURE) |
+| 6.0.036 | 2026-07-13 | SCG COOKIE FIX | Fix readInputConfig_ to call getSCGCookie_ (PropertiesService primary) + setSCGCookie_UI writes PropertiesService + clears cell |
+| 6.0.035 | 2026-07-12 | BRANCH NUMBER RE-APPLY | RE-APPLY branch number matching lost in PR #93 rebase regression — PERSON_IDX.BRANCH_NO=12 + scorePersonCandidate branch comparison |
+| 6.0.034 | 2026-07-12 | PHASE 3.3 — REVIEW SERVICE SPLIT | แตก 12_ReviewService.gs 1841→1102 บรรทัด + 12b_ReviewReprocessor.gs (775 บรรทัด) |
+| 6.0.033 | 2026-07-12 | PHASE 3.2 — WEBAPP SPLIT | แตก 22_WebApp.gs 2086→337 บรรทัด + 22b_WebAppViews.gs + 22c_WebAppActions.gs |
+| 6.0.032 | 2026-07-12 | PHASE 3.1 — MATCH ENGINE SPLIT | แตก 10_MatchEngine.gs 2959→2302 บรรทัด + 10d_MatchTestHarness.gs + 10e_MatchResolvePersist.gs |
+| 6.0.031 | 2026-07-12 | PHASE 2.3 — PERSIST SRP | แยก persistResult_ → persistFactRows_ + persistReviewRows_ (audit 4) |
+| 6.0.030 | 2026-07-12 | PHASE 2.2 — MATCH DECISION SPLIT | แตก makeMatchDecision 267→78 บรรทัด + 10b_MatchDecision.gs (audit 1.2) |
+| 6.0.029 | 2026-07-12 | DRY RUN TIME GUARD | Time guard 300s + cap 500→250 rows (GAS 6-min timeout fix) |
+| 6.0.028 | 2026-07-12 | SNAPSHOT TEST HARNESS | 29_SnapshotTest.gs — save baseline + compare for refactor safety |
+| 6.0.027 | 2026-07-12 | ESLINT COMPLEXITY GUARDS | max-lines-per-function:300 + complexity:30 + max-params:6 (audit 1.2/1.3) |
+| 6.0.026 | 2026-07-11 | SCG COOKIE PROPERTIESSERVICE | getSCGCookie_ PropertiesService primary + auto-migrate from cell (audit 3A) — NOTE: fixed wrong function, re-fixed in V6.0.036 |
+| 6.0.025 | 2026-07-11 | BRANCH NUMBER DECISION LOGIC | PERSON_IDX.BRANCH_NO=12 + scorePersonCandidate branch comparison (audit 1.5) — NOTE: lost in rebase, re-applied in V6.0.035 |
+| 6.0.024 | 2026-07-11 | ESCAPEHTML CONSOLIDATION | รวม 7 escapeHtml_ definitions → 1 shared alias (audit 1.4) |
+| 6.0.023 | 2026-07-11 | SONARCLOUD CODE SMELLS | replaceAll + .find() in MobileActions.html (S7781 + S7750) |
+| 6.0.022 | 2026-07-11 | PIPELINE TIME LIMIT FIX | TIME_LIMIT_MS 330s→280s (trigger timeout fix) |
+| 6.0.021 | 2026-07-11 | MOBILE ACTIONS VIEW | 44 action buttons in WebApp + ≡ Menu dropdown + two-press confirm |
+| 6.0.020 | 2026-07-10 | STOP SIGNAL CLEAR | Clear stale STOP SIGNAL at runMatchEngine start (pipeline หยุดที่ row 0 fix) |
+| 6.0.019 | 2026-07-10 | ALIAS CACHEKEY FIX | loadGlobalAliasesMap_ cacheKey ReferenceError fix (createGlobalAlias ล้มเหลวทุกครั้ง) |
+| 6.0.018 | 2026-07-10 | CODEQL #51 FIX | Remove unused 'ui' variable in analyzeRule5PlaceOnlyImpact_UI |
+| 6.0.017 | 2026-07-10 | DRY RUN FORCE ALL | getAllSourceRowsForceAll + forceAllRows param (ข้าม SYNC_STATUS filter) |
+| 6.0.016 | 2026-07-09 | RULE 5 + [24] + WEIGHTS | Rule 5 fix (geo+place→REVIEW) + [24] place matching + weight rebalance (geo 0.60→0.35, person 0.25→0.45, place 0.15→0.20) |
+| 6.0.015 | 2026-07-09 | PHASE 2 ALGORITHM | Jaro-Winkler + ensemble + weighted score + threshold 90→85 + auto-alias |
+| 6.0.014 | 2026-07-09 | M_PLACE REVERSE GEOCODE | +2 columns (canonical_reverse_geocode + normalized_reverse_geocode) + revert [24]→[18] |
+| 6.0.013 | 2026-07-09 | GEO-FIRST + BRANCH SPLIT | พิกัดเป็นหลัก + แยกสาขา/บริษัท + ปรับ weight (baseline 14% → target 45-55%) |
+| 6.0.012 | 2026-07-09 | PHASE 1 MATCHING | 7 matching improvements + run log + dry-run test mode + stop signal + safe reset |
 | 6.0.011 | 2026-07-09 | GEO-DISTANCE GUARD | FUZZY_MATCH Rule 6 ตรวจระยะพิกัด — ลด confidence ถ้าห่าง >1 กม. + new helper getCandidateResolvedCoords_ |
 | 6.0.010 | 2026-07-09 | PHASE 3 — NICE-TO-HAVE (16 items) | LockService guards 9 functions + onInstall + SPA hash + Tailwind pin + Leaflet fallback + QReview overlay + onEdit lock + RBAC extend |
 | 6.0.009 | 2026-07-08 | PHASE 2 — IMPORTANT CORRECTNESS | submitReviewDecision lock + acquireAliasHistoryLock_ real lock + applyMasterCoordinatesToDailyJob PropertiesService→LockService + pagination optimization |

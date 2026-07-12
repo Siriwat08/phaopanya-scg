@@ -464,7 +464,7 @@
 **วันที่ประเมิน:** 2026-06-12
 **เวอร์ชันโค้ด:** V5.5.017 (post-CONSISTENCY-SYNC (V5.5.022); original V5.5.004)
 **เวอร์ชันเอกสาร:** 1.0
-**อ้างอิง:** LMDS_V5.5_REFACTOR_code_Report.md
+**อ้างอิง:** LMDS_V6.0_REFACTOR_code_Report.md
 
 ---
 
