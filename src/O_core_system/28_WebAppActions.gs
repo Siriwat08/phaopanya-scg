@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.039
+ * VERSION: 6.0.040
  * FILE: 28_WebAppActions.gs
  * LMDS V6.0 — Web App Actions Server (Mobile Menu)
  * ===================================================
@@ -786,8 +786,15 @@ function runPreflightAudit_Web(params) {
   if (typeof runPreflightAudit !== 'function') {
     return { ok: false, message: 'runPreflightAudit ไม่พร้อม' };
   }
-  const result = runPreflightAudit();
-  return { ok: true, message: 'Preflight audit เสร็จ', result: result };
+  // [V6.0.040] CodeQL #55: function may not return a value (uses getUi().alert)
+  //   Store result defensively — if undefined, still return ok=true with message
+  let result = null;
+  try {
+    result = runPreflightAudit();
+  } catch (e) {
+    return { ok: false, message: 'Preflight audit ล้มเหลว: ' + e.message };
+  }
+  return { ok: true, message: 'Preflight audit เสร็จ — ตรวจ SYS_LOG สำหรับรายละเอียด', result: result };
 }
 
 function runPipelinePreflightStrict_Web(params) {
@@ -811,24 +818,42 @@ function detectDoubleProcessing_Web(params) {
   if (typeof detectDoubleProcessing !== 'function') {
     return { ok: false, message: 'detectDoubleProcessing ไม่พร้อม' };
   }
-  const result = detectDoubleProcessing();
-  return { ok: true, message: 'Detect duplicates เสร็จ', result: result };
+  // [V6.0.040] CodeQL #53: function may not return a value
+  let result = null;
+  try {
+    result = detectDoubleProcessing();
+  } catch (e) {
+    return { ok: false, message: 'Detect duplicates ล้มเหลว: ' + e.message };
+  }
+  return { ok: true, message: 'Detect duplicates เสร็จ — ตรวจ SYS_LOG', result: result };
 }
 
 function checkSystemIntegrity_Web(params) {
   if (typeof checkSystemIntegrity !== 'function') {
     return { ok: false, message: 'checkSystemIntegrity ไม่พร้อม' };
   }
-  const result = checkSystemIntegrity();
-  return { ok: true, message: 'System integrity check เสร็จ', result: result };
+  // [V6.0.040] CodeQL #54: function may not return a value
+  let result = null;
+  try {
+    result = checkSystemIntegrity();
+  } catch (e) {
+    return { ok: false, message: 'System integrity check ล้มเหลว: ' + e.message };
+  }
+  return { ok: true, message: 'System integrity check เสร็จ — ตรวจ SYS_LOG', result: result };
 }
 
 function diagnoseSystemState_Web(params) {
   if (typeof diagnoseSystemState !== 'function') {
     return { ok: false, message: 'diagnoseSystemState ไม่พร้อม' };
   }
-  const result = diagnoseSystemState();
-  return { ok: true, message: 'Diagnostic เสร็จ', result: result };
+  // [V6.0.040] CodeQL #55: function may not return a value
+  let result = null;
+  try {
+    result = diagnoseSystemState();
+  } catch (e) {
+    return { ok: false, message: 'Diagnostic ล้มเหลว: ' + e.message };
+  }
+  return { ok: true, message: 'Diagnostic เสร็จ — ตรวจ SYS_LOG', result: result };
 }
 
 function resetSourceSyncStatus_Web(params) {
