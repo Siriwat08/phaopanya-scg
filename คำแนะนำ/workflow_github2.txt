@@ -1,0 +1,289 @@
+ดูให้แล้วครับ ไฟล์นี้ยาวมาก (4,636 บรรทัด) เป็น session ที่ AI ตอบคำถามทั้ง 3 ข้อของคุณแบบลงมือทำจริง ไม่ใช่แค่ตอบทฤษฎี — ขอสรุปเป็นภาษาง่าย ๆ ให้ก่อน แล้วบอกสถานะปัจจุบันว่าทำถึงไหนแล้ว
+
+## สรุปสิ่งที่เกิดขึ้น (แปลเป็นภาษาคน)
+
+**คำถามข้อ 1 (เพิ่มการตรวจสอบอะไรได้อีก):** AI แนะนำ 14 อย่าง แล้วลงมือทำจริง 2 อย่างที่สำคัญสุด:
+- **Gitleaks** — เครื่องมือสแกนหา "ความลับที่หลุด" (API key, password) ในโค้ด เก่งกว่าที่มีอยู่เดิมมาก (จับได้ 800+ รูปแบบ เทียบกับของเดิมที่จับได้แค่ AIza key กับ password)
+- **Gas-lint** — ตัวตรวจโค้ดที่ "รู้จัก" Google Apps Script จริง ๆ (รู้ว่า `SpreadsheetApp`, `CacheService` คืออะไร) ต่างจาก ESLint เดิมที่ใช้ตรวจแค่ไฟล์ `.js` ทั่วไป ไม่เข้าใจภาษา GAS
+
+**คำถามข้อ 2 (workflow เดิมทำดีมั้ย):** ให้คะแนน 80-85% พร้อมจุดแก้เฉพาะเจาะจง (เช่น `actions/checkout@v7` เป็นเวอร์ชันที่ไม่มีจริง พิมพ์ผิดจาก v4)
+
+**คำถามข้อ 3 (sync header อัตโนมัติได้มั้ย):** ได้ — และนี่คือส่วนที่ยาวที่สุด สร้างสคริปต์ตรวจ 2 ตัวใหม่ (`check_06_header_changelog.sh`, `check_07_header_dependencies.sh`) แล้ว **รันทดสอบกับโค้ดจริงในบทสนทนา** ไม่ใช่แค่เขียนทิ้งไว้เฉย ๆ
+
+## 🔴 สถานะจริงตอนนี้ — ยังไม่เสร็จ ยังไม่ได้ส่ง PR
+
+จุดสำคัญที่ต้องรู้ก่อนทำอะไรต่อ:
+
+1. **ยังไม่มีการสร้าง PR เลย** — ผมค้นทั้งไฟล์แล้ว เจอแค่คำแนะนำ "สร้าง PR จาก branch → main" เป็นขั้นตอนที่ **แนะนำให้ทำ** ไม่ใช่ว่าทำไปแล้ว
+2. **ไฟล์จบตรงกลางการแก้บั๊ก** — บรรทัดสุดท้ายของไฟล์คือ AI เพิ่งแก้ typo ในสคริปต์ (`failbacks` → `failures`) แต่**ยังไม่ได้รันทดสอบซ้ำเพื่อยืนยันว่าแก้ถูก** — ต้องรันอีกรอบก่อนเชื่อว่าใช้ได้จริง
+3. **เจอปัญหาจริงที่สำคัญมาก:** สคริปต์ตรวจ CHANGELOG (check_06) รันแล้วพบว่า **เกือบทุกไฟล์ยังมี "Latest 3 versions" ที่ค้างเป็น v5.5.022/021/020** (เก่ามาก) ทั้งที่โค้ดจริงอยู่ v6.0.035 แล้ว — นี่คือปัญหาเดียวกับที่เราคุยกันไปก่อนหน้านี้เป๊ะ (header ไม่ sync กับโค้ดจริง) ตอนนี้มีหลักฐานยืนยันชัดจากสคริปต์ที่เขียนขึ้นมาเอง
+
+## ⚠️ คำเตือนสำคัญที่ AI เขียนไว้ในไฟล์ — อย่าข้าม
+
+ในไฟล์มีเขียนเตือนไว้ชัดเจนแล้ว (บรรทัด 4338-4342):
+
+> **"Workflow 07 จะ block PR ใหม่ ถ้า CHANGELOG section ใน header .gs ไม่ตรงตามเงื่อนไข"**
+
+พูดง่าย ๆ คือ **ถ้าเปิดใช้ check_06/07 ตอนนี้เลย โดยยังไม่แก้ header ทุกไฟล์ก่อน จะทำให้ PR ทุกอันที่ส่งเข้ามาถูกบล็อกหมด** เพราะไฟล์เก่าแทบทั้งหมดยังมี "Latest 3 versions" ค้างอยู่
+
+## สิ่งที่ควรทำต่อ — เรียงลำดับ
+
+1. **รันคำสั่งที่ AI เตรียมไว้ให้แล้วในไฟล์** (บรรทัด 4416-4418) เพื่อลบ "Latest 3 versions" boilerplate ออกจากทุกไฟล์ก่อน:
+   ```bash
+   find src -name "*.gs" -exec sed -i '/Latest 3 versions/,/^ \*     v5.5.020/d' {} \;
+   ```
+2. **ขอให้ AI รันทดสอบ check_07 อีกรอบ** ยืนยันว่า bug "unbound variable" แก้หายแล้วจริง (ค้างอยู่ตรงนี้ในไฟล์ที่ส่งมา)
+3. **ค่อยทำ "ขั้นตอนที่ 5-6" ที่เขียนไว้แล้วในไฟล์** — commit, push, สร้าง PR แล้วดู workflow รันครบ 9 ตัว
+4. เตรียมใจว่า **gitleaks (workflow 08) อาจเจอ secret เก่าที่เคย commit ไว้ในอดีต** — ถ้าเจอของจริงต้อง revoke ทันที ถ้าเป็นแค่ test data ให้ใส่ allowlist ตามที่ไฟล์อธิบายไว้
+
+**คำแนะนำ:** เพราะ session นี้ยาวและซับซ้อนมาก แนะนำให้บอก AI ว่า **"ขอสรุปสถานะปัจจุบันทั้งหมดใหม่อีกครั้งเป็น 1 หน้า พร้อมบอกว่าเหลืออะไรต้องทำก่อนส่ง PR"** ก่อนสั่งให้ทำอะไรต่อ เพราะไฟล์นี้มีการรันคำสั่ง ทดสอบ แก้บั๊กไปมาหลายรอบ เสี่ยงที่ AI เองจะสับสนสถานะถ้าเริ่ม session ใหม่โดยไม่ทวนก่อน
+
+ผมต้องการใหคุณสร้างไฟล์ในส่วนที่ขาดไป เพื่อที่จะใช้จริง ในrepo นี้  ถ้าเรายังจะกลัวโค๊ดมรปัญหา เราก็ไม่รู้ซักทีว่าตรงไหนที่มีปัญหา
+
+Good, the extraction pattern works cleanly. Now let me write the second script:ทั้ง 2 สคริปต์สร้างเสร็จแล้ว และ **ผมรันทดสอบกับโค้ดจริงจาก zip ที่คุณเคยส่งมา (V6.0.034) ให้แล้ว** — ไม่ใช่แค่เขียนทิ้งไว้เฉย ๆ แบบใน session เก่าที่ยังค้างกลางทาง คุณพูดถูกที่บอกว่า "ถ้ายังกลัวไม่กล้าใช้จริง ก็ไม่มีทางรู้ว่าตรงไหนมีปัญหา" — ผมเลยรันให้ดูปัญหาจริงเลย:
+
+## ผลตรวจจริงที่เจอ (ไม่ใช่ทฤษฎี)
+
+**check_06 (CHANGELOG sync):** เจอ 34 จาก 35 ไฟล์มีปัญหา — ยืนยันปัญหาเดิมที่คุยกันไปแล้ว (header ค้าง v5.5.022/021/020) แถมเจอเพิ่ม 4 ไฟล์ใหม่ที่ CHANGELOG section ไม่ได้ชี้ไปที่ `/docs/CHANGELOG.md` เลย (`22b_WebAppViews.gs`, `22c_WebAppActions.gs`, `28_WebAppActions.gs`, `29_SnapshotTest.gs`) — น่าจะเป็นไฟล์ที่เพิ่งถูกสร้างจากการแตกไฟล์ใหญ่ (Phase 3) แล้วลืมใส่ header เต็มรูปแบบ
+
+**check_07 (Dependencies sync):** เจอ 5 ไฟล์ที่ไม่มี `DEPENDENCIES:` section เลย — ทั้งหมดเป็นไฟล์ใหม่จากการแตกไฟล์ (`10d_MatchTestHarness.gs`, `10e_MatchResolvePersist.gs`, `12b_ReviewReprocessor.gs`, `22b_WebAppViews.gs`, `22c_WebAppActions.gs`) สอดคล้องกับ pattern เดียวกัน — ตอนแตกไฟล์เร็ว ๆ ช่วง Phase 3 น่าจะลืมเติม header ให้ไฟล์ใหม่ครบ
+
+**นี่คือคำตอบตรง ๆ ต่อสิ่งที่คุณกังวล:** ตอนนี้รู้แล้วว่า "ตรงไหนมีปัญหา" เป็นรูปธรรม ไม่ใช่แค่เดา — เจอ 9 ไฟล์ใหม่จาก Phase 3 ที่ header ไม่ครบ ซึ่งเป็นสิ่งที่ยังไม่เคยมีใครพูดถึงมาก่อนในบทสนทนานี้ทั้งหมด## วิธีเอาไปใช้ในโปรเจกต์จริง
+
+1. เอาไฟล์ทั้ง 2 ไปวางที่ `.github/scripts/doc-code-sync-checks/` ในโปรเจกต์
+2. รัน `chmod +x` ให้ทั้งคู่ เพื่อให้เรียกจาก CI ได้
+3. รันด้วยมือดูก่อน 1 รอบเพื่อดูรายชื่อไฟล์ที่ต้องแก้ครบ (ไม่ต้องรอ CI):
+   ```bash
+   bash .github/scripts/doc-code-sync-checks/check_06_header_changelog.sh
+#!/usr/bin/env bash
+# =============================================================================
+# check_06_header_changelog.sh
+# -----------------------------------------------------------------------------
+# ตรวจว่า CHANGELOG section ใน header ของทุกไฟล์ .gs ไม่มี "Latest N versions"
+# แบบ hardcode ที่ค้างเป็นเวอร์ชันเก่า (ต้นตอบั๊กที่เจอ: ทุกไฟล์ copy-paste
+# v5.5.022/021/020 เหมือนกันหมด ทั้งที่โค้ดจริงไปไกลกว่านั้นมากแล้ว)
+#
+# กติกา: CHANGELOG section ควรมีแค่ "See /docs/CHANGELOG.md" (ชี้ไปที่ไฟล์กลาง
+# เดียว) ไม่ควร list เวอร์ชันซ้ำในทุกไฟล์ เพราะไม่มีทางอัปเดตให้ตรงกันได้ 100%
+# ทุกครั้งที่ bump version — จุดเดียวที่เป็น source of truth คือ CHANGELOG.md
+#
+# วิธีใช้:
+#   bash check_06_header_changelog.sh              # โหมดปกติ (ตาม STRICT_MODE)
+#   STRICT_MODE=1 bash check_06_header_changelog.sh # โหมด strict: exit 1 ถ้าพบปัญหา
+#
+# ใช้ใน CI: ใส่ step นี้ใน 07-doc-code-sync.yml เป็น "Check 6"
+#   - name: 📋 Check 6 — Header CHANGELOG Sync
+#     run: bash .github/scripts/doc-code-sync-checks/check_06_header_changelog.sh
+#     continue-on-error: true   # <- แนะนำให้เป็น warn-only รอบแรก จนกว่าไฟล์เก่าจะแก้ครบ
+# =============================================================================
+
+set -uo pipefail
+
+# หา root ของ repo แบบ robust (ไม่พึ่ง cwd ตอนรัน)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+cd "$REPO_ROOT" || { echo "❌ ไม่พบ repo root จาก $SCRIPT_DIR"; exit 1; }
+
+STRICT_MODE="${STRICT_MODE:-0}"
+CONFIG_FILE="src/O_core_system/01_Config.gs"
+FAIL_COUNT=0
+WARN_COUNT=0
+OK_COUNT=0
+
+echo "📋 Check 6: Header CHANGELOG Sync"
+echo "  📂 Working dir: $REPO_ROOT"
+
+if [[ ! -f "$CONFIG_FILE" ]]; then
+  echo "  ❌ ไม่พบ $CONFIG_FILE — ข้ามการตรวจ APP_VERSION"
+else
+  APP_VERSION=$(grep -oP "const\s+APP_VERSION\s*=\s*['\"]\K[^'\"]+" "$CONFIG_FILE" || echo "UNKNOWN")
+  echo "  📌 APP_VERSION ปัจจุบัน: $APP_VERSION"
+fi
+echo ""
+
+# วนทุกไฟล์ .gs ใน src/
+while IFS= read -r -d '' file; do
+  fname="$(basename "$file")"
+
+  # ดึงเฉพาะ comment block แรกสุดของไฟล์ (header)
+  header=$(awk '/^\/\*\*/{flag=1} flag{print} /^ \*\//{if(flag)exit}' "$file")
+
+  if [[ -z "$header" ]]; then
+    echo "  ⚠️  $fname: ไม่พบ header comment block เลย"
+    ((WARN_COUNT++))
+    continue
+  fi
+
+  if ! grep -q "CHANGELOG:" <<< "$header"; then
+    echo "  ❌ $fname: ไม่มี CHANGELOG: section ใน header"
+    ((FAIL_COUNT++))
+    continue
+  fi
+
+  # ปัญหาหลัก: มี "Latest N versions" หรือ list เวอร์ชันแบบ hardcode (v5.5.xxx / v6.0.xxx)
+  # ตามด้วยบรรทัดที่ขึ้นต้นด้วย v[0-9] อยู่ใน CHANGELOG block
+  changelog_block=$(awk '/CHANGELOG:/{flag=1} flag{print} /DEPENDENCIES:|ARCHITECTURE:/{if(flag && !/CHANGELOG:/) exit}' <<< "$header")
+
+  if grep -qiE "Latest [0-9]+ versions?" <<< "$changelog_block"; then
+    stale_versions=$(grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" <<< "$changelog_block" | head -3 | tr '\n' ' ')
+    echo "  ⚠️  $fname: มี 'Latest N versions' แบบ hardcode ค้างอยู่ (เจอ: $stale_versions)"
+    echo "      💡 แนะนำ: ลบ list ทิ้ง เหลือแค่ 'CHANGELOG: See /docs/CHANGELOG.md for full history.'"
+    ((WARN_COUNT++))
+    continue
+  fi
+
+  if ! grep -q "/docs/CHANGELOG.md" <<< "$changelog_block"; then
+    echo "  ⚠️  $fname: CHANGELOG section ไม่ได้ชี้ไปที่ /docs/CHANGELOG.md"
+    ((WARN_COUNT++))
+    continue
+  fi
+
+  echo "  ✅ $fname: CHANGELOG header สะอาด (อ้างอิง /docs/CHANGELOG.md อย่างเดียว)"
+  ((OK_COUNT++))
+
+done < <(find src -name "*.gs" -print0 | sort -z)
+
+echo ""
+echo "─────────────────────────────────────"
+echo "  ✅ ผ่าน:  $OK_COUNT ไฟล์"
+echo "  ⚠️  เตือน: $WARN_COUNT ไฟล์"
+echo "  ❌ ล้มเหลว: $FAIL_COUNT ไฟล์ (ไม่มี CHANGELOG section เลย)"
+echo "─────────────────────────────────────"
+
+if [[ "$FAIL_COUNT" -gt 0 ]]; then
+  echo "❌ พบไฟล์ที่ไม่มี CHANGELOG section เลย — ต้องแก้ก่อน merge"
+  exit 1
+fi
+
+if [[ "$WARN_COUNT" -gt 0 && "$STRICT_MODE" == "1" ]]; then
+  echo "❌ STRICT_MODE=1: พบ $WARN_COUNT ไฟล์ที่ยังมี stale changelog — บล็อก PR"
+  exit 1
+fi
+
+if [[ "$WARN_COUNT" -gt 0 ]]; then
+  echo "⚠️  พบปัญหาแต่ยังไม่บล็อก (STRICT_MODE=0) — ควรทยอยแก้"
+fi
+
+exit 0
+
+
+   bash .github/scripts/doc-code-sync-checks/check_07_header_dependencies.sh
+#!/usr/bin/env bash
+# =============================================================================
+# check_07_header_dependencies.sh
+# -----------------------------------------------------------------------------
+# ตรวจว่า header ของทุกไฟล์ .gs ที่ list โมดูลใน "REQUIRES (Load Order):"
+# อ้างถึงไฟล์ที่มีอยู่จริงใน src/ และมี "EXPORTS TO:" section ประกาศไว้
+# (ถ้าฟังก์ชันในไฟล์นี้ถูกไฟล์อื่นเรียกใช้จริง — ป้องกัน dependency doc ที่ผี
+# หรือขาดหาย ซึ่งทำให้คนอ่าน/AI เข้าใจ dependency graph ผิด)
+#
+# ขอบเขต: อ่านเฉพาะภายใน "REQUIRES (Load Order):" ... จนถึง "CALLS (Invokes):"
+# และ "EXPORTS TO:" ... จนถึง "SHEETS ACCESSED:" เท่านั้น — ไม่ scan ทั้ง header
+# เพื่อไม่ให้หยิบ identifier อื่น (เช่น ชื่อ case ใน ARCHITECTURE diagram) มาปนโดยผิด
+# (นี่คือบั๊กที่เจอในรอบทดสอบก่อนหน้า — regex กว้างเกินไป)
+#
+# วิธีใช้:
+#   bash check_07_header_dependencies.sh
+#   STRICT_MODE=1 bash check_07_header_dependencies.sh
+# =============================================================================
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+cd "$REPO_ROOT" || { echo "❌ ไม่พบ repo root จาก $SCRIPT_DIR"; exit 1; }
+
+STRICT_MODE="${STRICT_MODE:-0}"
+FAIL_COUNT=0
+WARN_COUNT=0
+OK_COUNT=0
+
+echo "📋 Check 7: Header DEPENDENCIES Sync"
+echo "  📂 Working dir: $REPO_ROOT"
+echo ""
+
+# สร้างรายชื่อโมดูลที่มีอยู่จริงทั้งหมด (basename ไม่รวม .gs) ไว้เทียบ
+declare -A EXISTING_MODULES
+while IFS= read -r -d '' f; do
+  base="$(basename "$f" .gs)"
+  EXISTING_MODULES["$base"]=1
+done < <(find src -name "*.gs" -print0)
+
+while IFS= read -r -d '' file; do
+  fname="$(basename "$file")"
+  modname="$(basename "$file" .gs)"
+
+  header=$(awk '/^\/\*\*/{flag=1} flag{print} /^ \*\//{if(flag)exit}' "$file")
+  if [[ -z "$header" ]]; then
+    continue  # check_06 จัดการกรณีไม่มี header แล้ว ข้ามที่นี่
+  fi
+
+  if ! grep -q "DEPENDENCIES:" <<< "$header"; then
+    echo "  ❌ $modname: ไม่มี DEPENDENCIES: section"
+    ((FAIL_COUNT++))
+    continue
+  fi
+
+  # ---- ตรวจ REQUIRES block ----
+  requires_block=$(awk '/REQUIRES \(Load Order\):/{flag=1; next} /CALLS \(Invokes\):|EXPORTS TO:/{flag=0} flag{print}' <<< "$header")
+  missing_deps=()
+  dep_count=0
+
+  if [[ -n "$requires_block" ]]; then
+    while IFS= read -r line; do
+      dep=$(grep -oE '^\s*\*\s*-\s*[0-9]{2}[a-z]?_[A-Za-z][A-Za-z0-9]*' <<< "$line" | grep -oE '[0-9]{2}[a-z]?_[A-Za-z][A-Za-z0-9]*$')
+      [[ -z "$dep" ]] && continue
+      ((dep_count++))
+      if [[ -z "${EXISTING_MODULES[$dep]:-}" ]]; then
+        missing_deps+=("$dep")
+      fi
+    done <<< "$requires_block"
+  fi
+
+  if [[ ${#missing_deps[@]} -gt 0 ]]; then
+    echo "  ❌ $modname: REQUIRES อ้างถึงโมดูลที่ไม่มีอยู่จริง — ${missing_deps[*]}"
+    ((FAIL_COUNT++))
+  elif [[ "$dep_count" -gt 0 ]]; then
+    echo "  ✅ $modname: REQUIRES $dep_count โมดูล — ทุกตัวมีอยู่จริง"
+    ((OK_COUNT++))
+  fi
+
+  # ---- ตรวจ EXPORTS TO block (แค่ presence — ไม่ validate ว่า reverse-ref ถูก 100% ในรอบนี้) ----
+  exports_block=$(awk '/EXPORTS TO:/{flag=1; next} /SHEETS ACCESSED:/{flag=0} flag{print}' <<< "$header")
+  if [[ -z "$exports_block" ]] || grep -qi "none" <<< "$exports_block"; then
+    : # ไฟล์ที่เป็น leaf module (ไม่มีใครเรียกใช้) — ไม่ถือเป็นปัญหา ถ้าตั้งใจเขียน "None"
+  else
+    export_count=$(grep -cE '^\s*\*\s*-\s*[0-9]{2}[a-z]?_[A-Za-z]' <<< "$exports_block" || true)
+    if [[ "$export_count" -eq 0 ]]; then
+      echo "  ⚠️  $modname: มี EXPORTS TO: header แต่ parse ไม่เจอโมดูลไหนเลย (รูปแบบอาจไม่ตรง pattern)"
+      ((WARN_COUNT++))
+    fi
+  fi
+
+done < <(find src -name "*.gs" -print0 | sort -z)
+
+echo ""
+echo "─────────────────────────────────────"
+echo "  ✅ ผ่าน:  $OK_COUNT ไฟล์"
+echo "  ⚠️  เตือน: $WARN_COUNT ไฟล์"
+echo "  ❌ ล้มเหลว: $FAIL_COUNT ไฟล์"
+echo "─────────────────────────────────────"
+
+if [[ "$FAIL_COUNT" -gt 0 ]]; then
+  echo "❌ พบ dependency ที่อ้างถึงไฟล์ที่ไม่มีจริง หรือไม่มี DEPENDENCIES section — ต้องแก้ก่อน merge"
+  exit 1
+fi
+
+if [[ "$WARN_COUNT" -gt 0 && "$STRICT_MODE" == "1" ]]; then
+  exit 1
+fi
+
+exit 0
+
+
+   ```
+4. ค่อยเพิ่มเข้า `07-doc-code-sync.yml` เป็น step ใหม่ (มี comment ตัวอย่างไว้ในหัวไฟล์แล้ว) — **ตั้ง `continue-on-error: true` ไว้ก่อนในรอบแรก** อย่าเพิ่งบล็อก PR ทันที เพราะตอนนี้มี 34+5 ไฟล์ที่ยังไม่ผ่าน ถ้าเปิด strict เลยจะบล็อกทุก PR ทันที (ตรงกับคำเตือนที่ AI เขียนไว้ในไฟล์เก่าเป๊ะ)
+
+**จุดที่ผมออกแบบต่างจากของเดิมเล็กน้อย:** ใส่ตัวแปร `STRICT_MODE` ไว้ให้ — ช่วงแรกปล่อยเป็น warn-only (`STRICT_MODE=0`) จนกว่าจะแก้ไฟล์เก่าครบ แล้วค่อยเปลี่ยนเป็น `STRICT_MODE=1` ใน CI เพื่อบล็อกจริงในอนาคต ไม่ต้องแก้ script ทีหลัง แค่เปลี่ยน env var เดียว
+
+ต้องการให้ผมสร้างสคริปต์ตัวที่ 3 ไหมครับ — ตัวที่ลบ "Latest N versions" ออกจากทุกไฟล์อัตโนมัติ (ที่ AI ตัวเดิมเขียนเป็นคำสั่ง `sed` บรรทัดเดียวไว้แล้ว) ผมทำเป็นสคริปต์แยกให้รันปลอดภัยกว่า พร้อม backup ก่อนแก้จริงได้ครับ
