@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.023
+ * VERSION: 6.0.024
  * FILE: 22_WebApp.gs
  * LMDS V5.5 — Web App Server (Dashboard)
  * ===================================================
