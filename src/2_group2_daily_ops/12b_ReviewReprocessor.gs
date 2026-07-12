@@ -1,20 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 12b_ReviewReprocessor.gs
- * LMDS V6.0 — Q_REVIEW Post-Processor (extracted from 12_ReviewService.gs)
+ * LMDS V6.0 — Q_REVIEW Post-Processor
  * ===================================================
  * PURPOSE:
  *   รวม reprocessReviewQueue + reproc* helpers สำหรับ batch reprocessing
- *   Q_REVIEW rows ที่มี MATCH_STATUS='MATCHED' แต่ยังไม่ได้ sync ไป FACT_DELIVERY
- *
+ *   Q_REVIEW rows ที่มี MATCH_STATUS=MATCHED แต่ยังไม่ได้ sync ไป FACT_DELIVERY
  *   แยกออกจาก 12_ReviewService.gs เพื่อลดขนาดไฟล์ (audit 1.2)
  *
- *   ถูกเรียกโดย:
- *     - 12_ReviewService.gs (applyAllPendingDecisions → reprocessReviewQueue)
- *     - 00_App.gs menu (ผ่าน applyAllPendingDecisions)
- * ===================================================
  * CHANGELOG:
- *   v6.0.034 (2026-07-12) — INITIAL — extracted from 12_ReviewService.gs
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
+ * DEPENDENCIES:
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 10_MatchEngine, 10e_MatchResolvePersist, 11_TransactionService, 12_ReviewService
+ *   CALLED BY: 12_ReviewService (applyAllPendingDecisions → reprocessReviewQueue), 00_App (applyAllPendingDecisions menu)
+ *
+ * ARCHITECTURE:
+ *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)
  * ===================================================
  */
 

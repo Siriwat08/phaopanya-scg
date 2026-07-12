@@ -1,76 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 16_GeoDictionaryBuilder.gs
- * LMDS V5.5 — Geo Dictionary Builder (SYS_TH_GEO)
+ * LMDS V6.0 — Geo Dictionary Builder (SYS_TH_GEO)
  * ===================================================
  * PURPOSE:
  *   สร้างและดูแลฐานข้อมูลภูมิศาสตร์ไทย (SYS_TH_GEO) 16 คอลัมน์
  *   สำหรับการแกะที่อยู่อัตโนมัติ
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   รวม buildGeoDictionary + lookup helpers (postcode, area, province, district)
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config (SHEET.SYS_TH_GEO, TH_GEO_IDX.*, AI_CONFIG.CACHE_TTL_SEC)
- *     - 02_Schema (SCHEMA)
- *     - 05_NormalizeService (normalizeForCompare)
- *     - 20_ThGeoService (populateGeoMetadata)
- *     - 14_Utils (diceCoefficient,
- *                saveChunkedCache_, loadChunkedCache_ [V5.5.007 P1 #7],
- *                flushLogBuffer_ (in finally of buildGeoDictionary) [V5.5.008 P2 #11])
- *   CALLS (Invokes):
- *     - normalizeForCompare() → 05_NormalizeService
- *     - diceCoefficient() → 14_Utils
- *     - saveChunkedCache_/loadChunkedCache_ → 14_Utils (postcode/province/district
- *       maps migrated from raw cache.put/get to chunked putAll/getAll) [V5.5.007 P1 #7]
- *     - flushLogBuffer_() → 03_SetupSheets (buildGeoDictionary finally) [V5.5.008 P2 #11]
- *     - logWarn/logInfo() → 03_SetupSheets
- *   EXPORTS TO:
- *     - 00_App (buildGeoDictionary, populateGeoMetadata — menu trigger)
- *     - 07_PlaceService (lookupByPostcode, lookupPostcodeByArea, lookupProvinceFromAddress, scanAddressAgainstDictionary, isValidProvince)
- *     - 20_ThGeoService (loadCachedGeoRows_, safeUiAlert_)
- *   SHEETS ACCESSED:
- *     - SHEET.SYS_TH_GEO (Read+Write: 16-column dictionary)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 20_ThGeoService
+ *   CALLED BY: 00_App (buildGeoDictionary, populateGeoMetadata — menu), 07_PlaceService (lookupByPostcode, lookupPostcodeByArea, scanAddressAgainstDictionary), 20_ThGeoService (loadCachedGeoRows_)
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────┐
- *   │         Thai Geo Dictionary (SYS_TH_GEO)        │
- *   ├─────────────────────────────────────────────────┤
- *   │  buildGeoDictionary                             │
- *   │    ├─ populate search/postal keys               │
- *   │    └─ clean columns → CacheService + RAM        │
- *   ├─────────────────────────────────────────────────┤
- *   │  Lookup Functions:                              │
- *   │    lookupByPostcode(postcode → area info)       │
- *   │    lookupPostcodeByArea(tambon/amphoe/province) │
- *   │    lookupProvinceFromAddress(raw → province)    │
- *   │    scanAddressAgainstDictionary(raw → geo)      │
- *   │    isValidProvince(name → boolean)              │
- *   │    lookupDistrictsByProvince(province → [])     │
- *   ├─────────────────────────────────────────────────┤
- *   │  Fuzzy Matching: diceCoefficient-based          │
- *   ├─────────────────────────────────────────────────┤
- *   │  Cache Layer:                                   │
- *   │    RAM: _GLOBAL_GEO_DICT_CACHE (in-memory)     │
- *   │    CacheService: chunked postcode/prov/district │
- *   │    loadCachedGeoRows_ / getCachedPostcodeMap_   │
- *   │    savePostcodeMapToCache_ / getCachedProvinces_│
- *   │    getCachedDistricts_ (write-back on miss      │
- *   │      — V5.5.008 P2 #14) / invalidateGeoDictCache│
- *   │    + nulls _GLOBAL_GEO_DICT_SEARCH_KEY_INDEX    │
- *   │      (V5.5.007 P0 #2)                           │
- *   │    [V5.5.007 P1 #7] chunked cache migration     │
- *   │      (saveChunkedCache_/loadChunkedCache_)      │
- *   │    [V5.5.008 P2 #11] flushLogBuffer_() in finally│
- *   │      of buildGeoDictionary                      │
- *   ├─────────────────────────────────────────────────┤
- *   │  Helpers: safeUiAlert_ (→ 14_Utils)              │
- *   └─────────────────────────────────────────────────┘
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

@@ -1,88 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 21_AliasService.gs
- * LMDS V5.5 — Hybrid Alias Architecture (Global M_ALIAS + Entity-Specific Views)
+ * LMDS V6.0 — Hybrid Alias Architecture (Global M_ALIAS)
  * ===================================================
  * PURPOSE:
  *   จัดการตารางกลาง M_ALIAS — เชื่อมโยงชื่อสกปรก/ย่อ/ผิด → master_uuid → พิกัด
  *   เป็น Single Source of Truth สำหรับ Alias Resolution ที่ Group 2 ใช้ค้นหา
- *   ⚠️ Auto Pipeline ไม่เขียน M_ALIAS ที่นี่ — เขียนที่ autoEnrichAliasesFromFactBatch_() เท่านั้น
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   ⚠️ Auto Pipeline ไม่เขียน M_ALIAS ที่นี่ — เขียนที่ autoEnrichAliasesFromFactBatch_() ใน 10_MatchEngine เท่านั้น
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config.gs          (SHEET.M_ALIAS, ALIAS_IDX.*, AI_CONFIG, CACHE_KEY.GLOBAL_ALIAS_ALL,
- *                              CACHE_KEY.GLOBAL_ALIAS_REVERSE [V5.5.007 P1 #8])
- *     - 02_Schema.gs          (SCHEMA[SHEET.M_ALIAS], SCHEMA[SHEET.M_PERSON], SCHEMA[SHEET.M_PLACE])
- *     - 03_SetupSheets.gs     (logInfo, logWarn, logError, logDebug, flushLogBuffer_ [V5.5.008 P2 #11])
- *     - 05_NormalizeService.gs (normalizeForCompare)
- *     - 14_Utils.gs           (generateShortId,
- *                              saveChunkedCache_, loadChunkedCache_, invalidateChunkedCache_ [V5.5.007 P1 #7])
- *   CALLS (Invokes):
- *     - loadAllPersons_()                 → 06_PersonService.gs (UUID converters)
- *     - loadAllPlaces_()                  → 07_PlaceService.gs (UUID converters)
- *     - getDestsByPersonId()              → 09_DestinationService.gs (fastLookupByShipToName)
- *     - getDestsByPlaceId()               → 09_DestinationService.gs (fastLookupByShipToName)
- *     - saveChunkedCache_/loadChunkedCache_ → 14_Utils.gs (saveAliasCacheChunked_/
- *       loadAliasCacheChunked_ now delegate here) [V5.5.007 P1 #7]
- *     - invalidateChunkedCache_ → 14_Utils.gs (migrateStep1_AssignUuid_ uses this
- *       instead of raw removeAll to avoid orphaned chunk keys) [V5.5.007 P0 #4]
- *     - flushLogBuffer_() → 03_SetupSheets (MIGRATION_HybridAliasSystem finally) [V5.5.008 P2 #11]
- *   EXPORTS TO:
- *     - 06_PersonService.gs   (resolveMasterUuidViaGlobalAlias, convertUuidToPersonId)
- *     - 07_PlaceService.gs    (resolveMasterUuidViaGlobalAlias, convertUuidToPlaceId)
- *     - 10_MatchEngine.gs     (convertPersonIdToUuid — in legacy Migration code)
- *     - 17_SearchService.gs   (fastLookupByShipToName — Group 2 Fast Track)
- *   SHEETS ACCESSED:
- *     - SHEET.M_ALIAS         (Read+Write: Global alias table — ⚠️ Single Writer = autoEnrich)
- *     - SHEET.M_PERSON        (Read: UUID ↔ personId conversion)
- *     - SHEET.M_PLACE         (Read: UUID ↔ placeId conversion)
- *     - SHEET.M_PERSON_ALIAS  (Read: Migration source, dedup check)
- *     - SHEET.M_PLACE_ALIAS   (Read: Migration source, dedup check)
- *     - SHEET.SOURCE          (Read: SCG Raw data → populateAliasFromSCGRawData_)
- *     - SHEET.FACT_DELIVERY   (Read: populateAliasFromFactDelivery_)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 06_PersonService, 07_PlaceService, 09_DestinationService
+ *   CALLED BY: 06_PersonService (resolveMasterUuidViaGlobalAlias, convertUuidToPersonId), 07_PlaceService (resolveMasterUuidViaGlobalAlias, convertUuidToPlaceId), 10_MatchEngine (convertPersonIdToUuid — legacy Migration code), 17_SearchService (fastLookupByShipToName — Group 2 Fast Track), 00_App (MIGRATION_HybridAliasSystem, populateAliasFromSCGRawData, assignMasterUuidIfMissing)
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────────────────┐
- *   │  21_AliasService.gs (Hybrid Alias — Read Path + Migration)  │
- *   │  │                                                          │
- *   │  │  ⚠️ WRITE PATH: autoEnrichAliasesFromFactBatch_() ONLY   │
- *   │  │     (this file does NOT auto-write M_ALIAS in pipeline)  │
- *   │  │                                                          │
- *   │  ├── [Read Path — Group 2 Fast Track]                      │
- *   │  │   ├── fastLookupByShipToName()                           │
- *   │  │   │   └── M_ALIAS → masterUuid → entityId → dest → lat,lng│
- *   │  │   ├── loadGlobalAliasReverseIndex_() (variant → masterUuid)│
- *   │  │   └── resolveMasterUuidViaGlobalAlias() (Person/Place)   │
- *   │  │                                                          │
- *   │  ├── [Read Path — Group 1 Candidate Search]                │
- *   │  │   └── loadGlobalAliasesMap_() (uuid → variants[])        │
- *   │  │                                                          │
- *   │  ├── [Write Path — Migration/Admin ONLY]                   │
- *   │  │   ├── createGlobalAlias() — Append to M_ALIAS (no sync) │
- *   │  │   ├── MIGRATION_HybridAliasSystem() — 5-step migration  │
- *   │  │   │   └── [V5.5.007 P0 #4] migrateStep1_AssignUuid_     │
- *   │  │   │       uses invalidateChunkedCache_ (was             │
- *   │  │   │       raw removeAll — avoids orphaned chunk keys)  │
- *   │  │   │   └── [V5.5.008 P2 #11] flushLogBuffer_() in finally│
- *   │  │   ├── populateAliasFromSCGRawData_()                    │
- *   │  │   └── populateAliasFromFactDelivery_()                  │
- *   │  │                                                          │
- *   │  ├── [Cache — V5.5.007 P1 #7] saveAliasCacheChunked_/      │
- *   │  │   loadAliasCacheChunked_ now delegate to centralized    │
- *   │  │   saveChunkedCache_/loadChunkedCache_ (14_Utils, putAll)│
- *   │  │                                                          │
- *   │  └── [Utilities]                                           │
- *   │      ├── UUID ↔ Entity ID converters (4 functions)         │
- *   │      ├── assignMasterUuidIfMissing()                       │
- *   │      └── generateUUID()                                    │
- *   └─────────────────────────────────────────────────────────────┘
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

@@ -1,18 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 10e_MatchResolvePersist.gs
- * LMDS V6.0 — Resolve & Persist for Q_REVIEW (extracted from 10_MatchEngine.gs)
+ * LMDS V6.0 — Resolve & Persist for Q_REVIEW
  * ===================================================
  * PURPOSE:
- *   รวม resolveAndPersist* + reproc* functions ที่ใช้สำหรับ reprocessing
+ *   รวม resolveAndPersist* + reproc* functions สำหรับ reprocessing
  *   Q_REVIEW decisions (MERGE_TO_CANDIDATE / CREATE_NEW from review)
+ *   แยกออกจาก 10_MatchEngine.gs เพื่อลดขนาดไฟล์ (audit 1.2)
  *
- *   ถูกเรียกโดย:
- *     - 12_ReviewService.gs (applyReviewDecision)
- *     - 10_MatchEngine.gs (handleReview_ → resolveAndPersist_)
- * ===================================================
  * CHANGELOG:
- *   v6.0.032 (2026-07-12) — INITIAL — extracted from 10_MatchEngine.gs
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
+ * DEPENDENCIES:
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 10_MatchEngine, 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService, 11_TransactionService, 21_AliasService, 26_AuditTrailService
+ *   CALLED BY: 12_ReviewService (applyReviewDecision → resolveAndPersist_), 10_MatchEngine (handleReview_ → resolveAndPersist_)
+ *
+ * ARCHITECTURE:
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

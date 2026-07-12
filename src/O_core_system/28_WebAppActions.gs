@@ -1,34 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 28_WebAppActions.gs
  * LMDS V6.0 — Web App Actions Server (Mobile Menu)
  * ===================================================
  * PURPOSE:
  *   ให้บริการ action dispatcher สำหรับ WebApp mobile menu
  *   ทำหน้าที่เป็น bridge ระหว่าง frontend (MobileActions view) กับ backend functions
- *   แทนที่จะเขียน API method แยกสำหรับแต่ละฟังก์ชัน ใช้ dispatcher ตัวเดียว
+ *   Pattern: runWebAppAction(actionId, params) → registry → _Web variant (no UI alerts)
  *
- *   Pattern: runWebAppAction(actionId, params) → ค้น registry → เรียก _Web variant
- *
- * WHY _Web VARIANTS?
- *   หลายฟังก์ชัน *_UI ใช้ SpreadsheetApp.getUi().alert() ซึ่ง throw ใน WebApp context
- *   _Web variants ข้าม confirmation (client ทำเอง) และ return JSON แทนการ show UI
- * ===================================================
  * CHANGELOG:
- *   v6.0.021 (2026-07-11) — INITIAL — Mobile Actions view + dispatcher
- * ===================================================
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES:
- *     - 01_Config.gs          (APP_VERSION, SHEET, AI_CONFIG)
- *     - 03_SetupSheets.gs     (logInfo, logWarn, logError)
- *     - 27_RbacService.gs     (requirePermission_)
- *     - 00_App.gs             (*_UI functions for delegation)
- *     - 10_MatchEngine.gs     (runTestMatchDryRun_)
- *   CALLS:
- *     - All *_UI functions via dispatcher
- *   USED BY:
- *     - 22_WebApp.gs (doGet → exposes runWebAppAction, getWebAppActionRegistry)
- *     - views/MobileActions.html (frontend)
+ *   REQUIRES: 01_Config, 02_Schema, 14_Utils, 22_WebApp
+ *   CALLED BY: Frontend (MobileActions view via google.script.run)
+ *
+ * ARCHITECTURE:
+ *   Group 3 — Web frontend server (dashboard, views, actions, mobile menu)
  * ===================================================
  */
 

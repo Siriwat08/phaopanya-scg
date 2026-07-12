@@ -1,68 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 04_SourceRepository.gs
- * LMDS V5.5 — Source Data Repository
+ * LMDS V6.0 — Source Data Repository
  * ===================================================
  * PURPOSE:
  *   จัดการข้อมูลต้นทาง (Source Sheet) สำหรับ Pipeline
  *   เป็น Single Entry Point สำหรับการอ่านและเขียนข้อมูลต้นฉบับ
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   รวม getUnprocessedRows, getAllSourceRows, buildSourceObj_, sync status updates
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config (SHEET.*, SRC_IDX.*, SCG_CONFIG.*, AI_CONFIG.*,
- *                  CACHE_KEY.SOURCE_ROWS, CACHE_KEY.PROCESSED_INVOICES [V5.5.007 P1 #8])
- *     - 02_Schema (SCHEMA[SHEET.SOURCE])
- *     - 14_Utils (normalizeInvoiceNo, parseLatLng, isValidLatLng, callSpreadsheetWithRetry,
- *                 saveChunkedCache_, loadChunkedCache_ [V5.5.007 P1 #7])
- *     - 03_SetupSheets (logInfo/logError/logWarn/logDebug, flushLogBuffer_ [V5.5.008 P2 #11])
- *   CALLS (Invokes):
- *     - normalizeInvoiceNo() → 14_Utils
- *     - parseLatLng() → 14_Utils
- *     - isValidLatLng() → 14_Utils
- *     - callSpreadsheetWithRetry() → 14_Utils
- *     - saveChunkedCache_/loadChunkedCache_ → 14_Utils (saveSourceRowsToCache_/
- *       saveProcessedInvoicesToCache_ now delegate here; was raw cache.put/get) [V5.5.007 P1 #7]
- *     - columnToLetterHelper_() → (self)
- *     - logInfo/logError/logWarn/logDebug() → 03_SetupSheets
- *     - flushLogBuffer_() → 03_SetupSheets (runLoadSource finally) [V5.5.008 P2 #11]
- *     - updateSyncStatus_() → (self)
- *     - processOneRow() → 10_MatchEngine
- *   EXPORTS TO:
- *     - 10_MatchEngine (getUnprocessedRows, getAllSourceRows, buildSourceObj_)
- *     - 00_App (runFullPipeline, runLoadSource)
- *   SHEETS ACCESSED:
- *     - SHEET.SOURCE (Read+Write: source data & sync status)
- *     - SHEET.FACT_DELIVERY (Read: processed invoice lookup)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 14_Utils, 03_SetupSheets
+ *   CALLED BY: 10_MatchEngine (getUnprocessedRows, getAllSourceRows, buildSourceObj_, updateSyncStatus_), 00_App (runFullPipeline, runLoadSource), 10d_MatchTestHarness (getAllSourceRowsForceAll)
+ *
  * ARCHITECTURE:
- *   Source Data Hub
- *   ┌─────────────────────────────────────────────┐
- *   │ runLoadSource                               │
- *   │   └→ invalidateCache                        │
- *   │   └→ getUnprocessedRows                     │
- *   │        └→ getAllSourceRows → buildSourceObj_ │
- *   │        └→ getProcessedInvoiceSet_            │
- *   │             └→ FACT_DELIVERY lookup          │
- *   │   [V5.5.008 P2 #11] flushLogBuffer_() in    │
- *   │     finally block                           │
- *   │                                             │
- *   │ [V5.5.007 P1 #7] saveSourceRowsToCache_ +   │
- *   │   loadSourceRowsFromCache_ / saveProcessedIn-│
- *   │   voicesToCache_ + loadProcessedInvoicesFrom│
- *   │   Cache_ — now delegate to centralized      │
- *   │   saveChunkedCache_/loadChunkedCache_       │
- *   │   (putAll/getAll; was raw cache.put/get)    │
- *   │                                             │
- *   │ processSrcBatch_ → processOneRow             │
- *   │ updateSyncStatus_ (batch status update)      │
- *   └─────────────────────────────────────────────┘
+ *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)
  * ===================================================
  */
 

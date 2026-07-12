@@ -1,53 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 13_ReportService.gs
- * LMDS V5.5 — Data Quality Report Service
+ * LMDS V6.0 — Data Quality Report Service
  * ===================================================
  * PURPOSE:
  *   สร้างรายงาน Data Quality ของระบบ LMDS
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   รวบรวม stats จาก Master + Fact + Review sheets → RPT_QUALITY
+ *   รวม buildFullQualityReport + summary builders
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config (SHEET.RPT_QUALITY, SHEET.FACT_DELIVERY, SHEET.M_PERSON, SHEET.M_PLACE, SHEET.M_GEO_POINT, SHEET.M_DESTINATION, FACT_IDX.*, PERSON_IDX.*, PLACE_IDX.*, GEO_IDX.*, DEST_IDX.*, APP_CONST.*)
- *     - 02_Schema (SCHEMA)
- *     - 06_PersonService (loadAllPersons_)
- *     - 07_PlaceService (loadAllPlaces_)
- *     - 08_GeoService (loadAllGeos_)
- *     - 09_DestinationService (loadAllDestinations_)
- *     - 12_ReviewService (getReviewStats)
- *   CALLS (Invokes):
- *     - getReviewStats() → 12_ReviewService
- *     - logError/logInfo() → 03_SetupSheets
- *   EXPORTS TO:
- *     - 00_App (buildFullQualityReport — menu trigger)
- *   SHEETS ACCESSED:
- *     - SHEET.RPT_QUALITY (Write: quality report output)
- *     - SHEET.FACT_DELIVERY (Read: match status counts)
- *     - SHEET.M_PERSON (Read: active row count)
- *     - SHEET.M_PLACE (Read: active row count)
- *     - SHEET.M_GEO_POINT (Read: active row count)
- *     - SHEET.M_DESTINATION (Read: destination count)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService, 11_TransactionService, 12_ReviewService, 04_SourceRepository
+ *   CALLED BY: 00_App (buildFullQualityReport — menu), 22b_WebAppViews (Dashboard metrics)
+ *
  * ARCHITECTURE:
- *   Report Builder
- *   ┌──────────────────────────────────────────────┐
- *   │  buildFullQualityReport                      │
- *   │  ├─ auto/review/new/error counts from FACT   │
- *   │  ├─ match rates (auto & processed)           │
- *   │  ├─ master data counts (person/place/geo/dst)│
- *   │  └─ write to RPT_DATA_QUALITY sheet          │
- *   │  countActiveRows_                            │
- *   │  └─ active row counter per sheet             │
- *   │  safeUiAlert_                                │
- *   │  └─ trigger-safe UI alert                    │
- *   └──────────────────────────────────────────────┘
+ *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)
  * ===================================================
  */
 

@@ -1,30 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 99_Legacy.gs
- * LMDS V5.5 — Deprecated/Legacy Functions (Compatibility Layer)
+ * LMDS V6.0 — Deprecated/Legacy Functions (Compatibility Layer)
  * ===================================================
  * PURPOSE:
  *   รวบรวมฟังก์ชันที่ถูก deprecated แล้วแต่ยังเก็บไว้เพื่อ backward compatibility
  *   สำหรับ external scripts ที่อาจยังเรียกใช้งานอยู่
+ *   ⚠️ ฟังก์ชันในไฟล์นี้จะถูกลบออกในอนาคต — ควรย้ายไปใช้ API ใหม่
  *
- *   ⚠️  ฟังก์ชันในไฟล์นี้จะถูกลบออกในอนาคต — ควรย้ายไปใช้ API ใหม่
- *      ตามที่ระบุใน @deprecated tag ของแต่ละฟังก์ชัน
- * ===================================================
- * CONTENTS:
- *   - getColIndex(schemaKey, colName)        ← moved from 02_Schema.gs (V5.5.019)
- *   - getDestinationsByPerson(personId)       ← moved from 09_DestinationService.gs (REF-020)
- *   - getDestinationsByPlace(placeId)         ← moved from 09_DestinationService.gs (REF-020)
- * ===================================================
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config.gs     (SHEET, *_IDX constants)
- *     - 02_Schema.gs     (SCHEMA object)
- *     - 03_SetupSheets.gs (logWarn)
- *     - 09_DestinationService.gs (getDestsByPersonId_, getDestsByPlaceId_)
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   V5.5.034 (2026-07-03) — Created 99_Legacy.gs, moved 3 deprecated functions
- *   V5.5.035 (2026-07-03) — SonarCloud fixes: extract MODULE_NAME constant + block comments
+ *   REQUIRES: 01_Config, 02_Schema
+ *   CALLED BY: External legacy scripts (compatibility shims)
+ *
+ * ARCHITECTURE:
+ *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)
  * ===================================================
  */
 

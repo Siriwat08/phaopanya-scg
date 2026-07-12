@@ -1,59 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 05_NormalizeService.gs
- * LMDS V5.5 — Thai Name & Place Normalization
+ * LMDS V6.0 — Thai Name & Place Normalization
  * ===================================================
  * PURPOSE:
  *   ทำความสะอาดและ normalize ชื่อบุคคลและสถานที่
  *   เป็น Single Source of Truth สำหรับการทำความสะอาดข้อมูล
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   รวม Thai/English transliteration, semantic note parser, double-metaphone (V6.0)
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 14_Utils (diceCoefficient, levenshteinDistance) [for scoring in other files]
- *   CALLS (Invokes):
- *     - logInfo() → 03_SetupSheets
- *     - escapeRegex_() → (self)
- *     - buildNormResult_() → (self)
- *   EXPORTS TO:
- *     - 06_PersonService (normalizePersonNameFull)
- *     - 07_PlaceService (normalizePlaceName)
- *     - 17_SearchService (normalizePersonNameFull, normalizePlaceName)
- *     - 10_MatchEngine (all matching)
- *     - 16_GeoDictionaryBuilder (normalizeForCompare)
- *     - 21_AliasService (normalizeForCompare)
- *     - 19_Hardening (normalizeForCompare)
- *     - 20_ThGeoService (normalizeForCompare)
- *   SHEETS ACCESSED:
- *     - None (pure computation module)
- * ===================================================
+ *   REQUIRES: 01_Config, 14_Utils
+ *   CALLED BY: 06_PersonService, 07_PlaceService, 10_MatchEngine, 16_GeoDictionaryBuilder, 20_ThGeoService, 21_AliasService, 19_Hardening
+ *
  * ARCHITECTURE:
- *   Text Cleaner
- *   ┌──────────────────────────────────────────────────────┐
- *   │ normalizePersonNameFull (7 steps):                   │
- *   │   1. extractPhone                                   │
- *   │   2. extractDoc                                     │
- *   │   3. extractDeliveryNotes                           │
- *   │   4. checkCompany                                   │
- *   │   5. stripPrefix                                    │
- *   │   6. cleanSpecialChars                              │
- *   │   7. buildNormResult_                               │
- *   │                                                     │
- *   │ normalizePlaceName (4 steps):                        │
- *   │   1. extractPhone/Doc                               │
- *   │   2. detectType                                     │
- *   │   3. extractDeliveryNotes                           │
- *   │   4. stripSuffix                                    │
- *   │                                                     │
- *   │ buildThaiPhoneticKey → consonant key                │
- *   │ normalizeForCompare → lowercase + strip spaces      │
- *   └──────────────────────────────────────────────────────┘
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

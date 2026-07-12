@@ -1,70 +1,23 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 19_Hardening.gs
- * LMDS V5.5 — System Hardening & Preflight Audit
- * [FIX BUG-A2] v5.4.003: runPreflightAudit() เพิ่ม try-catch
- * [ADD v5.4.003] buildGlobalAliasDedupSet_() — helper ที่ generatePersonAliasesFromHistory ต้องใช้
+ * LMDS V6.0 — System Hardening & Preflight Audit
  * ===================================================
  * PURPOSE:
  *   ตรวจสอบความสมบูรณ์ของข้อมูลก่อนประมวลผล (Preflight Audit)
- *   และตรวจจับปัญหาซ้ำซ้อน
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   และตรวจจับปัญหาซ้ำซ้อน เช่น duplicate processing, schema mismatch
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config (SHEET.*, SRC_IDX.*, FACT_IDX.*, PERSON_ALIAS_IDX.*, SCHEMA)
- *     - 02_Schema (SCHEMA)
- *     - 06_PersonService (loadAllPersons_, loadAllAliases_)
- *     - 07_PlaceService (loadAllPlaces_)
- *     - 08_GeoService (loadAllGeos_)
- *     - 09_DestinationService (loadAllDestinations_)
- *     - 11_TransactionService (findFactRowByInvoice_)
- *     - 05_NormalizeService (normalizeForCompare)
- *     - 14_Utils (generateShortId, normalizeInvoiceNo)
- *   CALLS (Invokes):
- *     - loadAllPersons_() → 06_PersonService
- *     - loadAllAliases_() → 06_PersonService
- *     - normalizeForCompare() → 05_NormalizeService
- *     - generateShortId() → 14_Utils
- *     - normalizeInvoiceNo() → 14_Utils
- *     - invalidateAliasCache_() → 06_PersonService
- *     - logInfo() → 03_SetupSheets
- *     - flushLogBuffer_() → 03_SetupSheets (called in finally of runPreflightAudit) [V5.5.008 P2 #11]
- *   EXPORTS TO:
- *     - 00_App (runPreflightAudit, detectDoubleProcessing, generatePersonAliasesFromHistory — menu trigger)
- *   SHEETS ACCESSED:
- *     - SHEET.SOURCE (Read: sync status integrity check)
- *     - SHEET.FACT_DELIVERY (Read: double processing detection)
- *     - SHEET.M_PERSON_ALIAS (Write: alias generation output)
- *     - All SHEET.* constants (Read: iterated via runPreflightAudit)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 05_NormalizeService, 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService, 11_TransactionService, 14_Utils
+ *   CALLED BY: 00_App (runPreflightAudit, detectDoubleProcessing, checkSystemIntegrity)
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────────┐
- *   │                19_Hardening.gs                      │
- *   │           System Hardening & Audit                  │
- *   ├─────────────────────────────────────────────────────┤
- *   │                                                     │
- *   │  runPreflightAudit ─── Schema integrity check       │
- *   │       │                  + API key validation       │
- *   │       │                  + flushLogBuffer_() in     │
- *   │       │                    finally [V5.5.008 #11]   │
- *   │                                                     │
- *   │  fixMissingSyncStatus ── Batch sync status repair   │
- *   │                                                     │
- *   │  detectDoubleProcessing ─ Duplicate detection       │
- *   │       │                  in FACT_DELIVERY           │
- *   │       │                                             │
- *   │  generatePersonAliasesFromHistory                   │
- *   │       └── Auto-alias generation from                │
- *   │           delivery history (FACT_DELIVERY)          │
- *   │                                                     │
- *   └─────────────────────────────────────────────────────┘
+ *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)
  * ===================================================
  */
 

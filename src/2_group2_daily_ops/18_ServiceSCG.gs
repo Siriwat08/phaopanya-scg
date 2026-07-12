@@ -1,55 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 18_ServiceSCG.gs
- * LMDS V5.5 — SCG API Service (Group 2 Commander)
+ * LMDS V6.0 — SCG API Service (Group 2 Commander)
  * ===================================================
  * PURPOSE:
  *   ดึงข้อมูลการจัดส่งจาก SCG API → เขียนลงตารางงานประจำวัน
  *   แล้วเรียก Module 17 จับคู่พิกัด พร้อมสร้างสรุปเจ้าของสินค้า/Shipment
  *   เป็น Commander ของ Group 2 (Daily Ops)
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config.gs          (SHEET.DAILY_JOB, SCG_CONFIG, APP_CONST, DATA_IDX)
- *     - 02_Schema.gs          (SCHEMA[SHEET.DAILY_JOB])
- *     - 03_SetupSheets.gs     (logInfo, logWarn, logError)
- *   CALLS (Invokes):
- *     - applyMasterCoordinatesToDailyJob() → 18_ServiceSCG.gs (self — calls Module 17)
- *     - runLookupEnrichment()              → 17_SearchService.gs
- *   EXPORTS TO:
- *     - 00_App.gs             (fetchDataFromSCGJWD, applyMasterCoordinatesToDailyJob, clearAllSCGSheets_UI)
- *   SHEETS ACCESSED:
- *     - SHEET.DAILY_JOB       (Read+Write: SCG API data + aggregated columns)
- *     - SHEET.INPUT           (Read: Cookie + Shipment numbers)
- *     - SHEET.EMPLOYEE        (Read: Employee data)
- *     - SHEET.OWNER_SUMMARY   (Write: สรุปเจ้าของสินค้า)
- *     - SHEET.SHIPMENT_SUM    (Write: สรุป_Shipment)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 17_SearchService, 04_SourceRepository
+ *   CALLED BY: 00_App (fetchDataFromSCGJWD, applyMasterCoordinatesToDailyJob, setSCGCookie_UI — menu)
+ *
  * ARCHITECTURE:
- *   ┌───────────────────────────────────────────────────────────────────────┐
- *   │  18_ServiceSCG.gs (Group 2 Commander — SCG Data Pipeline)             │
- *   │  ├── fetchDataFromSCGJWD() — Orchestrator (Lock + steps)              │
- *   │  │   ├── [AuthZ Guard] ป้องกันคนไม่มีสิทธิ์เรียกใช้งาน                     │
- *   │  │   ├── 1. readInputConfig_() → {cookie, shipmentString}             │
- *   │  │   ├── 2. callSCGApi_(cfg) → responseText                           │
- *   │  │   ├── 3. flattenShipmentsToRows_(shipments) → []                   │
- *   │  │   ├── 4. aggregateShopData_(allFlatData) → mutates                 │
- *   │  │   └── 5. writeDailyJobSheet_(ss, allFlatData) [ใช้ clearContent]   │
- *   │  │   ├── 6. applyMasterCoordinatesToDailyJob() [Properties Lock]      │
- *   │  │   ├── 7. buildOwnerSummary()                                       │
- *   │  │   └── 8. buildShipmentSummary()                                    │
- *   │  ├── fetchWithRetry_() — HTTP retry without PII leak in error         │
- *   │  ├── checkIsEPOD_() — E-POD eligibility (ReDoS safe regex)            │
- *   │  ├── getSCGCookie_() — [REVERTED] อ่านจาก B1 ก่อน → fallback Properties │
- *   │  └── clearAllSCGSheets_UI() — ใช้ clearContent() แทน deleteRows()       │
- *   └───────────────────────────────────────────────────────────────────────┘
+ *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)
  * ===================================================
  */
 

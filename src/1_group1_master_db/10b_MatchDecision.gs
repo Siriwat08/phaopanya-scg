@@ -1,30 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 10b_MatchDecision.gs
- * LMDS V6.0 — Match Decision Rules (extracted from 10_MatchEngine.gs)
+ * LMDS V6.0 — Match Decision Rules
  * ===================================================
  * PURPOSE:
- *   แยก match decision rules ออกจาก makeMatchDecision() 267 บรรทัด
- *   เป็น pure functions แต่ละ rule — ลด complexity เพื่อ maintainability
- *
- *   Audit finding 1.2: makeMatchDecision() = single point of fragility
- *   Audit recommendation: "แตกเป็น dispatcher + 8 pure function ตาม rule"
- *
- *   Pattern: แต่ละ evaluateRuleN_ return decision object หรือ null
- *            makeMatchDecision() ลองทีละ rule ตามลำดับ — return ตัวแรกที่ non-null
- *
+ *   แยก match decision rules ออกจาก makeMatchDecision() (267 บรรทัด)
+ *   เป็น pure functions แต่ละ rule — ลด complexity เพื่อ maintainability (audit 1.2)
  *   BACKWARD COMPATIBLE: makeMatchDecision() signature + return shape เหมือนเดิม 100%
- *   Snapshot test (V6.0.028) จะยืนยันว่า decisions ไม่เปลี่ยน
- * ===================================================
+ *
  * CHANGELOG:
- *   v6.0.030 (2026-07-12) — INITIAL — extracted from 10_MatchEngine.gs
- * ===================================================
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES:
- *     - 01_Config.gs (APP_CONST, AI_CONFIG)
- *     - 14_Utils.gs (haversineDistanceM)
- *     - 05_NormalizeService.gs (normalizeProvinceForCompare_)
- *     - 10_MatchEngine.gs (calculateWeightedScore, getCandidateResolvedCoords_, getGeoProvince_)
+ *   REQUIRES: 01_Config, 14_Utils, 05_NormalizeService, 10_MatchEngine
+ *   CALLED BY: 10_MatchEngine (makeMatchDecision dispatcher)
+ *
+ * ARCHITECTURE:
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

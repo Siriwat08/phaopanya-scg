@@ -1,70 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 10_MatchEngine.gs
- * LMDS V5.5 — Core Match & Resolution Engine
+ * LMDS V6.0 — Core Match & Resolution Engine
  * ===================================================
  * PURPOSE:
  *   ประมวลผลข้อมูลต้นทาง → จับคู่ Person/Place/Geo → ตัดสินใจ → บันทึกผล
  *   เป็นหัวใจหลักของ Pipeline และเป็น Single Writer สำหรับ M_ALIAS
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   ตั้งแต่ V6.0.030+ decision rules แยกไป 10b, test harness ไป 10d, resolve/persist ไป 10e
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config.gs          (SHEET.*, FACT_IDX.*, ALIAS_IDX.*, AI_CONFIG)
- *     - 02_Schema.gs          (SCHEMA definitions)
- *     - 03_SetupSheets.gs     (logInfo, logWarn, logError)
- *     - 05_NormalizeService.gs (normalizeForCompare)
- *     - 14_Utils.gs           (generateShortId)
- *   CALLS (Invokes):
- *     - resolvePerson()                    → 06_PersonService.gs
- *     - resolvePlace()                     → 07_PlaceService.gs
- *     - resolveGeo()                       → 08_GeoService.gs
- *     - createPerson()                     → 06_PersonService.gs
- *     - createPlace()                      → 07_PlaceService.gs
- *     - createGeoPoint()                   → 08_GeoService.gs
- *     - resolveDestination() / createDestination() → 09_DestinationService.gs
- *     - upsertFactDelivery()               → 11_TransactionService.gs
- *     - enqueueReview()                    → 12_ReviewService.gs
- *     - loadAllPersons_()                  → 06_PersonService.gs
- *     - loadAllPlaces_()                   → 07_PlaceService.gs
- *     - loadAllAliases_()                  → 06_PersonService.gs
- *     - loadAllPlaceAliases_()             → 07_PlaceService.gs
- *     - getUnprocessedRows()               → 04_SourceRepository.gs (Group 2)
- *     - updateSyncStatus_()                → 04_SourceRepository.gs (Group 2)
- *     - toThaiDateStr()                    → 14_Utils.gs (Group 0)
- *   EXPORTS TO:
- *     - 00_App.gs             (runMatchEngine — Pipeline menu)
- *   SHEETS ACCESSED (Read + Write):
- *     - SHEET.FACT_DELIVERY   (Read: FACT_IDX, Write: batch append)
- *     - SHEET.Q_REVIEW        (Write: batch append with color)
- *     - SHEET.M_ALIAS         (Write: Single Writer — PERSON canonical/variant + PLACE canonical/variant)
- *     - SHEET.M_PERSON_ALIAS  (Write: variant names only)
- *     - SHEET.M_PLACE_ALIAS   (Write: variant addresses only)
- *   ⚠️ SINGLE WRITER RULE:
- *     - M_ALIAS ถูกเขียนที่นี่เท่านั้น (autoEnrichAliasesFromFactBatch_)
- *     - ห้ามเรียก createGlobalAlias() ใน auto pipeline
- *     - createGlobalAlias() ใช้สำหรับ Migration/Admin เท่านั้น
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService, 11_TransactionService, 12_ReviewService, 04_SourceRepository, 10b_MatchDecision, 10d_MatchTestHarness, 10e_MatchResolvePersist, 26_AuditTrailService
+ *   CALLED BY: 00_App (runMatchEngine — Pipeline menu), 24_PipelineManager (runMatchEngine wrapper), 12_ReviewService (handleReview_ → resolveAndPersist_)
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────────────────┐
- *   │  10_MatchEngine.gs (Pipeline Core + M_ALIAS Single Writer)  │
- *   │  ├── runMatchEngine()       — Main entry (Lock + Time Guard)│
- *   │  ├── processOneRow()        — Resolve → Decide → Execute    │
- *   │  ├── makeMatchDecision()    — 8 Rules (INVALID→FULL_MATCH)  │
- *   │  ├── executeDecision()      — AUTO_MATCH / CREATE_NEW / REVIEW│
- *   │  ├── flushBatches_()        — Transaction write (FACT+Alias) │
- *   │  │   └── autoEnrichAliasesFromFactBatch_()  ← SINGLE WRITER │
- *   │  │       ├── M_ALIAS (PERSON canon+variant, PLACE canon+var)│
- *   │  │       ├── M_PERSON_ALIAS (variant ≠ canonical only)      │
- *   │  │       └── M_PLACE_ALIAS  (variant ≠ canonical only)      │
- *   │  └── Auto-Resume (installAutoResume_ / removeAutoResume_)   │
- *   └─────────────────────────────────────────────────────────────┘
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

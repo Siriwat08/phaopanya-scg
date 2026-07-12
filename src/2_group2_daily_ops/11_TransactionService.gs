@@ -1,62 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 11_TransactionService.gs
- * LMDS V5.5 — FACT_DELIVERY Transaction Service
+ * LMDS V6.0 — FACT_DELIVERY Transaction Service
  * ===================================================
  * PURPOSE:
  *   จัดการตาราง FACT_DELIVERY — บันทึกประวัติการจัดส่งทั้งหมด
  *   เป็น Single Source of Truth สำหรับประวัติขนส่ง
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   รวม upsertFactDelivery (INSERT/UPDATE), findFactRowByInvoice_, cache invalidation
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config (SHEET.FACT_DELIVERY, SHEET.SOURCE, FACT_IDX.*, APP_CONST.*)
- *     - 02_Schema (SCHEMA)
- *     - 08_GeoService (loadAllGeos_)
- *     - 14_Utils (generateShortId, normalizeInvoiceNo)
- *     - 06_PersonService (loadAllPersons_)
- *     - 07_PlaceService (loadAllPlaces_)
- *   CALLS (Invokes):
- *     - loadAllGeos_() → 08_GeoService
- *     - generateShortId() → 14_Utils
- *     - normalizeInvoiceNo() → 14_Utils
- *     - logError() → 03_SetupSheets
- *   EXPORTS TO:
- *     - 10_MatchEngine (upsertFactDelivery)
- *     - 12_ReviewService (upsertFactDelivery)
- *     - 08_GeoService (invalidateGeoLatLngCache_ — NEW V5.5.007 P1 #5; called
- *       from invalidateGeoCache_ to clear _GEO_LATLNG_RAM_CACHE so new
- *       createGeoPoint results are visible to getGeoLatLng_ on next lookup)
- *   SHEETS ACCESSED:
- *     - SHEET.FACT_DELIVERY (Read+Write: delivery transaction records)
- *     - SHEET.SOURCE (Read: source data reference)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 08_GeoService, 14_Utils, 06_PersonService, 07_PlaceService
+ *   CALLED BY: 10_MatchEngine (upsertFactDelivery), 12_ReviewService (upsertFactDelivery), 08_GeoService (invalidateGeoLatLngCache_), 04_SourceRepository (getProcessedInvoiceSet_), 19_Hardening, 22b_WebAppViews (FACT_DELIVERY view)
+ *
  * ARCHITECTURE:
- *   Transaction Writer
- *   ┌──────────────────────────────────┐
- *   │  upsertFactDelivery              │
- *   │  ├─ INSERT: new row with TX ID   │
- *   │  └─ UPDATE: merge into existing  │
- *   │  findFactRowByInvoice_           │
- *   │  └─ TextFinder batch lookup      │
- *   │  getGeoLatLng_                   │
- *   │  └─ fetch lat/lng from Geo cache │
- *   │  formatTimeValue_                │
- *   │  └─ time formatting helper       │
- *   │  invalidateFactInvoiceCache_()   │
- *   │  └─ clears _FACT_INVOICE_RAM_CACHE│
- *   │  invalidateGeoLatLngCache_()     │
- *   │  └─ NEW V5.5.007 P1 #5: clears   │
- *   │     _GEO_LATLNG_RAM_CACHE; called│
- *   │     by 08_GeoService.invalidateGeo│
- *   │     Cache_ on geo point creation │
- *   └──────────────────────────────────┘
+ *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)
  * ===================================================
  */
 

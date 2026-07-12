@@ -1,50 +1,23 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 02_Schema.gs
- * LMDS V5.5 — Sheet Schema Definitions
+ * LMDS V6.0 — Sheet Schema Definitions
  * ===================================================
  * PURPOSE:
  *   กำหนด Schema ของทุก Sheet ในระบบ รวมถึง Column Headers และ Validation Rules
  *   เป็น Single Source of Truth สำหรับโครงสร้างข้อมูล
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   DEFINES SCHEMA FOR:
- *     - SHEET.M_PERSON        → 06_PersonService.gs
- *     - SHEET.M_PERSON_ALIAS  → 06_PersonService.gs / 10_MatchEngine.gs
- *     - SHEET.M_PLACE         → 07_PlaceService.gs
- *     - SHEET.M_PLACE_ALIAS   → 07_PlaceService.gs / 10_MatchEngine.gs
- *     - SHEET.M_ALIAS         → 21_AliasService.gs / 10_MatchEngine.gs (Single Writer)
- *     - SHEET.M_GEO_POINT     → 08_GeoService.gs
- *     - SHEET.M_DESTINATION   → 09_DestinationService.gs
- *     - SHEET.FACT_DELIVERY   → 11_TransactionService.gs / 10_MatchEngine.gs
- *     - SHEET.Q_REVIEW        → 12_ReviewService.gs
- *     - SHEET.DAILY_JOB       → 18_ServiceSCG.gs / 17_SearchService.gs
- *     - SHEET.MAPS_CACHE      → 15_GoogleMapsAPI.gs
- *     - SHEET.SYS_TH_GEO      → 16_GeoDictionaryBuilder.gs
- *   USED BY (Index References):
- *     - 01_Config.gs         (INDEX constants via validateConfig)
- *     - All Service files     (getValues/setValues)
- * ===================================================
+ *   REQUIRES: 01_Config
+ *   CALLED BY: 01_Config, 03_SetupSheets, All Service files
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────────────────┐
- *   │  02_Schema.gs (Schema Definition Hub)                      │
- *   │  ├── SCHEMA{} — Array of column names per sheet            │
- *   │  │   ├── Group 1: Master Data (M_PERSON, M_ALIAS, ...)    │
- *   │  │   ├── Group 1: Fact Table (FACT_DELIVERY)               │
- *   │  │   ├── Group 2: Daily Ops (ตารางงานประจำวัน)            │
- *   │  │   └── System: SYS_LOG, SYS_CONFIG, SYS_TH_GEO          │
- *   │  ├── getSheetHeaders() — Get headers for a sheet           │
- *   │  ├── validateSheetHeaders() — Verify headers match schema  │
- *   │  └── validateSchemaConsistency() — SCHEMA.length vs IDX    │
- *   │  (getColIndex moved to 99_Legacy.gs in V5.5.034)            │
- *   └─────────────────────────────────────────────────────────────┘
+ *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)
  * ===================================================
  */
 

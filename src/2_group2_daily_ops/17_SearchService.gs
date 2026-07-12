@@ -1,52 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 17_SearchService.gs
- * LMDS V5.5 — Search Service (The Bridger — Group 2)
+ * LMDS V6.0 — Search Service (The Bridger — Group 2)
  * ===================================================
  * PURPOSE:
  *   สะพานเชื่อม Group 2 (ตารางงานประจำวัน) → Group 1 (Master Data)
  *   รับ ShipToName → ค้นหาพิกัดที่ดีที่สุด → เขียน LatLong_Actual
- *   [REDESIGN v5.4.003] ShipToName-Only Policy:
- *     - ShipToAddress ถูกลบออกจาก logic ทั้งหมด (ไม่น่าเชื่อถือ)
- *     - LatLong_SCG ถูกลบออกจาก logic ทั้งหมด (อิงจาก ShipToAddress)
- *     - AI Reasoning ถูกลบออก (ไม่เหมาะกับ production)
- *     - ถ้าหาไม่เจอ → คืน NOT_FOUND เว้นว่าง ไม่ fallback ใดๆ
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   [REDESIGN v5.4.003] ShipToName-Only Policy — ไม่ fallback ใดๆ ถ้าหาไม่เจอ
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config.gs          (SHEET.DAILY_JOB, DATA_IDX.*, AI_CONFIG, APP_CONST)
- *     - 02_Schema.gs          (SCHEMA[SHEET.DAILY_JOB])
- *     - 05_NormalizeService.gs (normalizePersonNameFull)
- *     - 14_Utils.gs           (isValidLatLng, parseLatLng)
- *   CALLS (Invokes):
- *     - fastLookupByShipToName()          → 21_AliasService.gs (Tier 0 Fast Track)
- *     - resolvePerson()                   → 06_PersonService.gs
- *     - getDestsByPersonId()              → 09_DestinationService.gs
- *   EXPORTS TO:
- *     - 18_ServiceSCG.gs      (findBestGeoByPersonPlace, runLookupEnrichment)
- *   SHEETS ACCESSED:
- *     - SHEET.DAILY_JOB       (Read+Write: ShipToName→LatLong_Actual + color coding)
- *     - SHEET.M_ALIAS         (Read: Tier 0 Fast Track via fastLookupByShipToName)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 21_AliasService (fastLookupByShipToName), 09_DestinationService, 20_ThGeoService, 06_PersonService, 07_PlaceService
+ *   CALLED BY: 18_ServiceSCG (applyMasterCoordinatesToDailyJob), 00_App (runLookupEnrichment — menu), 22c_WebAppActions (searchLocations)
+ *
  * ARCHITECTURE:
- *   ┌────────────────────────────────────────────────────────────────────────┐
- *   │  17_SearchService.gs                                                   │
- *   │  ├── runLookupEnrichment()   [Entry: ดึงข้อมูลจาก DAILY_JOB, loop หาพิกัด]      │
- *   │  │   └── Chunk Processing (รอบละ 500 rows) ป้องกัน GAS Time/Memory Limit   │
- *   │  ├── lookupEnrichOneRow_()   [Logic: หาสี, status, พิกัด]                 │
- *   │  │   ├── findBestGeoByPersonPlace() [ค้นหา Master DB]                      │
- *   │  │   └── lookupSingleRow()          [UI Wrapper สำหรับเรียกทีละแถว]         │
- *   │  ├── flushLookupResults_()   [Output: batch setValues กลับไปที่ DAILY_JOB] │
- *   │  │   └── ใช้ clearContent() และ setBackgrounds เฉพาะช่วง ลดการพังของ Format│
- *   │  └── (Locking handled by caller — runLookupEnrichment re-entrancy guarded) │
- *   └────────────────────────────────────────────────────────────────────────┘
+ *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)
  * ===================================================
  */
 // [FIX V5.5.048] ลบ dead reference getEnrichmentLock_() ออกจาก ARCHITECTURE comment

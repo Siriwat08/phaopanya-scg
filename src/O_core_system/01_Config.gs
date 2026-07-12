@@ -1,65 +1,23 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 01_Config.gs
- * LMDS V5.5 — System Configuration & Constants
+ * LMDS V6.0 — System Configuration & Constants
  * ===================================================
  * PURPOSE:
  *   กำหนดค่าคงที่และ Configuration หลักของระบบทั้งหมด
  *   เป็น Single Source of Truth สำหรับ Constants, Sheets, AI Config
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   DEFINES:
- *     - APP_VERSION, SCHEMA_VERSION, APP_NAME (Metadata)
- *     - SHEET{} (7 master + 4 system + 1 source + 5 daily ops + 2 summaries = 19; MAPS_CACHE ถูกลบใน V5.5.013)
- *     - *_IDX{} (Person, PersonAlias, Place, PlaceAlias, Alias, Geo, Dest, Fact, Review, ThGeo, Employee, Src, Data, SysLog, OwnerSum, ShipmentSum = 16; MAPS_CACHE_IDX ถูกลบใน V5.5.013)
- *     - AI_CONFIG, SCG_CONFIG, APP_CONST (System configs)
- *     - _GLOBAL_* CACHE variables (RAM cache layer)
- *     - CACHE_KEY{} (13 entries: GLOBAL_ALIAS_ALL, GLOBAL_ALIAS_REVERSE, PERSON_ALL,
- *         PERSON_ALIAS_ALL, PLACE_ALL, PLACE_ALIAS_ALL, GEO_ALL, DEST_ALL, SOURCE_ROWS,
- *         PROCESSED_INVOICES, TH_GEO_POSTCODE, TH_GEO_PROVINCES, TH_GEO_DISTRICTS) [V5.5.007 P1 #8]
- *     - invalidateAllGlobalCaches() — orchestrates 11 invalidate*Cache_* calls across
- *         modules 04/06/07/08/09/10/11/16 (was 6 calls pre-V5.5.007) [V5.5.007 P0 #1]
- *   CALLED BY (All Modules):
- *     - 00_App.gs          (Menu, triggers)
- *     - 05_NormalizeService.gs  (Normalization)
- *     - 06_PersonService.gs     (Person CRUD)
- *     - 07_PlaceService.gs      (Place CRUD)
- *     - 08_GeoService.gs        (Geo operations)
- *     - 09_DestinationService.gs (Destination management)
- *     - 10_MatchEngine.gs       (Core matching)
- *     - 11_TransactionService.gs (FACT operations)
- *     - 12_ReviewService.gs     (Review queue)
- *     - 13_ReportService.gs     (Reporting)
- *     - 15_GoogleMapsAPI.gs     (Maps integration)
- *     - 16_GeoDictionaryBuilder.gs (Geo dictionary)
- *     - 17_SearchService.gs     (Search/Bridge)
- *     - 18_ServiceSCG.gs       (SCG operations)
- *     - 19_Hardening.gs        (System hardening)
- *     - 20_ThGeoService.gs     (Thai Geo extraction)
- *     - 21_AliasService.gs     (Hybrid Alias)
- * ===================================================
+ *   REQUIRES: (none — leaf module / config root)
+ *   CALLED BY: All modules (config & constants)
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────────────────┐
- *   │  01_Config.gs (Configuration Hub)                            │
- *   │  ├── APP_VERSION / SCHEMA_VERSION / APP_NAME                 │
- *   │  ├── SHEET{} (19 sheet definitions)                          │
- *   │  ├── *_IDX{} (16 index constant sets)                       │
- *   │  ├── AI_CONFIG (Match Engine settings)                       │
- *   │  ├── SCG_CONFIG (SCG API settings)                          │
- *   │  ├── APP_CONST (Status, Colors, Lock)                        │
- *   │  ├── CACHE_KEY{} (13 entries) [V5.5.007 P1 #8]              │
- *   │  ├── validateConfig() (Schema validation)                    │
- *   │  ├── invalidateAllGlobalCaches() — 11 invalidate*Cache_*    │
- *   │  │   calls (was 6 pre-V5.5.007) [V5.5.007 P0 #1]            │
- *   │  └── _GLOBAL_* CACHE (RAM Cache Layer)                       │
- *   └─────────────────────────────────────────────────────────────┘
+ *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)
  * ===================================================
  */
 
@@ -70,8 +28,8 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.036';
-const SCHEMA_VERSION = '6.0.036';
+const APP_VERSION = '6.0.037';
+const SCHEMA_VERSION = '6.0.037';
 const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs

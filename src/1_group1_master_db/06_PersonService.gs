@@ -1,58 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 06_PersonService.gs
- * LMDS V5.5 — Person Master Service
+ * LMDS V6.0 — Person Master Service
  * ===================================================
  * PURPOSE:
  *   จัดการ Master Person — ฐานข้อมูลชื่อลูกค้า/ผู้รับสินค้า
  *   เป็น Single Source of Truth สำหรับข้อมูลบุคคล
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   รวม CRUD + alias lookup + cache invalidation
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config.gs          (SHEET.M_PERSON, PERSON_IDX.*, AI_CONFIG)
- *     - 02_Schema.gs          (SCHEMA[SHEET.M_PERSON], SCHEMA[SHEET.M_PERSON_ALIAS])
- *     - 03_SetupSheets.gs     (logDebug, logWarn, logError)
- *     - 05_NormalizeService.gs (normalizePersonNameFull, normalizeForCompare)
- *     - 14_Utils.gs           (generateShortId, generateUUID, diceCoefficient, levenshteinDistance)
- *     - 14_Utils.gs           (ensembleNameMatch [V6.0.015 P2.3] — used in calculateNameScore_)
- *   CALLS (Invokes):
- *     - resolveMasterUuidViaGlobalAlias() → 21_AliasService.gs (findPersonCandidates)
- *     - convertUuidToPersonId()           → 21_AliasService.gs (findPersonCandidates)
- *     - createGlobalAlias()               → 21_AliasService.gs (mergePersonRecords ONLY — Admin Action)
- *   EXPORTS TO:
- *     - 10_MatchEngine.gs     (resolvePerson, createPerson, updatePersonStats, loadAllPersons_)
- *     - 11_TransactionService.gs (loadAllPersons_)
- *     - 17_SearchService.gs   (loadAllPersons_)
- *     - 19_Hardening.gs       (loadAllPersons_)
- *     - 21_AliasService.gs    (loadAllPersons_ — UUID converters)
- *   SHEETS ACCESSED:
- *     - SHEET.M_PERSON        (Read+Write: CRUD, Stats update)
- *     - SHEET.M_PERSON_ALIAS  (Read+Write: Alias lookup, createPersonAlias)
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 21_AliasService
+ *   CALLED BY: 10_MatchEngine, 11_TransactionService, 17_SearchService, 19_Hardening, 21_AliasService, 22b_WebAppViews
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────────────────┐
- *   │  06_PersonService.gs (Person Master Hub)                   │
- *   │  ├── resolvePerson()        — Match/resolve person        │
- *   │  ├── findPersonCandidates() — Multi-strategy search       │
- *   │  │   ├── M_ALIAS Fast Path (resolveMasterUuidViaGlobalAlias)│
- *   │  │   ├── Phone Match                                       │
- *   │  │   ├── Alias Match (M_PERSON_ALIAS)                      │
- *   │  │   ├── Phonetic / Name Match                             │
- *   │  │   └── Note Search (Deep Match)                          │
- *   │  ├── scorePersonCandidate() — Score calculation            │
- *   │  ├── createPerson()         — Create new person record    │
- *   │  ├── createPersonAlias()    — Add alternate name          │
- *   │  ├── mergePersonRecords()   — Merge duplicates (Admin)    │
- *   │  ├── updatePersonStats()    — Update usage statistics     │
- *   │  └── loadAllPersons_()      — Load all persons (cached)   │
- *   └─────────────────────────────────────────────────────────────┘
+ *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)
  * ===================================================
  */
 

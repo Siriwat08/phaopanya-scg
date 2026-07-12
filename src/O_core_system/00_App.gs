@@ -1,57 +1,23 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 00_App.gs
- * LMDS V5.5 — Application Entry Point & Menu Controller
+ * LMDS V6.0 — Application Entry Point & Menu Controller
  * ===================================================
  * PURPOSE:
- *   จุดเริ่มต้นหลักของระบบ LMDS ควบคุม Custom Menu และ Pipeline Triggers
- *   ทำหน้าที่เป็น Gateway สำหรับการเรียกใช้งานระบบทั้งหมด
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
+ *   จุดเริ่มต้นหลักของระบบ LMDS — ควบคุม Custom Menu และ Pipeline Triggers
+ *   ทำหน้าที่เป็น Gateway สำหรับการเรียกใช้งานระบบทั้งหมดผ่าน onOpen()/onEdit()
+ *
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
  * DEPENDENCIES:
- *   REQUIRES (Load Order):
- *     - 01_Config.gs     (Configuration & Constants)
- *     - 02_Schema.gs     (Schema Definitions)
- *   CALLS (Invokes):
- *     - runMatchEngine()                       → 10_MatchEngine.gs
- *     - runLookupEnrichment()                 → 17_SearchService.gs
- *     - buildFullQualityReport()              → 13_ReportService.gs
- *     - fetchDataFromSCGJWD()                 → 18_ServiceSCG.gs
- *     - buildGeoDictionary()                  → 16_GeoDictionaryBuilder.gs
- *     - applyMasterCoordinatesToDailyJob()    → 18_ServiceSCG.gs
- *     - MIGRATION_HybridAliasSystem()         → 21_AliasService.gs
- *     - populateAliasFromSCGRawData_()        → 21_AliasService.gs
- *     - assignMasterUuidIfMissing()           → 21_AliasService.gs
- *   EXPORTS TO:
- *     - All modules (onOpen trigger, menu system)
- *   SHEETS ACCESSED:
- *     - SHEET.SOURCE        (Read: Pipeline input)
- *     - SHEET.DAILY_JOB     (Read+Write: SCG Daily Operations)
- *     - SHEET.Q_REVIEW      (Read+Write: Review Queue, onEdit trigger)
- *   TRIGGERS:
- *     - onOpen()     → สร้าง Custom Menu inline ทุกครั้งที่เปิด Spreadsheet
- *     - onEdit()     → ดักจับการแก้ไขใน Q_REVIEW
- * ===================================================
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils
+ *   CALLED BY: All modules (onOpen trigger, menu system)
+ *
  * ARCHITECTURE:
- *   ┌─────────────────────────────────────────────────────────────┐
- *   │  00_App.gs (Entry Point / Gateway)                         │
- *   │  ├── onOpen() → builds Custom Menu inline (no createMenu_ helper) │
- *   │  └── Custom Menu → Pipeline Actions                         │
- *   │      ├── "Run Full Pipeline" → runFullPipeline()           │
- *   │      ├── "🟩 กลุ่ม 1" → runMatchEngine()                  │
- *   │      ├── "🟦 กลุ่ม 2" → fetchDataFromSCGJWD()             │
- *   │      ├── "🔧 ระบบ" → setupAllSheets / buildGeoDictionary  │
- *   │      │   ├── "Migration: Hybrid Alias" → MIGRATION_HybridAliasSystem()│
- *   │      │   ├── "ตรวจสอบ Master UUID" → assignMasterUuidIfMissing()  │
- *   │      │   └── "ดึงชื่อจาก SCG ดิบ" → populateAliasFromSCGRawData_() │
- *   │      └── "Audit" → runPreflightAudit()                      │
- *   └─────────────────────────────────────────────────────────────┘
+ *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)
  * ===================================================
  */
 

@@ -1,76 +1,24 @@
 /**
- * VERSION: 6.0.036
+ * VERSION: 6.0.037
  * FILE: 12_ReviewService.gs
- * LMDS V5.5 — Review Queue Service
- * [FIX BUG-B2] v5.4.003: updateReviewRowStatus_() helper — 1 setValues แทน 5× setValue
- * [FIX BUG-B2] v5.4.003: applyAllPendingDecisions — Time Guard + Batch Status
- * [FIX BUG-A2] v5.4.003: applyAllPendingDecisions — เพิ่ม try-catch outer
- * [FIX v5.5.005] แก้ Syntax Error บรรทัด 259 (try block ไม่มี catch/finally)
- * [FIX v5.5.005] เพิ่ม return statement ใน applyReviewDecision() — ทำให้ Review เขียน FACT_DELIVERY ได้
- * [FIX v5.5.005] ลบ dead code resolveGeoAndDest_() — ละเมิดกฎ Architecture
+ * LMDS V6.0 — Review Queue Service
  * ===================================================
  * PURPOSE:
- * จัดการคิวรีวิว Q_REVIEW — พักข้อมูลที่ต้องให้คนตัดสินใจ
- * ===================================================
- * ===================================================
- * CHANGELOG: See /docs/CHANGELOG.md for full history.
- *   Latest 3 versions:
- *     v5.5.022 (2026-06-26) — CONSISTENCY SYNC + DEEP DIVE FIX (BUG-M01/M02/M03/H02/H03/C01 + 6 cache/config fixes)
- *     v5.5.021 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- *     v5.5.020 (2026-06-22) — REFACTOR_CYCLE6_RESIDUAL (REF-005 cleanup + REF-011 pilot)
- * ===================================================
- * DEPENDENCIES:
- * REQUIRES (Load Order):
- * - 01_Config (SHEET.Q_REVIEW, SHEET.SOURCE, REVIEW_IDX.*, SRC_IDX.*, APP_CONST.*)
- * - 02_Schema (SCHEMA)
- * - 10_MatchEngine (resolveAndPersist_ gateway)
- * - 07_PlaceService (getEnrichedGeoData)
- * - 11_TransactionService (upsertFactDelivery)
- * - 14_Utils (generateShortId, normalizeInvoiceNo)
- * - 03_SetupSheets (logError, logInfo, logWarn, logDebug, safeUiAlert_)
- * - 10_MatchEngine (invalidateSameDayDestCache_, autoEnrichAliasesFromFactBatch_)
- *   [V5.5.007 P0 #3]
- * CALLS (Invokes):
- * - resolveAndPersist_() → 10_MatchEngine (Gateway for Group 1 CRUD)
- * - getEnrichedGeoData() → 07_PlaceService (Optional enrichment)
- * - invalidateSameDayDestCache_() → 10_MatchEngine (called from
- *   applyAllPendingDecisions to mirror persistResult_ cache invalidation) [V5.5.007 P0 #3]
- * - autoEnrichAliasesFromFactBatch_() → 10_MatchEngine (called from
- *   applyAllPendingDecisions to enrich M_ALIAS from newly-approved FACTs) [V5.5.007 P0 #3]
- * - maskReviewerEmail_() → Local security helper
- * - logError/logInfo/logWarn/logDebug() → 03_SetupSheets
+ *   จัดการคิวรีวิว Q_REVIEW — พักข้อมูลที่ต้องให้คนตัดสินใจ
+ *   รวม enqueueReview, applyReviewDecision, applyAllPendingDecisions
+ *   ตั้งแต่ V6.0.034 post-processor แยกไป 12b_ReviewReprocessor
  *
- * NOTE: ไม่เรียก Group 1 CRUD functions โดยตรงอีกต่อไป
- * ใช้ resolveAndPersist_() gateway แทน (REF-001)
- * EXPORTS TO:
- * - 00_App (openReviewQueue, applyAllPendingDecisions, applyReviewDecision, highlightHighPriorityReviews)
- * - 10_MatchEngine (enqueueReview)
- * SHEETS ACCESSED:
- * - SHEET.Q_REVIEW (Read+Write: review queue entries)
- * - SHEET.SOURCE (Read: restore delivery date/time)
- * ===================================================
+ * CHANGELOG:
+ *   v6.0.037 (2026-07-13) — Header sync — no functional change
+ *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
+ *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *
+ * DEPENDENCIES:
+ *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 10_MatchEngine (resolveAndPersist_ gateway), 10e_MatchResolvePersist, 07_PlaceService (getEnrichedGeoData), 11_TransactionService (upsertFactDelivery), 12b_ReviewReprocessor, 26_AuditTrailService, 27_RbacService
+ *   CALLED BY: 00_App (openReviewQueue, applyAllPendingDecisions menu), 10_MatchEngine (enqueueReview), 22c_WebAppActions (submitReviewDecision, getReviewDetail), 22b_WebAppViews (Q_REVIEW view)
+ *
  * ARCHITECTURE:
- * Review Queue Manager
- * ┌──────────────────────────────────────────────┐
- * │ enqueueReview                                │
- * │ └─ add pending review to Q_REVIEW            │
- * │ applyAllPendingDecisions                     │
- * │ └─ batch process all pending decisions       │
- * │    [V5.5.007 P0 #3] now mirrors persistResult_│
- * │    cache invalidation: calls invalidateSameDay│
- * │    DestCache_ + autoEnrichAliasesFromFactBatch│
- * │    _() (was missing → stale same-day dest +  │
- * │    M_ALIAS never enriched from review path)  │
- * │ applyReviewDecision                          │
- * │ ├─ CREATE_NEW → resolve + create masters     │
- * │ ├─ MERGE_TO_CANDIDATE → merge person recs    │
- * │ ├─ ESCALATE → mark as Escalated              │
- * │ └─ IGNORE → mark as Done                     │
- * │ getReviewStats                               │
- * │ └─ queue statistics (pending/done/escalated) │
- * │ highlightHighPriorityReviews                 │
- * │ └─ visual priority marking (batch colors)    │
- * └──────────────────────────────────────────────┘
+ *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)
  * ===================================================
  */
 
