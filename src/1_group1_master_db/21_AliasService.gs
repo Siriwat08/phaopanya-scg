@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.028
+ * VERSION: 6.0.029
  * FILE: 21_AliasService.gs
  * LMDS V5.5 — Hybrid Alias Architecture (Global M_ALIAS + Entity-Specific Views)
  * ===================================================

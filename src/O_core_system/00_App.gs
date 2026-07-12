@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.028
+ * VERSION: 6.0.029
  * FILE: 00_App.gs
  * LMDS V5.5 — Application Entry Point & Menu Controller
  * ===================================================
@@ -1349,8 +1349,10 @@ function runTestMatchDryRunForceAll_UI() {
     const rowsInput = ui.prompt(
       '🧪 [V6.0.017] Dry Run — Force All Rows',
       'ทดสอบ matching algorithm บนข้อมูลที่ processed แล้ว โดยข้าม SYNC_STATUS filter\n\n' +
-        '⚠️  ใช้เวลานานกว่า Dry Run ปกติ (~1s/row)\n\n' +
-        'กรุณาระบุจำนวนแถวที่ต้องการทดสอบ (1-500):',
+        '⚠️  ใช้เวลานานกว่า Dry Run ปกติ (~1.5s/row)\n' +
+        '⚠️  Cap สูงสุด 250 rows (GAS 6-min limit)\n\n' +
+        'แนะนำสำหรับ Snapshot Test: ใช้ 200 rows เพื่อเหลือ buffer\n\n' +
+        'กรุณาระบุจำนวนแถวที่ต้องการทดสอบ (1-250):',
       ui.ButtonSet.OK_CANCEL
     );
     if (rowsInput.getSelectedButton() !== ui.Button.OK) {
@@ -1360,11 +1362,13 @@ function runTestMatchDryRunForceAll_UI() {
 
     let maxRows = parseInt(rowsInput.getResponseText(), 10);
     if (isNaN(maxRows) || maxRows < 1) {
-      safeUiAlert_('❌ จำนวนแถวไม่ถูกต้อง — ต้องเป็นเลข 1-500');
+      safeUiAlert_('❌ จำนวนแถวไม่ถูกต้อง — ต้องเป็นเลข 1-250');
       return;
     }
-    if (maxRows > 500) {
-      maxRows = 500; // cap at 500 to avoid timeout (GAS 6 min limit)
+    if (maxRows > 250) {
+      maxRows = 250; // [V6.0.029] cap at 250 (was 500) — 250 rows × 1.5s = 375s, fits in 360s GAS limit
+      //   เหตุผล: 400 rows timeout at 360s (V6.0.028 log) → ลด cap เหลือ 250
+      //   ถ้า user ต้องการมากกว่า 250 → รันหลายครั้ง แต่ TEST_MATCH_RESULTS ถูก clear แต่ละครั้ง
     }
 
     const confirm = ui.alert(
@@ -1403,6 +1407,13 @@ function runTestMatchDryRunForceAll_UI() {
     lines.push('Mode: ข้าม SYNC_STATUS filter — ทดสอบทุกแถวที่มี INVOICE_NO');
     lines.push('Rows tested: ' + summary.tested + ' / ' + summary.totalRows + ' (limit ' + maxRows + ')');
     lines.push('Errors: ' + summary.errors);
+    if (summary.stoppedByTimeGuard) {
+      lines.push('');
+      lines.push('⚠️  ⚠️  ⚠️  TIME GUARD หยุดกลางทาง ⚠️  ⚠️  ⚠️');
+      lines.push('   หยุดที่ ' + summary.tested + '/' + summary.requestedRows + ' rows เพราะใกล้ 5-min limit');
+      lines.push('   แนะนำ: ลดจำนวน rows ในครั้งต่อไป (200 rows = safe)');
+      lines.push('   สำหรับ Snapshot Test: baseline และ post-refactor ต้องใช้จำนวน rows เท่ากัน');
+    }
     lines.push('');
     lines.push('─── Results ───');
     lines.push('✅ AUTO_MATCH : ' + summary.autoMatched);
