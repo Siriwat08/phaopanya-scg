@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.032
+ * VERSION: 6.0.033
  * FILE: 26_AuditTrailService.gs
  * LMDS V6.0 — Audit Trail (Critical-Only Scope)
  * ===================================================
