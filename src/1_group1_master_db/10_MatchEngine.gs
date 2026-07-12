@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.028
+ * VERSION: 6.0.029
  * FILE: 10_MatchEngine.gs
  * LMDS V5.5 — Core Match & Resolution Engine
  * ===================================================
@@ -2955,7 +2955,37 @@ function runTestMatchDryRun_(maxRows, forceAllRows) {
   // Collect result rows for batch write to TEST_MATCH_RESULTS sheet
   const resultRows = [];
 
+  // [V6.0.029] Time guard — ป้องกัน GAS 6-min timeout
+  //   เดิม: Dry Run ไม่มี time guard → 400 rows × 1.5s = 600s → timeout at 360s
+  //   ใหม่: หยุดที่ 300s (5 min) เพื่อเหลือ buffer 60s สำหรับ write TEST_MATCH_RESULTS
+  //   ถ้าหยุดกลางทาง → เขียนผลที่ได้ + บอก user ว่าเหลือกี่แถว
+  const DRY_RUN_TIME_LIMIT_MS = 300000; // 5 minutes
+  let stoppedByTimeGuard = false;
+
   for (let i = 0; i < rowsToTest.length; i++) {
+    // [V6.0.029] Time guard check — ทุก 10 rows เพื่อลด overhead
+    if (i % 10 === 0 && i > 0) {
+      const elapsed = new Date() - startTime;
+      if (elapsed > DRY_RUN_TIME_LIMIT_MS) {
+        logWarn(
+          'MatchEngine',
+          'runTestMatchDryRun_: Time guard หยุดที่แถว ' +
+            i +
+            '/' +
+            rowsToTest.length +
+            ' (elapsed=' +
+            Math.round(elapsed / 1000) +
+            's, limit=' +
+            DRY_RUN_TIME_LIMIT_MS / 1000 +
+            's) — เขียนผลที่ได้ ' +
+            resultRows.length +
+            ' rows'
+        );
+        stoppedByTimeGuard = true;
+        break;
+      }
+    }
+
     const srcObj = rowsToTest[i];
     try {
       // Mirror processOneRow() resolution calls — but stop BEFORE executeDecision()
@@ -3079,6 +3109,8 @@ function runTestMatchDryRun_(maxRows, forceAllRows) {
     errors: errors,
     matchRate: matchRate,
     elapsedSec: elapsedSec,
-    forceAllRows: forceAllRows // [V6.0.017] expose mode in summary
+    forceAllRows: forceAllRows, // [V6.0.017] expose mode in summary
+    stoppedByTimeGuard: stoppedByTimeGuard, // [V6.0.029] true if time guard stopped processing early
+    requestedRows: maxRows // [V6.0.029] how many rows user requested
   };
 }
