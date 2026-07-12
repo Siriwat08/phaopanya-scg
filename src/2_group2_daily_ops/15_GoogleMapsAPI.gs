@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.027
+ * VERSION: 6.0.028
  * FILE: 15_GoogleMapsAPI.gs
  * LMDS V5.5 — Google Maps Custom Functions (@customFunction)
  * ===================================================
