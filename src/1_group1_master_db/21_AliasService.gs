@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 21_AliasService.gs
  * LMDS V6.0 — Hybrid Alias Architecture (Global M_ALIAS)
  * ===================================================
@@ -9,13 +9,31 @@
  *   ⚠️ Auto Pipeline ไม่เขียน M_ALIAS ที่นี่ — เขียนที่ autoEnrichAliasesFromFactBatch_() ใน 10_MatchEngine เท่านั้น
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 06_PersonService, 07_PlaceService, 09_DestinationService
- *   CALLED BY: 06_PersonService (resolveMasterUuidViaGlobalAlias, convertUuidToPersonId), 07_PlaceService (resolveMasterUuidViaGlobalAlias, convertUuidToPlaceId), 10_MatchEngine (convertPersonIdToUuid — legacy Migration code), 17_SearchService (fastLookupByShipToName — Group 2 Fast Track), 00_App (MIGRATION_HybridAliasSystem, populateAliasFromSCGRawData, assignMasterUuidIfMissing)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 05_NormalizeService.gs (normalize before alias insert)
+ *     - 06_PersonService.gs, 07_PlaceService.gs, 09_DestinationService.gs (master UUID resolution)
+ *   CALLS: (Invokes)
+ *     - normalizePersonName() / normalizePlaceName() → 05_NormalizeService.gs
+ *     - resolveMasterUuidViaGlobalAlias() (internal, called by 06/07 services)
+ *     - logInfo() / logWarn()                   → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 06_PersonService.gs (resolveMasterUuidViaGlobalAlias, convertUuidToPersonId)
+ *     - 07_PlaceService.gs (resolveMasterUuidViaGlobalAlias, convertUuidToPlaceId)
+ *     - 10_MatchEngine.gs (convertPersonIdToUuid — legacy migration code)
+ *     - 10e_MatchResolvePersist.gs (bindAlias on Q_REVIEW resolve)
+ *     - 17_SearchService.gs (fastLookupByShipToName — Group 2 Fast Track)
+ *     - 00_App.gs (MIGRATION_HybridAliasSystem, populateAliasFromSCGRawData, assignMasterUuidIfMissing menus)
+ *   SHEETS ACCESSED:
+ *     - SHEET.M_ALIAS           (Read/Write — alias CRUD + fastLookupByShipToName)
+ *     - SHEET.M_PERSON / M_PLACE (Read — UUID resolution)
+ *     - SHEET.M_PERSON_ALIAS / M_PLACE_ALIAS (Read — per-master alias list)
+ *     - SHEET.FACT_DELIVERY     (Read — alias enrichment from history)
+ *     - SHEET.SOURCE            (Read — populateAliasFromSCGRawData)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)

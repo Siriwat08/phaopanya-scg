@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 03_SetupSheets.gs
  * LMDS V6.0 — Sheet Setup & Configuration Service
  * ===================================================
@@ -9,13 +9,26 @@
  *   ยังเป็นที่ตั้งของ logInfo/logWarn/logError/logDebug (System Logger)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 14_Utils
- *   CALLED BY: 00_App, All Service files (getSheetByName, log functions)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs            (SHEET.* names, ENV constants)
+ *     - 02_Schema.gs            (SCHEMA definitions for column setup)
+ *     - 14_Utils.gs             (safeUiAlert_, hash helpers)
+ *     - 27_RbacService.gs       (isAuthorizedUser_ for protected setup menu)
+ *   CALLS: (Invokes)
+ *     - validateConfig()                          → 01_Config.gs
+ *     - isAuthorizedUser_()                       → 27_RbacService.gs
+ *     - safeUiAlert_()                            → 14_Utils.gs
+ *   EXPORTS TO:
+ *     - 00_App.gs (setupAllSheets, setupEnvironment menus)
+ *     - All Service files (getSheetByNameSafe_, logInfo/logWarn/logError/logDebug)
+ *     - 14_Utils.gs (log functions used in util helpers)
+ *   SHEETS ACCESSED:
+ *     - All sheets (Write — setupAllSheets creates columns/formatting on every SHEET.* listed in 01_Config)
+ *     - SHEET.SYS_LOG            (Write — logInfo/logWarn/logError append rows)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)

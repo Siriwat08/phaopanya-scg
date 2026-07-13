@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 10e_MatchResolvePersist.gs
  * LMDS V6.0 — Resolve & Persist for Q_REVIEW
  * ===================================================
@@ -9,13 +9,27 @@
  *   แยกออกจาก 10_MatchEngine.gs เพื่อลดขนาดไฟล์ (audit 1.2)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 10_MatchEngine, 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService, 11_TransactionService, 21_AliasService, 26_AuditTrailService
- *   CALLED BY: 12_ReviewService (applyReviewDecision → resolveAndPersist_), 10_MatchEngine (handleReview_ → resolveAndPersist_)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 10_MatchEngine.gs       (match context + handleReview_ gateway)
+ *     - 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService (master CRUD)
+ *     - 11_TransactionService.gs (upsertFactDelivery)
+ *     - 21_AliasService.gs     (alias binding on resolve)
+ *     - 26_AuditTrailService.gs (audit on persist)
+ *   CALLS: (Invokes)
+ *     - resolvePerson() / resolvePlace() / resolveGeo() / resolveDestination() → 06/07/08/09
+ *     - upsertFactDelivery()                    → 11_TransactionService.gs
+ *     - bindAlias()                             → 21_AliasService.gs
+ *     - recordAuditTrail()                      → 26_AuditTrailService.gs
+ *   EXPORTS TO:
+ *     - 12_ReviewService.gs (applyReviewDecision → resolveAndPersist_)
+ *     - 10_MatchEngine.gs (handleReview_ → resolveAndPersist_)
+ *   SHEETS ACCESSED:
+ *     - (delegates to 06/07/08/09/11/21 services — no direct sheet writes here)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)

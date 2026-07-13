@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 22b_WebAppViews.gs
  * LMDS V6.0 — Web App View Data Providers
  * ===================================================
@@ -9,13 +9,27 @@
  *   ถูกเรียกโดย frontend ผ่าน google.script.run
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 14_Utils, 22_WebApp
- *   CALLED BY: Frontend (Dashboard, FACT_DELIVERY, Q_REVIEW, MatchEngine, SourceSheet views)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 14_Utils.gs, 03_SetupSheets.gs (core)
+ *     - 22_WebApp.gs            (doGet context, session helpers)
+ *     - 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService (master counts)
+ *     - 11_TransactionService, 13_ReportService (FACT + report metrics)
+ *   CALLS: (Invokes)
+ *     - getAllSourceRows()                       → 04_SourceRepository.gs
+ *     - upsertFactDelivery() read helpers        → 11_TransactionService.gs
+ *     - countPersons() / countPlaces() / countGeos() / countDestinations() → master services
+ *     - buildFullQualityReport()                 → 13_ReportService.gs
+ *   EXPORTS TO:
+ *     - 22_WebApp.gs (view dispatcher)
+ *     - Frontend views (Dashboard, FACT_DELIVERY, Q_REVIEW, MatchEngine, SourceSheet)
+ *   SHEETS ACCESSED:
+ *     - SHEET.SOURCE             (Read — SourceSheet view)
+ *     - SHEET.FACT_DELIVERY      (Read — FACT_DELIVERY view + dashboard metrics)
+ *     - SHEET.Q_REVIEW           (Read — Q_REVIEW view)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 3 — Web frontend server (dashboard, views, actions, mobile menu)

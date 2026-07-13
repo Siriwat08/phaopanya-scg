@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 08_GeoService.gs
  * LMDS V6.0 — Geo Point Master Service
  * ===================================================
@@ -9,13 +9,28 @@
  *   และ RAM + CacheService memoization (loadAllGeos_)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 15_GoogleMapsAPI, 14_Utils, 07_PlaceService, 11_TransactionService
- *   CALLED BY: 10_MatchEngine, 12_ReviewService, 11_TransactionService, 00_App, 19_Hardening, 22b_WebAppViews
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 14_Utils.gs (core)
+ *     - 15_GoogleMapsAPI.gs    (geocode/reverse geocode)
+ *     - 07_PlaceService.gs     (place-based geo fallback)
+ *     - 11_TransactionService.gs (FACT_DELIVERY history for geo provenance)
+ *   CALLS: (Invokes)
+ *     - geocode() / reverseGeocode()            → 15_GoogleMapsAPI.gs
+ *     - resolvePlace()                          → 07_PlaceService.gs
+ *     - logInfo() / logWarn()                   → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 10_MatchEngine.gs (resolveGeo for matches)
+ *     - 11_TransactionService.gs (invalidateGeoLatLngCache_)
+ *     - 12_ReviewService.gs (geo enrichment on review)
+ *     - 00_App.gs (applyMasterCoordinatesToDailyJob menu)
+ *     - 19_Hardening.gs (countGeos preflight)
+ *     - 22b_WebAppViews.gs (dashboard counts)
+ *   SHEETS ACCESSED:
+ *     - SHEET.M_GEO_POINT       (Read/Write — CRUD on geo master + loadAllGeos_ cache)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)

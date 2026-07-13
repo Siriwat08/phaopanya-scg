@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 28_WebAppActions.gs
  * LMDS V6.0 — Web App Actions Server (Mobile Menu)
  * ===================================================
@@ -9,13 +9,26 @@
  *   Pattern: runWebAppAction(actionId, params) → registry → _Web variant (no UI alerts)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 14_Utils, 22_WebApp
- *   CALLED BY: Frontend (MobileActions view via google.script.run)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 14_Utils.gs (core)
+ *     - 22_WebApp.gs            (doGet context, session)
+ *     - 10d_MatchTestHarness.gs (dry run actions)
+ *     - 19_Hardening.gs         (preflight action)
+ *     - 12_ReviewService.gs     (review actions)
+ *   CALLS: (Invokes)
+ *     - runTestMatchDryRun_UI()                → 10d_MatchTestHarness.gs
+ *     - runPreflightAudit()                    → 19_Hardening.gs
+ *     - applyAllPendingDecisions()             → 12_ReviewService.gs / 12b_ReviewReprocessor.gs
+ *     - logInfo()                              → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 22_WebApp.gs (action dispatcher)
+ *     - Frontend (MobileActions view via google.script.run)
+ *   SHEETS ACCESSED:
+ *     - SHEET.TEST_MATCH_RESULTS (Read — action status)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 3 — Web frontend server (dashboard, views, actions, mobile menu)

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 09_DestinationService.gs
  * LMDS V6.0 — Destination Master Service
  * ===================================================
@@ -9,13 +9,24 @@
  *   และ query helpers + cached loader (loadAllDestinations_)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 14_Utils, 03_SetupSheets
- *   CALLED BY: 10_MatchEngine, 17_SearchService, 21_AliasService, 19_Hardening, 22b_WebAppViews
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 14_Utils.gs, 03_SetupSheets.gs (core)
+ *     - 06_PersonService.gs, 07_PlaceService.gs, 08_GeoService.gs (Trinity components)
+ *   CALLS: (Invokes)
+ *     - resolvePerson() / resolvePlace() / resolveGeo() → 06/07/08 services
+ *     - logInfo() / logWarn()                   → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 10_MatchEngine.gs (resolveDestination for matches)
+ *     - 17_SearchService.gs (destination lookup)
+ *     - 21_AliasService.gs (destination binding)
+ *     - 19_Hardening.gs (countDestinations preflight)
+ *     - 22b_WebAppViews.gs (dashboard counts)
+ *   SHEETS ACCESSED:
+ *     - SHEET.M_DESTINATION     (Read/Write — CRUD + loadAllDestinations_ cache + stats update)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)

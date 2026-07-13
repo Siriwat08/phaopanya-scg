@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 29_SnapshotTest.gs
  * LMDS V6.0 — Snapshot Test Harness for Refactoring Safety
  * ===================================================
@@ -9,13 +9,21 @@
  *   เพื่อยืนยันว่า refactoring ไม่เปลี่ยนแปลง decision ของแต่ละ row
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 10d_MatchTestHarness
- *   CALLED BY: 00_App (menu triggers: snapshot save / compare)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 10d_MatchTestHarness.gs (test data access)
+ *   CALLS: (Invokes)
+ *     - getSheetByNameSafe_()                   → 03_SetupSheets.gs
+ *     - logInfo() / logWarn()                   → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 00_App.gs (menu: saveSnapshot, compareSnapshot)
+ *     - 10d_MatchTestHarness.gs (baseline capture before dry run)
+ *   SHEETS ACCESSED:
+ *     - SHEET.TEST_MATCH_RESULTS (Read/Write — save baseline + compare after refactor)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)

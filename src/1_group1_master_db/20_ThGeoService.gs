@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 20_ThGeoService.gs
  * LMDS V6.0 — Thai Geo Service
  * ===================================================
@@ -9,13 +9,26 @@
  *   รวม extractGeoFromAddress (3-tier search) + populateGeoMetadata (batch fill 16 cols)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 07_PlaceService, 16_GeoDictionaryBuilder
- *   CALLED BY: 07_PlaceService (getEnrichedGeoData), 16_GeoDictionaryBuilder (populateGeoMetadata — shared function), 17_SearchService (geo search utilities)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 05_NormalizeService.gs (normalize address tokens)
+ *     - 07_PlaceService.gs     (place-based geo fallback)
+ *     - 16_GeoDictionaryBuilder.gs (populateGeoMetadata shared + dictionary lookup)
+ *   CALLS: (Invokes)
+ *     - normalizePlaceName()                    → 05_NormalizeService.gs
+ *     - resolvePlace()                          → 07_PlaceService.gs
+ *     - scanAddressAgainstDictionary() / lookupByPostcode() → 16_GeoDictionaryBuilder.gs
+ *   EXPORTS TO:
+ *     - 07_PlaceService.gs (getEnrichedGeoData)
+ *     - 16_GeoDictionaryBuilder.gs (populateGeoMetadata shared function)
+ *     - 17_SearchService.gs (geo search utilities)
+ *     - 00_App.gs (populateGeoMetadata menu)
+ *   SHEETS ACCESSED:
+ *     - SHEET.SYS_TH_GEO        (Read — loadCachedGeoRows_ + 3-tier address extraction)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)

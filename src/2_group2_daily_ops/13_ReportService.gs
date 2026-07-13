@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 13_ReportService.gs
  * LMDS V6.0 — Data Quality Report Service
  * ===================================================
@@ -9,13 +9,27 @@
  *   รวม buildFullQualityReport + summary builders
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService, 11_TransactionService, 12_ReviewService, 04_SourceRepository
- *   CALLED BY: 00_App (buildFullQualityReport — menu), 22b_WebAppViews (Dashboard metrics)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService (master counts)
+ *     - 11_TransactionService.gs (FACT stats)
+ *     - 12_ReviewService.gs    (review queue stats)
+ *     - 04_SourceRepository.gs (source stats)
+ *   CALLS: (Invokes)
+ *     - countPersons() / countPlaces() / countGeos() / countDestinations() → master services
+ *     - getSheetByNameSafe_()                   → 03_SetupSheets.gs
+ *     - logInfo()                               → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 00_App.gs (buildFullQualityReport menu)
+ *     - 22b_WebAppViews.gs (dashboard metrics from RPT_QUALITY)
+ *   SHEETS ACCESSED:
+ *     - SHEET.RPT_QUALITY       (Write — append quality report rows)
+ *     - SHEET.M_PERSON / M_PLACE / M_GEO_POINT / M_DESTINATION (Read — master counts)
+ *     - SHEET.FACT_DELIVERY     (Read — delivery stats)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)

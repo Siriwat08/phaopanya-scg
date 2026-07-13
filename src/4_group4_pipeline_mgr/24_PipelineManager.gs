@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 24_PipelineManager.gs
  * LMDS V6.0 — Pipeline Manager (Standalone Module)
  * ===================================================
@@ -9,13 +9,22 @@
  *   STANDALONE — ใช้ Script Properties เก็บ state ของตัวเอง (prefix: PIPELINE_*)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 10_MatchEngine (runMatchEngine only)
- *   CALLED BY: Time-driven trigger (auto-run 08:00-22:00 every hour), 00_App (manual pipeline menu — optional wrapper)
+ *   REQUIRES: (Load Order)
+ *     - 10_MatchEngine.gs       (runMatchEngine — the only call into the engine)
+ *     - 01_Config.gs            (PIPELINE_* constants, sheet names for diagnostics)
+ *   CALLS: (Invokes)
+ *     - runMatchEngine()                        → 10_MatchEngine.gs
+ *     - PropertiesService.getScriptProperties() (Apps Script runtime — state)
+ *     - ScriptApp.newTrigger() (time-based auto-resume + daily quota reset)
+ *   EXPORTS TO:
+ *     - Time-driven trigger (auto-run 08:00–22:00 every hour)
+ *     - 00_App.gs (manual pipeline menu — optional wrapper)
+ *   SHEETS ACCESSED:
+ *     - SHEET.SOURCE / M_ALIAS / M_PERSON / M_PLACE / SYS_TH_GEO (Read — diagnostics + progress counts)
+ *   TRIGGERS: time-based (hourly runPipelineBatch + daily resetDailyQuotaJob at 00:05)
  *
  * ARCHITECTURE:
  *   Group 4 — Pipeline manager (batched runMatchEngine with quota/timeout guards)

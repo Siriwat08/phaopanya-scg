@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 10_MatchEngine.gs
  * LMDS V6.0 — Core Match & Resolution Engine
  * ===================================================
@@ -9,13 +9,40 @@
  *   ตั้งแต่ V6.0.030+ decision rules แยกไป 10b, test harness ไป 10d, resolve/persist ไป 10e
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService, 11_TransactionService, 12_ReviewService, 04_SourceRepository, 10b_MatchDecision, 10d_MatchTestHarness, 10e_MatchResolvePersist, 26_AuditTrailService
- *   CALLED BY: 00_App (runMatchEngine — Pipeline menu), 24_PipelineManager (runMatchEngine wrapper), 12_ReviewService (handleReview_ → resolveAndPersist_)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 04_SourceRepository.gs (getUnprocessedRows, buildSourceObj_)
+ *     - 05_NormalizeService.gs, 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService
+ *     - 11_TransactionService.gs (upsertFactDelivery)
+ *     - 12_ReviewService.gs (enqueueReview for ambiguous matches)
+ *     - 10b_MatchDecision.gs (decision rules dispatcher)
+ *     - 10d_MatchTestHarness.gs (test harness — referenced)
+ *     - 10e_MatchResolvePersist.gs (resolve/persist for Q_REVIEW reprocessing)
+ *     - 26_AuditTrailService.gs (alias write audit)
+ *   CALLS: (Invokes)
+ *     - getUnprocessedRows() / buildSourceObj_() → 04_SourceRepository.gs
+ *     - resolvePerson() / resolvePlace() / resolveGeo() / resolveDestination() → 06/07/08/09 services
+ *     - makeMatchDecision()                     → 10b_MatchDecision.gs
+ *     - upsertFactDelivery()                    → 11_TransactionService.gs
+ *     - enqueueReview()                         → 12_ReviewService.gs
+ *     - resolveAndPersist_()                    → 10e_MatchResolvePersist.gs
+ *     - recordAuditTrail()                      → 26_AuditTrailService.gs
+ *   EXPORTS TO:
+ *     - 00_App.gs (runMatchEngine menu)
+ *     - 24_PipelineManager.gs (runMatchEngine wrapper for batched runs)
+ *     - 12_ReviewService.gs (handleReview_ → resolveAndPersist_)
+ *     - 10b/10d/10e (split helpers)
+ *   SHEETS ACCESSED:
+ *     - SHEET.SOURCE             (Read — input rows via 04_SourceRepository)
+ *     - SHEET.M_ALIAS            (Write — single writer for alias table)
+ *     - SHEET.M_PERSON_ALIAS / M_PLACE_ALIAS (Write — alias persistence)
+ *     - SHEET.Q_REVIEW           (Write — enqueue ambiguous matches)
+ *     - SHEET.FACT_DELIVERY      (Write — upsert via 11_TransactionService)
+ *     - SHEET.PIPELINE_RUN_LOG   (Write — run state for resume)
+ *   TRIGGERS: time-based (auto-resume via ScriptApp.newTrigger in pipeline)
  *
  * ARCHITECTURE:
  *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)

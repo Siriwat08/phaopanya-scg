@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 00_App.gs
  * LMDS V6.0 — Application Entry Point & Menu Controller
  * ===================================================
@@ -8,13 +8,41 @@
  *   ทำหน้าที่เป็น Gateway สำหรับการเรียกใช้งานระบบทั้งหมดผ่าน onOpen()/onEdit()
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils
- *   CALLED BY: All modules (onOpen trigger, menu system)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs            (APP_NAME, APP_VERSION, ENV config constants)
+ *     - 02_Schema.gs            (column schema for menu diagnostics)
+ *     - 03_SetupSheets.gs       (getSheetByNameSafe_, log functions)
+ *     - 14_Utils.gs             (safeUiAlert_, acquireScriptLockOrWarn_)
+ *     - 27_RbacService.gs       (isAuthorizedUser_ menu guard)
+ *     - All pipeline service modules (called via menu items)
+ *   CALLS: (Invokes)
+ *     - validateConfig()                          → 01_Config.gs
+ *     - runFullPipeline()                         → 24_PipelineManager.gs
+ *     - runMatchEngine()                          → 10_MatchEngine.gs
+ *     - setupAllSheets()                          → 03_SetupSheets.gs
+ *     - buildGeoDictionary()                      → 16_GeoDictionaryBuilder.gs
+ *     - populateGeoMetadata()                     → 20_ThGeoService.gs
+ *     - fetchDataFromSCGJWD()                     → 18_ServiceSCG.gs
+ *     - applyMasterCoordinatesToDailyJob()        → 18_ServiceSCG.gs
+ *     - buildFullQualityReport()                  → 13_ReportService.gs
+ *     - openReviewQueue() / applyAllPendingDecisions() → 12_ReviewService.gs / 12b_ReviewReprocessor.gs
+ *     - runTestMatchDryRun_UI()                   → 10d_MatchTestHarness.gs
+ *   EXPORTS TO:
+ *     - Google Apps Script runtime (onOpen/onEdit/onInstall triggers — global)
+ *     - 24_PipelineManager.gs (runFullPipeline wrapper)
+ *   SHEETS ACCESSED:
+ *     - SHEET.SOURCE              (Read — diagnoseSourceData_)
+ *     - SHEET.DAILY_JOB           (Read — diagnostics)
+ *     - SHEET.FACT_DELIVERY       (Read — diagnostics)
+ *     - SHEET.Q_REVIEW            (Read — diagnose + menu)
+ *     - SHEET.M_ALIAS / M_PERSON / M_PLACE / M_GEO_POINT / M_DESTINATION (Read — diagnostics)
+ *     - SHEET.SYS_CONFIG / SYS_LOG / SYS_TH_GEO  (Read — diagnostics)
+ *     - SHEET.RPT_QUALITY / TEST_MATCH_RESULTS / INPUT / EMPLOYEE (Read — diagnostics)
+ *     - SHEET.M_PERSON_ALIAS / M_PLACE_ALIAS     (Read — alias migration menu)
+ *   TRIGGERS: onOpen, onInstall, onEdit
  *
  * ARCHITECTURE:
  *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)

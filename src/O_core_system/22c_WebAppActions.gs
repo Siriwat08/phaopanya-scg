@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 22c_WebAppActions.gs
  * LMDS V6.0 — Web App Actions
  * ===================================================
@@ -9,13 +9,27 @@
  *   ถูกเรียกโดย frontend ผ่าน google.script.run (ping, submitReviewDecision, searchLocations, etc.)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 14_Utils, 22_WebApp, 12_ReviewService, 17_SearchService, 15_GoogleMapsAPI
- *   CALLED BY: Frontend (MobileActions, Search, MapAnalytics, LiveFeed views)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 14_Utils.gs, 22_WebApp.gs (core)
+ *     - 12_ReviewService.gs     (submitReviewDecision, getReviewDetail)
+ *     - 17_SearchService.gs     (searchLocations)
+ *     - 15_GoogleMapsAPI.gs     (map data + geocoding)
+ *   CALLS: (Invokes)
+ *     - submitReviewDecision() / getReviewDetail() → 12_ReviewService.gs
+ *     - searchLocations()                        → 17_SearchService.gs
+ *     - geocode() / reverseGeocode()             → 15_GoogleMapsAPI.gs
+ *   EXPORTS TO:
+ *     - 22_WebApp.gs (action dispatcher)
+ *     - Frontend views (MobileActions, Search, MapAnalytics, LiveFeed)
+ *   SHEETS ACCESSED:
+ *     - SHEET.SOURCE             (Read — search/list)
+ *     - SHEET.FACT_DELIVERY      (Read — search/list)
+ *     - SHEET.Q_REVIEW           (Read/Write — submitReviewDecision updates)
+ *     - SHEET.M_ALIAS / M_PERSON / M_PLACE / M_DESTINATION (Read — search)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 3 — Web frontend server (dashboard, views, actions, mobile menu)

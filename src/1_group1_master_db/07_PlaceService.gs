@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 07_PlaceService.gs
  * LMDS V6.0 — Place Master Service
  * ===================================================
@@ -9,13 +9,32 @@
  *   รวม resolvePlace, findPlaceCandidates (multi-strategy search)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 16_GeoDictionaryBuilder, 20_ThGeoService, 21_AliasService
- *   CALLED BY: 10_MatchEngine, 11_TransactionService, 12_ReviewService, 17_SearchService, 19_Hardening, 20_ThGeoService, 21_AliasService, 22b_WebAppViews
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 05_NormalizeService.gs (normalizePlaceName)
+ *     - 16_GeoDictionaryBuilder.gs (lookupByPostcode, scanAddressAgainstDictionary)
+ *     - 20_ThGeoService.gs     (getEnrichedGeoData, extractGeoFromAddress)
+ *     - 21_AliasService.gs     (resolveMasterUuidViaGlobalAlias, convertUuidToPlaceId)
+ *   CALLS: (Invokes)
+ *     - normalizePlaceName()                    → 05_NormalizeService.gs
+ *     - getEnrichedGeoData() / extractGeoFromAddress() → 20_ThGeoService.gs
+ *     - lookupByPostcode() / scanAddressAgainstDictionary() → 16_GeoDictionaryBuilder.gs
+ *     - resolveMasterUuidViaGlobalAlias()       → 21_AliasService.gs
+ *   EXPORTS TO:
+ *     - 10_MatchEngine.gs, 11_TransactionService.gs, 12_ReviewService.gs (place resolution)
+ *     - 17_SearchService.gs (place search)
+ *     - 19_Hardening.gs (countPlaces preflight)
+ *     - 20_ThGeoService.gs (place lookups for geo enrichment)
+ *     - 21_AliasService.gs (place lookups)
+ *     - 22b_WebAppViews.gs (dashboard counts)
+ *   SHEETS ACCESSED:
+ *     - SHEET.M_PLACE           (Read/Write — CRUD on place master)
+ *     - SHEET.M_PLACE_ALIAS     (Read — alias lookups)
+ *     - SHEET.SYS_TH_GEO        (Read — geo enrichment lookup)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)

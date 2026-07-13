@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 19_Hardening.gs
  * LMDS V6.0 — System Hardening & Preflight Audit
  * ===================================================
@@ -8,13 +8,26 @@
  *   และตรวจจับปัญหาซ้ำซ้อน เช่น duplicate processing, schema mismatch
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 05_NormalizeService, 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService, 11_TransactionService, 14_Utils
- *   CALLED BY: 00_App (runPreflightAudit, detectDoubleProcessing, checkSystemIntegrity)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 14_Utils.gs, 03_SetupSheets.gs (core)
+ *     - 05_NormalizeService.gs  (normalization checks)
+ *     - 06_PersonService.gs, 07_PlaceService.gs, 08_GeoService.gs, 09_DestinationService.gs (master counts)
+ *     - 11_TransactionService.gs (FACT_DELIVERY stats)
+ *   CALLS: (Invokes)
+ *     - getSheetByNameSafe_()                     → 03_SetupSheets.gs
+ *     - countPersons() / countPlaces() / countGeos() / countDestinations() → 06/07/08/09 services
+ *     - logWarn() / logError()                    → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 00_App.gs (runPreflightAudit, detectDoubleProcessing, checkSystemIntegrity menus)
+ *   SHEETS ACCESSED:
+ *     - SHEET.SOURCE             (Read — duplicate processing detection)
+ *     - SHEET.FACT_DELIVERY      (Read — invoice duplicate check)
+ *     - SHEET.Q_REVIEW           (Read — stuck review detection)
+ *     - SHEET.M_PERSON / M_PLACE / M_GEO_POINT / M_ALIAS / M_PERSON_ALIAS / EMPLOYEE (Read — counts)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)

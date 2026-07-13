@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 22_WebApp.gs
  * LMDS V6.0 — Web App Server (Dashboard)
  * ===================================================
@@ -9,13 +9,25 @@
  *   เป็นจุดเชื่อมระหว่าง Frontend (HTML/JS) กับ Backend (Google Sheets)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 14_Utils, 03_SetupSheets
- *   CALLED BY: doGet() — Web App entry point; google.script.run calls from frontend
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 14_Utils.gs, 03_SetupSheets.gs (core)
+ *     - 27_RbacService.gs       (RBAC for dashboard access)
+ *     - 22b_WebAppViews.gs      (view data providers)
+ *     - 22c_WebAppActions.gs    (action dispatchers)
+ *     - 28_WebAppActions.gs     (mobile menu actions)
+ *   CALLS: (Invokes)
+ *     - isAuthorizedDashboardUser_()             → 27_RbacService.gs
+ *     - getDashboardData() / getFactDeliveryData() / getQReviewData() → 22b_WebAppViews.gs
+ *     - runWebAppAction()                        → 28_WebAppActions.gs
+ *     - logInfo()                                → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - Frontend (doGet entry; google.script.run calls from HTML/JS views)
+ *   SHEETS ACCESSED:
+ *     - (none directly — delegates to 22b/22c/28)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 3 — Web frontend server (dashboard, views, actions, mobile menu)

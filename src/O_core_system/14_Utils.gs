@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 14_Utils.gs
  * LMDS V6.0 — Utility Functions
  * ===================================================
@@ -8,13 +8,24 @@
  *   เช่น ID Generator, Hash, String similarity, LatLng parser, chunked cache helpers
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 03_SetupSheets
- *   CALLED BY: All modules (06-21) — most widely used utility module
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs            (ENV, SHEET constants)
+ *     - 03_SetupSheets.gs       (logInfo/logWarn for error reporting)
+ *   CALLS: (Invokes)
+ *     - logInfo() / logWarn() / logError()       → 03_SetupSheets.gs
+ *     - getSheetByNameSafe_()                    → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - All Service modules 05–21 (safeUiAlert_, generateId, hashString, levenshtein, parseLatLng, chunkArray_)
+ *     - 00_App.gs (safeUiAlert_, acquireScriptLockOrWarn_)
+ *     - 22_WebApp.gs family (utility helpers)
+ *   SHEETS ACCESSED:
+ *     - SHEET.INPUT             (Read — readInputConfig_ fallback)
+ *     - SHEET.SOURCE            (Read — utility helpers reference)
+ *     - SHEET.M_ALIAS / M_PERSON (Read — utility lookups)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)

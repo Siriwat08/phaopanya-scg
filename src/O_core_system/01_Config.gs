@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 01_Config.gs
  * LMDS V6.0 — System Configuration & Constants
  * ===================================================
@@ -8,13 +8,24 @@
  *   เป็น Single Source of Truth สำหรับ Constants, Sheets, AI Config
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: (none — leaf module / config root)
- *   CALLED BY: All modules (config & constants)
+ *   REQUIRES: (Load Order)
+ *     - (none — leaf module / config root)
+ *   CALLS: (Invokes)
+ *     - (none — defines constants only; some functions call other modules but those modules require this)
+ *   EXPORTS TO:
+ *     - All .gs modules (APP_VERSION, SCHEMA_VERSION, APP_NAME, SHEET.*, ENV_*, AI_*, color constants)
+ *     - 00_App.gs (validateConfig, readInputConfig_)
+ *     - 14_Utils.gs (constants used in hashing/util functions)
+ *   SHEETS ACCESSED:
+ *     - SHEET.SYS_CONFIG          (Read — readInputConfig_ loads runtime overrides)
+ *     - SHEET.SYS_NOTES / SYS_NEGATIVE_SAMPLES / SYS_AUDIT_TRAIL (constants only — name definitions)
+ *     - SHEET.M_ALIAS / M_PERSON / M_PLACE / M_GEO_POINT / M_DESTINATION (constants only)
+ *     - SHEET.FACT_DELIVERY / Q_REVIEW / SOURCE / DAILY_JOB / TEST_MATCH_RESULTS / PIPELINE_RUN_LOG (constants)
+ *     - SHEET.EMPLOYEE / INPUT / OWNER_SUMMARY / SHIPMENT_SUM / M_PERSON_ALIAS / M_PLACE_ALIAS (constants)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)
@@ -28,8 +39,8 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.043';
-const SCHEMA_VERSION = '6.0.043';
+const APP_VERSION = '6.0.044';
+const SCHEMA_VERSION = '6.0.044';
 const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
