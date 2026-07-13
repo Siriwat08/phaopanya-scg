@@ -14,6 +14,9 @@
 | 3 | 🔍 PR Validation | `03-pr-validation.yml` | ตรวจ PR + Auto comment + Label | PR |
 | 4 | 🏷️ Release | `04-release.yml` | ตัด Git Tag + สร้าง Release | push to main |
 | 5 | 💓 Health Check | `05-scheduled-health.yml` | เช็คสุขภาพระบบ | ทุกวันจันทร์ 09:00 |
+| 6 | 🛡️ CodeQL | `06-codeql.yml` | CodeQL semantic security analysis | push, PR, weekly |
+| 7 | 📚 Doc-Code Sync | `07-doc-code-sync.yml` | ตรวจ 9 checks เอกสาร ↔ โค้ดตรงกัน | push, PR |
+| 8 | 🔐 Gitleaks | `08-gitleaks.yml` | สแกน hardcoded secrets | push, PR |
 
 ---
 
@@ -26,7 +29,12 @@
 │   ├── 02-deploy.yml                # Deploy - อัปโหลดไป Apps Script
 │   ├── 03-pr-validation.yml         # PR - ตรวจ + Comment + Label
 │   ├── 04-release.yml               # Release - Tag + Release Notes
-│   └── 05-scheduled-health.yml      # Health - เช็คอัตโนมัติ
+│   ├── 05-scheduled-health.yml      # Health - เช็คอัตโนมัติ
+│   ├── 06-codeql.yml                # CodeQL - semantic security scan
+│   ├── 07-doc-code-sync.yml         # Doc-Code Sync - 9 checks (check_01 - check_09)
+│   └── 08-gitleaks.yml              # Gitleaks - hardcoded secret scan
+├── scripts/
+│   └── doc-code-sync-checks/        # 9 check scripts (check_01 - check_09)
 ├── ISSUE_TEMPLATE/
 │   ├── bug_report.md
 │   └── feature_request.md
@@ -181,6 +189,42 @@ git push origin develop  # push ไป develop เพื่อไม่ให้
 - 🔍 ตรวจ VERSION tag ครบทุกไฟล์
 - 📝 ดู commit activity
 - 📢 แจ้งเตือนถ้าเจอปัญหา
+
+---
+
+### 6. 🛡️ CodeQL (Semantic Security Scan)
+**Trigger:** push ทุก branch + PR + weekly schedule
+
+**ทำอะไร:**
+- 🔍 วิเคราะห์โค้ดด้วย CodeQL (semantic, ไม่ใช่แค่ regex)
+- 🛡️ ตรวจหา SQL injection, XSS, hardcoded credentials, ฯลฯ
+- 📝 อัปโหลดผลลัพธ์เข้า GitHub Security tab
+
+---
+
+### 7. 📚 Doc-Code Sync (9 checks)
+**Trigger:** push ทุก branch + PR
+
+**ทำอะไร:** รัน check scripts 9 ตัว (check_01 — check_09):
+- ✅ check_01 — VERSION ในไฟล์ .gs ตรงกับ `01_Config.gs`
+- ✅ check_02 — สถิติ (file count, line count, function count) ตรงกับที่อ้างใน docs
+- ✅ check_03 — local path references (no absolute paths)
+- ✅ check_04 — phantom dependencies (function calls ต้องมี definition)
+- ✅ check_05 — internal markdown links ใช้ได้
+- ✅ check_06 — verify fixed issues ใน docs ไม่กล่าวถึงปัญหาที่ยังไม่แก้
+- ✅ check_07 — VERSION header + CHANGELOG entry match
+- ✅ check_08 — DEPENDENCIES header ครบทุกไฟล์
+- ✅ check_09 — DOC-TYPE coverage (ทุกไฟล์ .md ต้องมี DOC-TYPE tag)
+
+---
+
+### 8. 🔐 Gitleaks (Hardcoded Secret Scan)
+**Trigger:** push ทุก branch + PR
+
+**ทำอะไร:**
+- 🔍 สแกนโค้ดและ commit history เพื่อหา hardcoded secrets (API keys, tokens, passwords)
+- 🛡️ ป้องกันการ commit secret เข้า repo โดย accident
+- 📝 แจ้งเตือนบน PR ถ้าเจอ secret
 
 ---
 

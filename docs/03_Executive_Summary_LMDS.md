@@ -1,6 +1,6 @@
 <!-- DOC-TYPE: living -->
 # สรุปโปรเจกต์สำหรับผู้บริหาร
-## ระบบ LMDS (Logistics Master Data System) V5.5
+## ระบบ LMDS (Logistics Master Data System) V6.0
 
 ---
 
@@ -30,14 +30,14 @@
 | รายการ | รายละเอียด |
 |:---|:---|
 | **ชื่อระบบ** | LMDS (Logistics Master Data System) |
-| **เวอร์ชัน** | V5.5.034 (DOC-CODE SYNC, 2026-07-03 — โค้ด ↔ เอกสารตรง 100%) |
+| **เวอร์ชัน** | V6.0.044 (DOC-CODE SYNC, 2026-07-13 — โค้ด ↔ เอกสารตรง 100%) |
 | **แพลตฟอร์ม** | Google Workspace (Google Sheets + Google Apps Script) |
 | **ลูกค้า** | SCG JWD Logistics |
 | **ขอบเขตการใช้งาน** | การขนส่งสินค้าในประเทศไทย |
 | **ภาษาที่ใช้พัฒนา** | JavaScript (Google Apps Script V8) |
-| **จำนวนไฟล์โค้ด** | 25 ไฟล์ (24 production + 1 legacy) |
-| **จำนวนบรรทัดโค้ด** | ~17,459 บรรทัด (non-blank) |
-| **จำนวนฟังก์ชัน** | 435 ฟังก์ชัน |
+| **จำนวนไฟล์โค้ด** | 35 ไฟล์ .gs (34 production + 1 legacy) + 19 ไฟล์ .html |
+| **จำนวนบรรทัดโค้ด** | ~27,213 บรรทัด (.gs only, non-blank) |
+| **จำนวนฟังก์ชัน** | 535 ฟังก์ชัน |
 | **จำนวน Sheet** | 19 แผ่น |
 | **สถานะ** | พร้อม Deploy Production (97% — Security Hardened) |
 
@@ -293,9 +293,9 @@
 
 | ตัวชี้วัด | จำนวน |
 |:---|:---|
-| ไฟล์โค้ด | 22 ไฟล์ |
-| บรรทัดโค้ด | ~16,545 บรรทัด |
-| ฟังก์ชัน | 321 ฟังก์ชัน |
+| ไฟล์โค้ด | 35 ไฟล์ .gs + 19 ไฟล์ .html |
+| บรรทัดโค้ด | ~27,213 บรรทัด (.gs only) |
+| ฟังก์ชัน | 535 ฟังก์ชัน |
 | ตารางข้อมูล (Sheet) | 19 แผ่น |
 | Schema คอลัมน์ | 16 ชุด |
 | ข้อมูลภูมิศาสตร์ไทย | 7,537 แถว |
@@ -450,10 +450,10 @@
 
 ## สรุป
 
-ระบบ LMDS V5.5 เป็นโซลูชันที่ตอบโจทย์ปัญหาการจัดการข้อมูลโลจิสติกส์อย่างครบวงจร ตั้งแต่การทำความสะอาดข้อมูล การจับคู่อัตโนมัติ ไปจนถึงการค้นหาพิกัด GPS ด้วยคะแนนความพร้อม 97% (Security Hardened) และผ่านการ Audit 18 รอบ (CRITICAL → PERF → SECURITY → REVIEW15 → REFACTOR → SYNC → CACHE-FIX → CACHE-CLEANUP → DOC-SYNC → GOOGLE-MAPS-REFACTOR → DRIVER-VERIFIED → CRITICAL-FIX → PERFORMANCE-FIX → SECURITY-POSTFIX) 116 ปัญหาแก้ไขหมดสิ้น (53 audit + 9 cache fix + 6 cache cleanup + 3 antipattern + 2 google maps refactor + 2 driver verified + 2 critical fix + 13 perf fix + 12 SEC fix V5.5.017) ระบบพร้อมสำหรับการ Deploy ใช้งานจริง และมีศักยภาพในการขยายการใช้งานต่อไปในอนาคต
+ระบบ LMDS V6.0 เป็นโซลูชันที่ตอบโจทย์ปัญหาการจัดการข้อมูลโลจิสติกส์อย่างครบวงจร ตั้งแต่การทำความสะอาดข้อมูล การจับคู่อัตโนมัติ ไปจนถึงการค้นหาพิกัด GPS ด้วยคะแนนความพร้อม 97% (Security Hardened) และผ่านการ Audit 18 รอบ (CRITICAL → PERF → SECURITY → REVIEW15 → REFACTOR → SYNC → CACHE-FIX → CACHE-CLEANUP → DOC-SYNC → GOOGLE-MAPS-REFACTOR → DRIVER-VERIFIED → CRITICAL-FIX → PERFORMANCE-FIX → SECURITY-POSTFIX) 116 ปัญหาแก้ไขหมดสิ้น (53 audit + 9 cache fix + 6 cache cleanup + 3 antipattern + 2 google maps refactor + 2 driver verified + 2 critical fix + 13 perf fix + 12 SEC fix V5.5.017) ระบบพร้อมสำหรับการ Deploy ใช้งานจริง และมีศักยภาพในการขยายการใช้งานต่อไปในอนาคต
 
 ---
 
-> **เอกสารฉบับนี้จัดทำสำหรับผู้บริหาร เพื่อสรุปภาพรวมโปรเจกต์ LMDS V5.5**
+> **เอกสารฉบับนี้จัดทำสำหรับผู้บริหาร เพื่อสรุปภาพรวมโปรเจกต์ LMDS V6.0**
 > 
-> **เวอร์ชันเอกสาร:** 1.0 | **วันที่:** มิถุนายน 2569
+> **เวอร์ชันเอกสาร:** 1.1 (V6.0.044 DOC-CODE SYNC) | **วันที่:** 13 กรกฎาคม 2569

@@ -1,12 +1,12 @@
 <!-- DOC-TYPE: living -->
-# Contributing to LMDS V5.5
+# Contributing to LMDS V6.0
 
 ขอบคุณที่สนใจร่วมพัฒนา LMDS (Logistics Master Data System)! 🎉
 
 ## 📋 กฎสำคัญ (16 Immutable Laws)
 
 ก่อนเริ่มเขียนโค้ด อ่านและทำความเข้าใจกฎ 16 ข้อที่เป็นหัวใจของโปรเจกต์:
-ดูได้ที่ `docs/📋 กฎการเขียนโค้ด LMDS V5.5.md`
+ดูได้ที่ `docs/📋 กฎการเขียนโค้ด LMDS V6.0.md`
 
 ### สรุปสั้น:
 1. **No Hardcoded Index** — ใช้ `XXX_IDX.NAME` จาก `01_Config.gs`
