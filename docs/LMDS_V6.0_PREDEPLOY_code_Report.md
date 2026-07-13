@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # 🚀 LMDS V5.5 — การประเมินความพร้อม Production [CMD: PREDEPLOY]
 ## วันที่: 2026-07-03 | เวอร์ชันปัจจุบัน: V5.5.034 (DOC-CODE SYNC) | original audit 2026-06-12, last reviewed at V5.5.022
 

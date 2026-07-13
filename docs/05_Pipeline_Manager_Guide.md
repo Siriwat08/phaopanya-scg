@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # ⚡ Pipeline Manager — คู่มือใช้งาน (Standalone Module)
 
 > **เอกสารประกอบ LMDS V5.5.034**

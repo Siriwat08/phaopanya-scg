@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # LMDS V6.0 Enhancement Roadmap
 
 > **Document Type:** Technical Enhancement Roadmap

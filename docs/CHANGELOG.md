@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # Changelog — LMDS V6.0
 
 All notable changes to LMDS V6.0 (Logistics Master Data System) are documented here.

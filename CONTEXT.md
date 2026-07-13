@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # 🚀 Project Overview
 **Logistics Master Data System (LMDS) V6.0.011** คือระบบจัดการฐานข้อมูลหลักด้านการขนส่ง (Master Data & Matching Engine + RBAC + WebApp) เป็น Full-stack solution บน Google Apps Script + Google Sheets
 

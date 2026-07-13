@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # สรุปโปรเจกต์สำหรับผู้บริหาร
 ## ระบบ LMDS (Logistics Master Data System) V5.5
 

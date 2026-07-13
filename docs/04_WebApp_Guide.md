@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # 📖 คู่มือ LMDS Dashboard Web App (Phase 1)
 
 > **เอกสารประกอบ LMDS V5.5.034**

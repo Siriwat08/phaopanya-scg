@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # Contributing to LMDS V5.5
 
 ขอบคุณที่สนใจร่วมพัฒนา LMDS (Logistics Master Data System)! 🎉

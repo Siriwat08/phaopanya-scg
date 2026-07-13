@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # LMDS V5.5 — Performance Fix Cycle Verification Report
 
 > เอกสารตรวจสอบยืนยันการแก้ไขประสิทธิภาพ (Post-Fix Performance Verification)

@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # 🚀 GitHub Actions สำหรับ Phaopanya SCG
 
 คู่มือติดตั้งและใช้งาน GitHub Actions สำหรับโปรเจกต์ **Phaopanya SCG** (Google Apps Script)

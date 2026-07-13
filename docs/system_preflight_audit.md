@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # 📋 LMDS V5.5.034 — Pre-Flight System Audit Report
 
 **วันที่ตรวจสอบ:** 2026-06-23

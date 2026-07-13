@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # [SYSTEM] LMDS Project — Master Review & SOP Prompt
 **Version:** V5.5.034 (DOC-CODE SYNC) | **อัปเดตล่าสุด:** 2026-07-03
 

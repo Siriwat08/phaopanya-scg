@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # LMDS V5.5 — Deep Analysis & Enhancement Roadmap
 ### Focus: Data Cleansing · Data Separation · Data Matching (+ WebApp / Pipeline / Architecture / Security)
 

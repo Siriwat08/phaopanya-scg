@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # 🔬 LMDS V5.5.034 — Deep Dive Audit Report (Security + Performance + Cache + Code Review)
 
 > **เอกสารรวบรวมการ Audit เชิงลึก** ของระบบ LMDS V5.5.034 (Audit performed at V5.5.021 state; findings implemented in V5.5.034)
