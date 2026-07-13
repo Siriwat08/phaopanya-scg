@@ -1,0 +1,667 @@
+<!-- DOC-TYPE: living -->
+---
+name: lmds-cicd-pipeline
+description: Build, debug, and extend the LMDS V6.0 CI/CD pipeline — 8 GitHub Actions workflows (CI, Deploy, PR Validation, Release, Health, CodeQL, Doc-Code Sync, Gitleaks), clasp integration, secrets, environments, and pre-commit hooks. Use when adding new workflows, fixing deploy failures, debugging clasp issues, configuring branch protection, or onboarding a new contributor. Triggers on "GitHub Actions", "workflow", "clasp push failed", "deploy", "secret", "CLASPRC", "APPS_SCRIPT_ID", "release", "tag", "doc-code sync", "Gitleaks", "CodeQL", "preflight", "post-deploy verify", "branch protection", "Conventional Commits".
+---
+
+# GitHub Actions for clasp
+
+LMDS CI/CD Pipeline Builder — 8 Workflows + clasp
+Status: LMDS V6.0.046 — 8 production workflows + 9 doc-code-sync checks + pre-commit hook
+Purpose: Build, debug, and extend the deploy pipeline for Google Apps Script projects.
+Reference: docs/01-github-actions-overview.md + all 8 .github/workflows/*.yml files
+
+This skill is the delivery layer — load lmds-architect first to know the project structure, then use this for any CI/CD or deploy question.
+
+1. The 8 Workflows at a Glance
+#	Workflow	Trigger	Purpose	Failure impact
+1	01-ci.yml	push, PR	Lint + syntax + anti-pattern + domain check	blocks PR merge
+2	02-deploy.yml	push to main	clasp push + versioned deploy + Web App update	production downtime
+3	03-pr-validation.yml	PR	size + anti-pattern + version bump + Conventional Commits	blocks PR merge
+4	04-release.yml	push to main	auto-bump version + tag + GitHub Release	cosmetic
+5	05-scheduled-health.yml	Mon 09:00 ICT	health stats + version consistency	advisory
+6	06-codeql.yml	push, PR, weekly	semantic security analysis	blocks PR merge if High+
+7	07-doc-code-sync.yml	push, PR	9 doc-code sync checks (4 critical)	blocks PR merge
+8	08-gitleaks.yml	push, PR	hardcoded secret scan	blocks PR merge
+Plus 9 shell scripts in .github/scripts/doc-code-sync-checks/.
+
+2. The Required GitHub Secrets
+Configure at Settings → Secrets and variables → Actions → New repository secret:
+
+Secret	Required	How to get	Used by
+CLASPRC	✅ Yes (for deploy)	cat ~/.clasprc.json after clasp login	02, 04
+APPS_SCRIPT_ID	✅ Yes (for deploy)	Apps Script Editor → Project Settings → Script ID	02, 04
+DEPLOY_WEBHOOK	⬜ Optional	Discord/Slack webhook URL	02 (notifications)
+GITLEAKS_LICENSE	⬜ Optional (for Pro)	Gitleaks Pro key	08
+Setting up CLASPRC
+bash
+
+Copy
+# 1. Login to clasp (one-time on a dev machine)
+
+clasp login --creds  # generates ~/.clasprc.json
+
+
+# 2. Copy content
+
+cat ~/.clasprc.json
+
+
+# 3. Paste as GitHub Secret "CLASPRC"
+
+# The content is JSON with access_token, refresh_token, client_id, client_secret
+Security notes:
+
+
+Never commit CLASPRC to the repo
+
+CLASPRC can be re-generated (clasp login --relogin) if expired
+
+The token expires periodically — CI will fail with 401 if so
+
+Setting up APPS_SCRIPT_ID
+bash
+
+Copy
+# 1. Open https://script.google.com
+
+# 2. Open your Apps Script project
+
+# 3. Project Settings (⚙️) → Script ID
+
+# 4. Copy the ~57-character ID
+
+# 5. Paste as GitHub Secret "APPS_SCRIPT_ID"
+3. Workflow #1 — CI (Code Quality)
+File: .github/workflows/01-ci.yml
+Trigger: push (any branch) + PR
+
+Jobs:
+
+1.
+node-lint — Prettier + ESLint
+2.
+syntax-check — file size, line count, syntax (braces/parens), anti-pattern (Law 1, 3, 16), appsscript.json validation
+3.
+domain-check — 3-domain architecture verification
+4.
+review15-check — 16 Immutable Laws audit (try-catch count, logError usage, VERSION tags)
+Customize for new checks:
+
+yaml
+
+Copy
+syntax-check:
+
+  steps:
+
+    - name: 🔍 Validate Google Apps Script syntax
+
+      run: |
+
+        # Add your custom check here
+
+        for f in $(find src -name "*.gs" -type f); do
+
+          # e.g. check for deprecated function usage
+
+          if grep -nE 'appendRow\(' "$f"; then
+
+            echo "❌ $f uses appendRow in a loop — see Law 4"
+
+            exit 1
+
+          fi
+
+        done
+4. Workflow #2 — Deploy (clasp push)
+File: .github/workflows/02-deploy.yml
+Trigger: push to main (with paths filter) + manual dispatch
+
+Stages:
+
+1.
+preflight — check secrets, required files, show info
+2.
+deploy — flatten src/ → clasp push → create version → update Web App URL
+3.
+verify — pull from Apps Script, diff against pushed files
+Key gotchas (already fixed in the file):
+
+
+✅ Pin Node 20.x (Node 22+ has clasp "Premature close" bug)
+
+✅ Flatten src/ subdirs to root (Apps Script doesn't support folders)
+
+✅ Retry push 5 times (transient API errors)
+
+✅ Manual curl auth check before clasp push
+
+✅ Update Web App deployment to point at new version
+
+✅ Post-deploy: pull back and diff
+
+Manual deploy:
+
+bash
+
+Copy
+# Via GitHub UI: Actions → Deploy → Run workflow → version label
+
+# Or via gh CLI:
+
+gh workflow run 02-deploy.yml -f version="v6.0.045" -f force="false"
+Production Environment:
+
+yaml
+
+Copy
+environment: production  # requires manual approval in GitHub Settings
+Set up at Settings → Environments → production → Required reviewers.
+
+5. Workflow #3 — PR Validation
+File: .github/workflows/03-pr-validation.yml
+Trigger: PR opened/updated
+
+Checks:
+
+
+PR size (warn if >500 lines)
+
+Anti-pattern scan on changed files only
+
+Version bump (must include version change if 01_Config.gs touched)
+
+Conventional Commits title format
+
+Auto-label by size and type
+
+Auto-comment with checklist
+
+Conventional Commits enforcement:
+
+text
+
+Copy
+feat: เพิ่มฟีเจอร์ใหม่
+
+fix: แก้บั๊ก
+
+docs: อัปเดตเอกสาร
+
+refactor: ปรับโครงสร้างโค้ด
+
+chore: งานบำรุงรักษา
+
+test: เพิ่ม/แก้ test
+
+perf: ปรับประสิทธิภาพ
+
+ci: เปลี่ยน CI config
+Auto-label config in .github/labeler.yml:
+
+yaml
+
+Copy
+feature:
+
+  - 'src/**'
+
+bug:
+
+  - 'src/**/fix*'
+
+docs:
+
+  - 'docs/**'
+
+  - '*.md'
+6. Workflow #4 — Release (Auto-tag + GitHub Release)
+File: .github/workflows/04-release.yml
+Trigger: push to main (with paths filter on src/)
+
+Behavior:
+
+
+Reads current version from 01_Config.gs
+
+Collects commits since last tag
+
+Creates GitHub Release with auto-generated notes
+
+Auto-bumps patch version (X.Y.Z → X.Y.(Z+1))
+
+Manual release:
+
+bash
+
+Copy
+gh workflow run 04-release.yml -f version="v6.1.0"  # major bump
+7. Workflow #5 — Scheduled Health Check
+File: .github/workflows/05-scheduled-health.yml
+Trigger: every Monday 09:00 ICT (02:00 UTC)
+
+Checks:
+
+
+Project stats (file count, line count, size)
+
+VERSION tag consistency
+
+Commit activity in last 7 days
+
+Alert if anomalies detected
+
+Cron expression: 0 2 * * 1 (UTC)
+
+8. Workflow #6 — CodeQL
+File: .github/workflows/06-codeql.yml
+Trigger: push, PR, weekly
+
+Behavior: GitHub's semantic security analyzer. Goes beyond regex to find:
+
+
+SQL injection
+
+XSS
+
+Hardcoded credentials
+
+Insecure random
+
+Path traversal
+
+Results appear in Security tab. High+ severity = blocks PR merge.
+
+Note: CodeQL doesn't have a JS-for-Apps-Script pack out of the box; it uses the standard javascript pack which still catches most patterns.
+
+9. Workflow #7 — Doc-Code Sync (9 checks)
+File: .github/workflows/07-doc-code-sync.yml
+Trigger: push, PR, manual
+Helper scripts: .github/scripts/doc-code-sync-checks/check_01_*.sh ... check_09_*.sh
+
+The 9 checks:
+
+#	Check	Severity	What it does
+1	check_01_version.sh	❌ BLOCKING	VERSION in all .gs files matches 01_Config.APP_VERSION
+2	check_02_stats.sh	⚠️ WARN	File/line/function counts in docs match reality
+3	check_03_local_paths.sh	❌ BLOCKING	No file:/// absolute paths in docs
+4	check_04_phantom_deps.sh	❌ BLOCKING	No calls to undefined functions
+5	check_05_internal_links.sh	⚠️ WARN	All [link](file.md) targets exist
+6	check_06_verify_fixes.sh	❌ BLOCKING	Docs don't claim fixes that aren't actually fixed
+7	check_07_header_changelog.sh	⚠️ WARN	File header VERSION matches CHANGELOG entry
+8	check_08_header_dependencies.sh	⚠️ WARN	All files have DEPENDENCIES section in header
+9	check_09_doc_type_coverage.sh	⚠️ WARN	All .md files have <!-- DOC-TYPE: ... --> tag
+DOC-TYPE values: living (evolving) | frozen (won't change) | reference (lookup) | tutorial (learning)
+
+Adding a new check:
+
+1.
+Create .github/scripts/doc-code-sync-checks/check_10_mycheck.sh
+2.
+Make it executable (chmod +x)
+3.
+Add a step in 07-doc-code-sync.yml:
+yaml
+
+Copy
+- name: 📋 Check 10 — My Check
+
+  id: check10
+
+  continue-on-error: true  # or false for blocking
+
+  run: .github/scripts/doc-code-sync-checks/check_10_mycheck.sh
+4.
+Add to the summary table.
+10. Workflow #8 — Gitleaks
+File: .github/workflows/08-gitleaks.yml
+Trigger: push, PR, manual
+
+Behavior: Scans git history (full depth) for 800+ secret patterns. Blocks PR merge on any finding.
+
+Custom allowlist (.gitleaks.toml):
+
+toml
+
+Copy
+[allowlist]
+
+description = "LMDS allowlist"
+
+regexes = [
+
+  '''test_api_key_for_ci''',  # test fixtures
+
+  '''EXAMPLE_API_KEY'''         # documentation examples
+
+]
+11. Pre-commit Hook (recommended for devs)
+File: scripts/pre-commit.sh
+
+Install:
+
+bash
+
+Copy
+cp scripts/pre-commit.sh .git/hooks/pre-commit
+
+chmod +x .git/hooks/pre-commit
+Blocks on:
+
+
+❌ Hardcoded index (row[N])
+
+❌ Hardcoded secret
+
+⚠️ setValue in loop
+
+⚠️ Function >100 lines
+
+12. Debugging Common CI Failures
+"clasp: command not found"
+The workflow installs clasp via npm install -g @google/clasp. If failing:
+
+yaml
+
+Copy
+- name: 📦 Setup Node.js 20
+
+  uses: actions/setup-node@v4
+
+  with:
+
+    node-version: '20'  # MUST be 20.x, not 22+
+"Premature close" during clasp push
+Node version issue. Pin to 20.x (already done in 02-deploy.yml).
+
+"Permission denied" during push
+CLASPRC expired. Re-run clasp login --relogin, update GitHub Secret.
+
+"Script ID not found"
+APPS_SCRIPT_ID wrong. Verify at Apps Script Editor → Project Settings.
+
+Workflow doesn't trigger
+
+Check on: paths filter
+
+Check branch name matches
+
+GitHub Actions enabled: Settings → Actions → General → Allow all actions
+
+Diff mismatch after deploy
+
+Apps Script may have files not in repo
+
+Run clasp pull locally, commit any drift
+
+13. Adding a New Workflow (Recipe)
+yaml
+
+Copy
+name: 🔧 My New Workflow
+
+
+on:
+
+  push:
+
+    branches: [main]
+
+  pull_request:
+
+    branches: [main]
+
+  workflow_dispatch:
+
+
+concurrency:
+
+  group: my-workflow-${{ github.ref }}
+
+  cancel-in-progress: true
+
+
+jobs:
+
+  my-job:
+
+    name: 🎯 My Job
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 5
+
+
+    steps:
+
+      - name: 📥 Checkout
+
+        uses: actions/checkout@v4
+
+
+      - name: 🟢 Setup Node
+
+        uses: actions/setup-node@v4
+
+        with:
+
+          node-version: '20'
+
+
+      # ... your steps ...
+
+
+      - name: 📊 Summary
+
+        if: always()
+
+        run: |
+
+          echo "## My Workflow Results" >> $GITHUB_STEP_SUMMARY
+
+          echo "Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+Place at .github/workflows/NN-my-workflow.yml (NN = next number, but GitHub doesn't care about the prefix).
+
+14. Local Testing of CI Steps
+bash
+
+Copy
+# Lint (same as CI)
+
+npm run lint
+
+
+# Format check
+
+npm run format:check
+
+
+# Run a single doc-code check
+
+.github/scripts/doc-code-sync-checks/check_01_version.sh
+
+
+# Test clasp push (dry-run)
+
+clasp push --dry-run
+
+
+# Test deploy to a TEST script (not prod!)
+
+# Use a different .clasp.json with TEST_APPS_SCRIPT_ID
+15. Branch Protection Rules (Recommended)
+At Settings → Branches → Branch protection rules → main:
+
+
+✅ Require a pull request before merging
+
+✅ Require approvals: 1 (or 2 for production)
+
+✅ Dismiss stale pull request approvals when new commits are pushed
+
+✅ Require status checks to pass before merging:
+
+🔍 CI / Node / Prettier / ESLint
+
+🔍 CI / Syntax Check (.gs files)
+
+🔍 CI / Domain Architecture Check
+
+🔍 CI / REVIEW15 Compliance Check
+
+🔍 PR Validation
+
+🔗 Doc-Code Sync / Sync Verification
+
+🛡️ CodeQL / Analyze
+
+🔐 Gitleaks / Run Gitleaks
+
+
+✅ Require conversation resolution before merging
+
+✅ Require signed commits (optional but recommended)
+
+✅ Include administrators (enforce for everyone)
+
+❌ Allow force pushes
+
+❌ Allow deletions
+
+16. Environment Setup for Production
+At Settings → Environments → production:
+
+
+✅ Required reviewers: 1+ (e.g. tech lead)
+
+✅ Wait timer: 0 minutes (or 5 min for safety)
+
+✅ Deployment branches: only main
+
+✅ Environment secrets: CLASPRC, APPS_SCRIPT_ID (alternative to repo-level)
+
+17. Release Process (End-to-End)
+bash
+
+Copy
+# 1. Develop on a feature branch
+
+git checkout -b feat/my-feature
+
+# ... make changes ...
+
+git add . && git commit -m "feat: my feature"
+
+git push origin feat/my-feature
+
+
+# 2. Open PR → all 8 CI workflows run
+
+# 3. Get approval
+
+# 4. Merge to main (squash)
+
+
+# 5. Auto-triggers:
+
+#    - 02-deploy.yml: pushes to Apps Script
+
+#    - 04-release.yml: creates Git tag + GitHub Release
+
+#    - 05-scheduled-health.yml: runs next Monday
+
+
+# 6. Verify in production
+
+#    - WebApp URL works
+
+#    - checkSystemIntegrity() green
+
+#    - One Q_REVIEW decision golden path
+
+
+# 7. Monitor for 24h
+
+#    - SYS_LOG for FATAL entries
+
+#    - Telegram alerts (if configured)
+
+#    - Match rate didn't drop
+18. Disaster Recovery
+CI is broken and blocks all PRs
+bash
+
+Copy
+# Option A: Disable the failing workflow temporarily
+
+# Settings → Actions → Select workflow → Disable
+
+
+# Option B: Revert the last commit on main
+
+git revert <bad_sha>
+
+git push origin main
+
+# This re-triggers the workflow with the previous good state
+
+
+# Option C: Hot-fix the workflow directly on main
+
+# (only if Option A/B aren't viable)
+Production deploy went wrong
+bash
+
+Copy
+# 1. Rollback the Apps Script deployment
+
+clasp versions  # find the last good version number
+
+clasp deploy --versionNumber <good_version> --description "rollback"
+
+
+# 2. Revert the git commit
+
+git revert <bad_sha>
+
+git push origin main
+
+
+# 3. If data was corrupted, restore Sheet from backup
+
+# File → Version history → Restore
+
+# Then run invalidateAllGlobalCaches()
+CLASPRC leaked
+1.
+Revoke the OAuth token at https://myaccount.google.com/permissions
+2.
+Re-login: clasp login --relogin
+3.
+Update CLASPRC GitHub Secret
+4.
+Audit who had access
+19. Cost Optimization
+GAS itself is free, but the underlying services have costs:
+
+Service	Free tier	LMDS usage
+Apps Script execution	6 hr/day free	~30 min/day (well within)
+UrlFetch	20K calls/day	~5K/day (3-layer cache helps)
+Sheets API	20K calls/day	~2K/day (batch ops)
+Google Maps Geocoding	$5/1K calls (after free $200/mo)	~1K/day (RAM + Sheet cache)
+Gemini API	Free tier limits	DISABLED in prod
+Telegram Bot	Free	~10/day (alerts only)
+Watch the Maps API bill — it can spike if cache invalidation happens frequently.
+
+20. Integration with Other Skills
+
+lmds-architect — load first.
+
+lmds-code-reviewer — for code-level enforcement.
+
+lmds-predeploy-checker — for the local pre-deploy checklist.
+
+lmds-gas-best-practices — for the underlying GAS constraints.
+
+lmds-security-auditor — for the SEC-001→012 review that the CI partially automates.
