@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 27_RbacService.gs
  * LMDS V6.0 — Role-Based Access Control
  * ===================================================
@@ -8,13 +8,23 @@
  *   Enforce deny-by-default pattern in WebApp + menu actions (SEC-001)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 14_Utils
- *   CALLED BY: 22_WebApp (isAuthorizedDashboardUser_), 00_App (menu guard), 03_SetupSheets (isAuthorizedUser_), 12_ReviewService (reviewer check)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs            (ADMIN_EMAILS, RBAC role constants)
+ *     - 14_Utils.gs             (safeUiAlert_)
+ *   CALLS: (Invokes)
+ *     - logWarn()                               → 03_SetupSheets.gs
+ *     - safeUiAlert_()                          → 14_Utils.gs
+ *   EXPORTS TO:
+ *     - 00_App.gs (isAuthorizedUser_ menu guard)
+ *     - 22_WebApp.gs (isAuthorizedDashboardUser_)
+ *     - 03_SetupSheets.gs (isAuthorizedUser_ for protected setup)
+ *     - 12_ReviewService.gs (reviewer role check)
+ *   SHEETS ACCESSED:
+ *     - (none — reads Session.getActiveUser().getEmail() + ADMIN_EMAILS constant)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)

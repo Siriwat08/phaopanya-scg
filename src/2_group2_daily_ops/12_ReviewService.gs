@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 12_ReviewService.gs
  * LMDS V6.0 — Review Queue Service
  * ===================================================
@@ -9,13 +9,36 @@
  *   ตั้งแต่ V6.0.034 post-processor แยกไป 12b_ReviewReprocessor
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 10_MatchEngine (resolveAndPersist_ gateway), 10e_MatchResolvePersist, 07_PlaceService (getEnrichedGeoData), 11_TransactionService (upsertFactDelivery), 12b_ReviewReprocessor, 26_AuditTrailService, 27_RbacService
- *   CALLED BY: 00_App (openReviewQueue, applyAllPendingDecisions menu), 10_MatchEngine (enqueueReview), 22c_WebAppActions (submitReviewDecision, getReviewDetail), 22b_WebAppViews (Q_REVIEW view)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 10_MatchEngine.gs       (resolveAndPersist_ gateway)
+ *     - 10e_MatchResolvePersist.gs (resolve/persist implementation)
+ *     - 07_PlaceService.gs     (getEnrichedGeoData for review detail)
+ *     - 11_TransactionService.gs (upsertFactDelivery on decision)
+ *     - 12b_ReviewReprocessor.gs (reprocessReviewQueue)
+ *     - 26_AuditTrailService.gs (audit on decision)
+ *     - 27_RbacService.gs      (reviewer role check)
+ *   CALLS: (Invokes)
+ *     - resolveAndPersist_()                    → 10e_MatchResolvePersist.gs
+ *     - getEnrichedGeoData()                    → 07_PlaceService.gs
+ *     - upsertFactDelivery()                    → 11_TransactionService.gs
+ *     - reprocessReviewQueue()                  → 12b_ReviewReprocessor.gs
+ *     - recordAuditTrail()                      → 26_AuditTrailService.gs
+ *     - isAuthorizedUser_()                     → 27_RbacService.gs
+ *   EXPORTS TO:
+ *     - 00_App.gs (openReviewQueue, applyAllPendingDecisions menus)
+ *     - 10_MatchEngine.gs (enqueueReview)
+ *     - 22c_WebAppActions.gs (submitReviewDecision, getReviewDetail)
+ *     - 22b_WebAppViews.gs (Q_REVIEW view)
+ *   SHEETS ACCESSED:
+ *     - SHEET.Q_REVIEW          (Read/Write — enqueue + apply decision + list)
+ *     - SHEET.SOURCE            (Read — review detail enrichment)
+ *     - SHEET.FACT_DELIVERY     (Read — review detail)
+ *     - SHEET.SYS_NEGATIVE_SAMPLES (Write — record rejected matches as negative learning)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)

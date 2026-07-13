@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 10b_MatchDecision.gs
  * LMDS V6.0 — Match Decision Rules
  * ===================================================
@@ -9,13 +9,21 @@
  *   BACKWARD COMPATIBLE: makeMatchDecision() signature + return shape เหมือนเดิม 100%
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 14_Utils, 05_NormalizeService, 10_MatchEngine
- *   CALLED BY: 10_MatchEngine (makeMatchDecision dispatcher)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 14_Utils.gs (core)
+ *     - 05_NormalizeService.gs (normalize for similarity comparison)
+ *     - 10_MatchEngine.gs       (match context types — referenced)
+ *   CALLS: (Invokes)
+ *     - normalizePersonName() / normalizePlaceName() → 05_NormalizeService.gs
+ *     - levenshtein() / similarity helpers         → 14_Utils.gs
+ *   EXPORTS TO:
+ *     - 10_MatchEngine.gs (makeMatchDecision dispatcher)
+ *   SHEETS ACCESSED:
+ *     - (none — pure decision functions, no sheet access)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 11_TransactionService.gs
  * LMDS V6.0 — FACT_DELIVERY Transaction Service
  * ===================================================
@@ -9,13 +9,29 @@
  *   รวม upsertFactDelivery (INSERT/UPDATE), findFactRowByInvoice_, cache invalidation
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 08_GeoService, 14_Utils, 06_PersonService, 07_PlaceService
- *   CALLED BY: 10_MatchEngine (upsertFactDelivery), 12_ReviewService (upsertFactDelivery), 08_GeoService (invalidateGeoLatLngCache_), 04_SourceRepository (getProcessedInvoiceSet_), 19_Hardening, 22b_WebAppViews (FACT_DELIVERY view)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 14_Utils.gs (core)
+ *     - 08_GeoService.gs       (geo cache invalidation)
+ *     - 06_PersonService.gs, 07_PlaceService.gs (master UUID lookups)
+ *     - 03_SetupSheets.gs      (sheet access + log)
+ *   CALLS: (Invokes)
+ *     - resolvePerson() / resolvePlace()        → 06/07 services
+ *     - invalidateGeoLatLngCache_()             → 08_GeoService.gs
+ *     - logInfo() / logWarn()                   → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 10_MatchEngine.gs (upsertFactDelivery)
+ *     - 12_ReviewService.gs (upsertFactDelivery)
+ *     - 10e_MatchResolvePersist.gs (upsertFactDelivery on resolve)
+ *     - 04_SourceRepository.gs (getProcessedInvoiceSet_)
+ *     - 19_Hardening.gs (FACT stats)
+ *     - 22b_WebAppViews.gs (FACT_DELIVERY view)
+ *   SHEETS ACCESSED:
+ *     - SHEET.FACT_DELIVERY     (Read/Write — upsert + findFactRowByInvoice_ + cache)
+ *     - SHEET.SOURCE            (Read — sync status correlation)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)

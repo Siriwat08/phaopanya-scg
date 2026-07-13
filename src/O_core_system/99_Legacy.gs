@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 99_Legacy.gs
  * LMDS V6.0 — Deprecated/Legacy Functions (Compatibility Layer)
  * ===================================================
@@ -9,13 +9,20 @@
  *   ⚠️ ฟังก์ชันในไฟล์นี้จะถูกลบออกในอนาคต — ควรย้ายไปใช้ API ใหม่
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema
- *   CALLED BY: External legacy scripts (compatibility shims)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs (core constants/schema)
+ *     - 14_Utils.gs (utility helpers used by legacy shims)
+ *   CALLS: (Invokes)
+ *     - logWarn()                               → 03_SetupSheets.gs (deprecation notice)
+ *     - modern API replacements in 06/07/08 services (where shims forward calls)
+ *   EXPORTS TO:
+ *     - External legacy scripts (compatibility shims — not called by internal modules)
+ *   SHEETS ACCESSED:
+ *     - (none directly — shims forward to modern service APIs)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)

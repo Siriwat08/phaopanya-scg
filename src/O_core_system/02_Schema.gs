@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 02_Schema.gs
  * LMDS V6.0 — Sheet Schema Definitions
  * ===================================================
@@ -8,13 +8,21 @@
  *   เป็น Single Source of Truth สำหรับโครงสร้างข้อมูล
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config
- *   CALLED BY: 01_Config, 03_SetupSheets, All Service files
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs            (sheet name constants)
+ *   CALLS: (Invokes)
+ *     - (none — pure schema definition module)
+ *   EXPORTS TO:
+ *     - 03_SetupSheets.gs (SCHEMA for sheet/column creation)
+ *     - All Service files (06–21) — column index lookups via SCHEMA.SHEET.cols
+ *     - 19_Hardening.gs (schema validation rules)
+ *     - 22b_WebAppViews.gs / 22c_WebAppActions.gs (column references)
+ *   SHEETS ACCESSED:
+ *     - (none at runtime — defines schema metadata only; references SHEET.* constants from 01_Config)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 16_GeoDictionaryBuilder.gs
  * LMDS V6.0 — Geo Dictionary Builder (SYS_TH_GEO)
  * ===================================================
@@ -9,13 +9,24 @@
  *   รวม buildGeoDictionary + lookup helpers (postcode, area, province, district)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 20_ThGeoService
- *   CALLED BY: 00_App (buildGeoDictionary, populateGeoMetadata — menu), 07_PlaceService (lookupByPostcode, lookupPostcodeByArea, scanAddressAgainstDictionary), 20_ThGeoService (loadCachedGeoRows_)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 05_NormalizeService.gs (normalize tokens before dictionary lookup)
+ *     - 20_ThGeoService.gs     (loadCachedGeoRows_, populateGeoMetadata shared)
+ *   CALLS: (Invokes)
+ *     - normalizePlaceName()                    → 05_NormalizeService.gs
+ *     - loadCachedGeoRows_()                    → 20_ThGeoService.gs
+ *     - getSheetByNameSafe_()                   → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 00_App.gs (buildGeoDictionary, populateGeoMetadata menus)
+ *     - 07_PlaceService.gs (lookupByPostcode, lookupPostcodeByArea, scanAddressAgainstDictionary)
+ *     - 20_ThGeoService.gs (loadCachedGeoRows_ shared function)
+ *   SHEETS ACCESSED:
+ *     - SHEET.SYS_TH_GEO        (Read/Write — build dictionary + populate 16-col geo metadata)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)

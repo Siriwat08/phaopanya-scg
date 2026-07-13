@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 06_PersonService.gs
  * LMDS V6.0 — Person Master Service
  * ===================================================
@@ -9,13 +9,29 @@
  *   รวม CRUD + alias lookup + cache invalidation
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 05_NormalizeService, 14_Utils, 21_AliasService
- *   CALLED BY: 10_MatchEngine, 11_TransactionService, 17_SearchService, 19_Hardening, 21_AliasService, 22b_WebAppViews
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 05_NormalizeService.gs (normalizePersonName)
+ *     - 21_AliasService.gs     (resolveMasterUuidViaGlobalAlias, convertUuidToPersonId)
+ *   CALLS: (Invokes)
+ *     - normalizePersonName()                   → 05_NormalizeService.gs
+ *     - resolveMasterUuidViaGlobalAlias()       → 21_AliasService.gs
+ *     - logInfo() / logWarn()                   → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 10_MatchEngine.gs (createPersonIfMissing, findPersonCandidates)
+ *     - 11_TransactionService.gs (person lookups for FACT_DELIVERY)
+ *     - 17_SearchService.gs (person search)
+ *     - 19_Hardening.gs (countPersons preflight)
+ *     - 21_AliasService.gs (person lookups)
+ *     - 22b_WebAppViews.gs (dashboard counts)
+ *   SHEETS ACCESSED:
+ *     - SHEET.M_PERSON          (Read/Write — CRUD on person master)
+ *     - SHEET.M_PERSON_ALIAS    (Read — alias lookups)
+ *     - SHEET.FACT_DELIVERY     (Read — reference history for stats)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)

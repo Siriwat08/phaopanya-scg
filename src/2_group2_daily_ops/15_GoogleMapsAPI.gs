@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 15_GoogleMapsAPI.gs
  * LMDS V6.0 — Google Maps Custom Functions (@customFunction)
  * ===================================================
@@ -9,13 +9,23 @@
  *   มีระบบ Cache (CacheService 6 ชม.) เพื่อลดการเรียก API
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 14_Utils
- *   CALLED BY: 08_GeoService (geocode / reverse geocode), Google Sheets cells (DIST_FROM_WH, RESOLVED_ADDR @customFunction), 22c_WebAppActions (map data)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs            (ENV_MAPS_API_KEY, cache key prefixes)
+ *     - 14_Utils.gs             (parseLatLng, hashString for cache keys)
+ *   CALLS: (Invokes)
+ *     - parseLatLng()                           → 14_Utils.gs
+ *     - UrlFetchApp.fetch() (Google Maps Geocoding API — external)
+ *     - CacheService.getScriptCache() (Apps Script runtime)
+ *   EXPORTS TO:
+ *     - 08_GeoService.gs (geocode / reverse geocode)
+ *     - 22c_WebAppActions.gs (map data for MapAnalytics view)
+ *     - Google Sheets cells (DIST_FROM_WH, RESOLVED_ADDR @customFunction)
+ *   SHEETS ACCESSED:
+ *     - (none — uses CacheService + UrlFetchApp; results consumed by callers)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)

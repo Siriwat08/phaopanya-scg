@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 10d_MatchTestHarness.gs
  * LMDS V6.0 — Match Engine Test Harness
  * ===================================================
@@ -9,13 +9,26 @@
  *   ถูกเรียกโดย 00_App.gs menu (runTestMatchDryRun_UI / runTestMatchDryRunForceAll_UI)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 10_MatchEngine, 04_SourceRepository, 29_SnapshotTest
- *   CALLED BY: 00_App (Dry Run menu triggers), 29_SnapshotTest (baseline capture)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 10_MatchEngine.gs       (core match logic for dry run)
+ *     - 04_SourceRepository.gs (getAllSourceRowsForceAll)
+ *     - 29_SnapshotTest.gs      (baseline capture before dry run)
+ *   CALLS: (Invokes)
+ *     - runMatchEngine()                        → 10_MatchEngine.gs
+ *     - getAllSourceRowsForceAll()              → 04_SourceRepository.gs
+ *     - saveSnapshot()                          → 29_SnapshotTest.gs
+ *     - logInfo()                               → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 00_App.gs (runTestMatchDryRun_UI, runTestMatchDryRunForceAll_UI menus)
+ *     - 29_SnapshotTest.gs (baseline capture before dry run)
+ *     - 28_WebAppActions.gs (dry run action)
+ *   SHEETS ACCESSED:
+ *     - SHEET.TEST_MATCH_RESULTS (Write — append dry run results; Read — comparison)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 1 — Master data building (normalize, persons, places, geo, match engine, aliases)

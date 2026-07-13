@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 18_ServiceSCG.gs
  * LMDS V6.0 — SCG API Service (Group 2 Commander)
  * ===================================================
@@ -9,13 +9,29 @@
  *   เป็น Commander ของ Group 2 (Daily Ops)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 17_SearchService, 04_SourceRepository
- *   CALLED BY: 00_App (fetchDataFromSCGJWD, applyMasterCoordinatesToDailyJob, setSCGCookie_UI — menu)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 17_SearchService.gs    (applyMasterCoordinatesToDailyJob)
+ *     - 04_SourceRepository.gs (write SCG rows to SOURCE)
+ *   CALLS: (Invokes)
+ *     - applyMasterCoordinatesToDailyJob() / runLookupEnrichment() → 17_SearchService.gs
+ *     - appendSourceRows_() / updateSyncStatus_()  → 04_SourceRepository.gs
+ *     - UrlFetchApp.fetch() (SCG API — external)
+ *     - logInfo() / logWarn()                   → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 00_App.gs (fetchDataFromSCGJWD, applyMasterCoordinatesToDailyJob, setSCGCookie_UI menus)
+ *   SHEETS ACCESSED:
+ *     - SHEET.DAILY_JOB         (Read/Write — SCG rows + coordinates enrichment)
+ *     - SHEET.SOURCE            (Write — append fetched SCG rows)
+ *     - SHEET.FACT_DELIVERY     (Read — de-dup against existing)
+ *     - SHEET.INPUT             (Read — config: SCG cookie, endpoint)
+ *     - SHEET.EMPLOYEE          (Read — driver/employee correlation)
+ *     - SHEET.OWNER_SUMMARY / SHIPMENT_SUM (Write — summary rollups)
+ *     - SHEET.Q_REVIEW          (Read — pending review check)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)

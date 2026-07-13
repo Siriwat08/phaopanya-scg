@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 17_SearchService.gs
  * LMDS V6.0 — Search Service (The Bridger — Group 2)
  * ===================================================
@@ -9,13 +9,27 @@
  *   [REDESIGN v5.4.003] ShipToName-Only Policy — ไม่ fallback ใดๆ ถ้าหาไม่เจอ
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 21_AliasService (fastLookupByShipToName), 09_DestinationService, 20_ThGeoService, 06_PersonService, 07_PlaceService
- *   CALLED BY: 18_ServiceSCG (applyMasterCoordinatesToDailyJob), 00_App (runLookupEnrichment — menu), 22c_WebAppActions (searchLocations)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 21_AliasService.gs     (fastLookupByShipToName — Fast Track)
+ *     - 09_DestinationService.gs (destination lookup)
+ *     - 20_ThGeoService.gs     (geo enrichment)
+ *     - 06_PersonService.gs, 07_PlaceService.gs (master lookups)
+ *   CALLS: (Invokes)
+ *     - fastLookupByShipToName()                → 21_AliasService.gs
+ *     - resolveDestination()                    → 09_DestinationService.gs
+ *     - extractGeoFromAddress()                 → 20_ThGeoService.gs
+ *     - resolvePerson() / resolvePlace()        → 06/07 services
+ *   EXPORTS TO:
+ *     - 18_ServiceSCG.gs (applyMasterCoordinatesToDailyJob)
+ *     - 00_App.gs (runLookupEnrichment menu)
+ *     - 22c_WebAppActions.gs (searchLocations)
+ *   SHEETS ACCESSED:
+ *     - SHEET.DAILY_JOB         (Read/Write — read ShipToName, write LatLong_Actual + match status)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)

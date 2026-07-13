@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 26_AuditTrailService.gs
  * LMDS V6.0 — Audit Trail (Critical-Only Scope)
  * ===================================================
@@ -9,13 +9,22 @@
  *   Retention: keep last 90 days; older rows auto-pruned by cleanupAuditTrail_UI()
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils
- *   CALLED BY: 10_MatchEngine (alias writes), 12_ReviewService (applyReviewDecision), 21_AliasService (alias CRUD)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *   CALLS: (Invokes)
+ *     - getSheetByNameSafe_()                    → 03_SetupSheets.gs
+ *     - logInfo() / logWarn()                    → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 10_MatchEngine.gs (recordAuditTrail on alias writes)
+ *     - 12_ReviewService.gs (recordAuditTrail on applyReviewDecision)
+ *     - 21_AliasService.gs (recordAuditTrail on alias CRUD)
+ *     - 10e_MatchResolvePersist.gs (audit on persist)
+ *   SHEETS ACCESSED:
+ *     - SHEET.SYS_AUDIT_TRAIL    (Write — append audit entries; Read — cleanup/prune old rows)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 0 — Core infrastructure (config, schema, utils, audit, RBAC, web app gateway)

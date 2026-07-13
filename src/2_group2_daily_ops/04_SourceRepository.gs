@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 04_SourceRepository.gs
  * LMDS V6.0 — Source Data Repository
  * ===================================================
@@ -9,13 +9,24 @@
  *   รวม getUnprocessedRows, getAllSourceRows, buildSourceObj_, sync status updates
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 14_Utils, 03_SetupSheets
- *   CALLED BY: 10_MatchEngine (getUnprocessedRows, getAllSourceRows, buildSourceObj_, updateSyncStatus_), 00_App (runFullPipeline, runLoadSource), 10d_MatchTestHarness (getAllSourceRowsForceAll)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 14_Utils.gs, 03_SetupSheets.gs (core)
+ *   CALLS: (Invokes)
+ *     - getSheetByNameSafe_()                   → 03_SetupSheets.gs
+ *     - logInfo() / logWarn()                   → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 10_MatchEngine.gs (getUnprocessedRows, getAllSourceRows, buildSourceObj_, updateSyncStatus_)
+ *     - 00_App.gs (runFullPipeline, runLoadSource menus)
+ *     - 10d_MatchTestHarness.gs (getAllSourceRowsForceAll)
+ *     - 18_ServiceSCG.gs (source write from SCG API)
+ *     - 22b_WebAppViews.gs (SourceSheet view data)
+ *   SHEETS ACCESSED:
+ *     - SHEET.SOURCE            (Read/Write — primary source rows + sync status updates)
+ *     - SHEET.FACT_DELIVERY     (Read — getProcessedInvoiceSet_ to skip processed)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)

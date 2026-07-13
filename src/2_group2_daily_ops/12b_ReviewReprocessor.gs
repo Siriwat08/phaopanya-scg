@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.043
+ * VERSION: 6.0.044
  * FILE: 12b_ReviewReprocessor.gs
  * LMDS V6.0 — Q_REVIEW Post-Processor
  * ===================================================
@@ -9,13 +9,26 @@
  *   แยกออกจาก 12_ReviewService.gs เพื่อลดขนาดไฟล์ (audit 1.2)
  *
  * CHANGELOG:
- *   v6.0.037 (2026-07-13) — Header sync — no functional change
- *   v6.0.036 (2026-07-13) — SCG cookie security fix (fix readInputConfig_ caller)
- *   v6.0.035 (2026-07-12) — RE-APPLY branch number matching (lost in PR #93 rebase regression)
+ *   See /docs/CHANGELOG.md for full history.
  *
  * DEPENDENCIES:
- *   REQUIRES: 01_Config, 02_Schema, 03_SetupSheets, 14_Utils, 10_MatchEngine, 10e_MatchResolvePersist, 11_TransactionService, 12_ReviewService
- *   CALLED BY: 12_ReviewService (applyAllPendingDecisions → reprocessReviewQueue), 00_App (applyAllPendingDecisions menu)
+ *   REQUIRES: (Load Order)
+ *     - 01_Config.gs, 02_Schema.gs, 03_SetupSheets.gs, 14_Utils.gs (core)
+ *     - 10_MatchEngine.gs       (handleReview_ gateway)
+ *     - 10e_MatchResolvePersist.gs (resolve/persist implementation)
+ *     - 11_TransactionService.gs (upsertFactDelivery)
+ *     - 12_ReviewService.gs    (review state helpers)
+ *   CALLS: (Invokes)
+ *     - resolveAndPersist_()                    → 10e_MatchResolvePersist.gs
+ *     - upsertFactDelivery()                    → 11_TransactionService.gs
+ *     - logInfo() / logWarn()                   → 03_SetupSheets.gs
+ *   EXPORTS TO:
+ *     - 12_ReviewService.gs (applyAllPendingDecisions → reprocessReviewQueue)
+ *     - 00_App.gs (applyAllPendingDecisions menu)
+ *   SHEETS ACCESSED:
+ *     - SHEET.Q_REVIEW          (Read/Write — re-read pending rows, mark reprocessed)
+ *     - SHEET.FACT_DELIVERY     (Read — verify sync state)
+ *   TRIGGERS: None
  *
  * ARCHITECTURE:
  *   Group 2 — Daily operations (source repo, FACT_DELIVERY, Q_REVIEW, reports, Maps, SCG)
