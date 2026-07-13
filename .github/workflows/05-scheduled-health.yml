@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: 📊 ตรวจสุขภาพโปรเจกต์
         run: |
@@ -26,10 +26,10 @@ jobs:
           echo "📝 บรรทัดทั้งหมด: $total_lines บรรทัด"
           echo "💾 ขนาด: $total_size"
           echo ""
-          if [[ "$total_files" -eq 22 ]]; then
-            echo "  ✅ ไฟล์ครบ 22 (00-21)"
+          if [[ "$total_files" -ge 30 ]]; then
+            echo "  ✅ ไฟล์ครบ ($total_files ไฟล์ — คาดหวัง ≥30 หลัง Phase 3 split)"
           else
-            echo "  ⚠️  ไฟล์ไม่ครบ (ควรมี 22)"
+            echo "  ⚠️  ไฟล์น้อยกว่าคาด (ควรมี ≥30, พบ $total_files)"
           fi
           missing_version=$(for f in $(find src -name "*.gs" -type f); do
             if ! grep -q "VERSION:" "$f"; then
