@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # คู่มือการติดตั้ง ตั้งค่าการใช้งาน แก้ไขปัญหา สำหรับทีม IT
 ## ระบบ LMDS (Logistics Master Data System) V5.5
 

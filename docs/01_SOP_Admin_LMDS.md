@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # คู่มือการใช้งาน SOP สำหรับ ADMIN
 ## ระบบ LMDS (Logistics Master Data System) V5.5
 

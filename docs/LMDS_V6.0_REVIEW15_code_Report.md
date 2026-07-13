@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # 🔍 LMDS V5.5 — FIRST_AUDIT_REVIEW15 — Complete Audit Cycle Report
 
 **ระบบ:** LMDS (Logistics Master Data System) Current Version: V5.5.034 (DOC-CODE SYNC, 2026-07-03); audit originally performed on V5.5.004, last reviewed at V5.5.022

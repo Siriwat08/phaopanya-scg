@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # LMDS V5.5 — CRITICAL Fix Cycle Report
 
 > เอกสารสรุปการตรวจสอบ วางแผน ดำเนินการ และยืนยันการแก้ไข Issue สำคัญ 8 รายการ

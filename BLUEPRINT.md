@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # BLUEPRINT: LMDS Architecture V6.0.011 (Production Ready)
 
 > เอกสารสถาปัตยกรรมระบบ LMDS (Logistics Master Data System) ฉบับเต็ม

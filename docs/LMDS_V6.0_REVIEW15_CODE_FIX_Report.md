@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # LMDS V5.5.018 — REVIEW15 CLEAN CODE FIX Report
 
 > **Audit Cycle 15** | **วันที่:** 2026-06-21 | **Verdict:** ✅ ALL FIXED (14/14 issues)

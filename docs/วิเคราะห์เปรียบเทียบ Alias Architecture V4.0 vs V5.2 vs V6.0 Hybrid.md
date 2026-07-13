@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # วิเคราะห์เปรียบเทียบ Alias Architecture: V4.0 vs V5.2 vs V5.5 Hybrid
 
 > **เอกสารวิเคราะห์เปรียบเทียบสถาปัตยกรรม Alias ทั้ง 3 เวอร์ชัน**  

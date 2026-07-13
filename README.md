@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # LMDS V6.0 — Logistics Master Data System
 
 > **Master Data + Matching Engine สำหรับข้อมูลขนส่ง บน Google Apps Script + Google Sheets**

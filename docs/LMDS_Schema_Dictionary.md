@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # 📘 พจนานุกรมโครงสร้างข้อมูล (LMDS Schema Dictionary)
 **เวอร์ชันระบบ:** V5.5.034 (DOC-CODE SYNC)
 **วันที่สกัดข้อมูล:** 2026-07-03 ล่าสุดจากไฟล์ `01_Config.gs` และ `02_Schema.gs`

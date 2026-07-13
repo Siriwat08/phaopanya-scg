@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # Security Policy
 
 ## 🛡️ การรายงานช่องโหว่ด้านความปลอดภัย

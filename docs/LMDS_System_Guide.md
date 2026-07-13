@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: living -->
 # 📘 LMDS System Guide — คู่มือระบบฉบับเต็ม
 
 > **Logistics Master Data System (LMDS)** — ระบบจัดการข้อมูลหลักด้านโลจิสติกส์
