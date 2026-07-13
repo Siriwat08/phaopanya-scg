@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.045
+ * VERSION: 6.0.046
  * FILE: 20_ThGeoService.gs
  * LMDS V6.0 — Thai Geo Service
  * ===================================================
