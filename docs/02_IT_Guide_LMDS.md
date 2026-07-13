@@ -1,6 +1,6 @@
 <!-- DOC-TYPE: living -->
 # คู่มือการติดตั้ง ตั้งค่าการใช้งาน แก้ไขปัญหา สำหรับทีม IT
-## ระบบ LMDS (Logistics Master Data System) V5.5
+## ระบบ LMDS (Logistics Master Data System) V6.0
 
 ---
 
@@ -130,7 +130,7 @@ autoEnrichAliasesFromFactBatch_() → M_ALIAS + M_PERSON_ALIAS + M_PLACE_ALIAS
 
 ```
 1. สร้าง Google Spreadsheet ใหม่
-2. ตั้งชื่อ เช่น "LMDS Production V5.5"
+2. ตั้งชื่อ เช่น "LMDS Production V6.0"
 3. บันทึก Spreadsheet ID จาก URL
    (https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit)
 ```
@@ -206,7 +206,7 @@ autoEnrichAliasesFromFactBatch_() → M_ALIAS + M_PERSON_ALIAS + M_PLACE_ALIAS
 
 ```
 1. รีเฟรช Spreadsheet
-2. ตรวจสอบเมนู 🚚 LMDS V5.5 ปรากฏ
+2. ตรวจสอบเมนู 🚚 LMDS V6.0 ปรากฏ
 3. รัน System Integrity Check
 4. รัน Preflight Audit
 5. ตรวจสอบ SYS_LOG ว่าไม่มี Error
@@ -245,13 +245,13 @@ autoEnrichAliasesFromFactBatch_() → M_ALIAS + M_PERSON_ALIAS + M_PLACE_ALIAS
 |:---|:---|:---|
 | LAST_PIPELINE_RUN | 2025-01-15T10:30:00 | เวลา Pipeline ล่าสุด |
 | GEO_DICT_BUILT | true | สถานะการสร้าง Geo Dictionary |
-| SCHEMA_VERSION | 5.5.022 | เวอร์ชัน Schema ปัจจุบัน |
+| SCHEMA_VERSION | 6.0.044 | เวอร์ชัน Schema ปัจจุบัน |
 
 ---
 
 ## 4. โครงสร้างไฟล์และโมดูล
 
-### 4.1 ไฟล์ทั้ง 25 ไฟล์ (24 production + 1 legacy)
+### 4.1 ไฟล์ทั้ง 35 ไฟล์ (34 production + 1 legacy)
 
 | # | ไฟล์ | กลุ่ม | หน้าที่หลัก | ฟังก์ชันสาธารณะสำคัญ |
 |:---:|:---|:---|:---|:---|
@@ -266,8 +266,12 @@ autoEnrichAliasesFromFactBatch_() → M_ALIAS + M_PERSON_ALIAS + M_PLACE_ALIAS
 | 9 | 08_GeoService.gs | Master | Geo CRUD | resolveGeo, createGeoPoint, findNearbyGeos, loadAllGeos_ |
 | 10 | 09_DestinationService.gs | Master | Dest CRUD | resolveDestination, createDestination, getDestsByPersonId |
 | 11 | 10_MatchEngine.gs | Master | **Match Engine** | runMatchEngine, processOneRow, makeMatchDecision, executeDecision, resolveAndPersist_, autoEnrichAliasesFromFactBatch_ |
+| 11b | 10b_MatchDecision.gs | Master | Match Decision Rules | (decision rule helpers split from 10_MatchEngine) |
+| 11d | 10d_MatchTestHarness.gs | Master | Match Test Harness | runMatchTest |
+| 11e | 10e_MatchResolvePersist.gs | Master | Resolve & Persist | resolveAndPersistMerge_ (split from 10_MatchEngine) |
 | 12 | 11_TransactionService.gs | Daily | FACT_DELIVERY | upsertFactDelivery, invalidateFactInvoiceCache_ |
 | 13 | 12_ReviewService.gs | Daily | Q_REVIEW | applyReviewDecision, applyAllPendingDecisions, getReviewStats |
+| 13b | 12b_ReviewReprocessor.gs | Daily | Q_REVIEW Post-Processor | reprocessReviewQueue |
 | 14 | 13_ReportService.gs | Daily | Reports | buildFullQualityReport |
 | 15 | 14_Utils.gs | Core | Utilities | levenshteinDistance, diceCoefficient, haversineDistanceM, generateShortId, callGeminiAPI, normalizeInvoiceNo, callSpreadsheetWithRetry, batchUpdateEntityStats_, saveChunkedCache_/loadChunkedCache_, isAuthorizedUser_ |
 | 16 | 15_GoogleMapsAPI.gs | Daily | Maps API | geocodeAddress, reverseGeocode, cachedGeoLookup_, getRouteDistanceKm, clearMapsCache |
@@ -277,6 +281,15 @@ autoEnrichAliasesFromFactBatch_() → M_ALIAS + M_PERSON_ALIAS + M_PLACE_ALIAS
 | 20 | 19_Hardening.gs | Core | Hardening | runPreflightAudit, detectDoubleProcessing, generatePersonAliasesFromHistory, applySheetProtection_UI |
 | 21 | 20_ThGeoService.gs | Master | Thai Geo | extractGeoFromAddress, populateGeoMetadata, transformGeoMetadataRow_ |
 | 22 | 21_AliasService.gs | Master | Alias Mgmt | resolveMasterUuidViaGlobalAlias, fastLookupByShipToName, createGlobalAlias, assignMasterUuidIfMissing, MIGRATION_HybridAliasSystem |
+| 23 | 22_WebApp.gs | Core | WebApp Server | doGet, getAppHtml, include_ |
+| 24 | 22b_WebAppViews.gs | Core | WebApp Views | getDashboardData, getQReviewData, getFactDeliveryData |
+| 25 | 22c_WebAppActions.gs | Core | WebApp Actions | handleAction, applyDecisionFromWebApp |
+| 26 | 24_PipelineManager.gs | Pipeline Mgr | Smart Scheduling | runPipelinePreflight, scheduleNextRun, sendTelegramAlert |
+| 27 | 26_AuditTrailService.gs | Core | Audit Trail | logAuditEvent, getAuditTrail |
+| 28 | 27_RbacService.gs | Core | RBAC | isAuthorizedUser_, getUserRole, canPerformAction |
+| 29 | 28_WebAppActions.gs | Core | Mobile Menu | handleMobileAction, getMobileMenuData |
+| 30 | 29_SnapshotTest.gs | Core | Snapshot Test | runSnapshotTest, compareSnapshots |
+| 31 | 99_Legacy.gs | Legacy | Deprecated | (compatibility shims) |
 
 ### 4.2 Dependency Map (การพึ่งพาระหว่างโมดูล)
 
@@ -940,16 +953,16 @@ APP_CONST = {
 
 ---
 
-> **เอกสารฉบับนี้จัดทำสำหรับทีม IT ที่ดูแลระบบ LMDS V5.5**
+> **เอกสารฉบับนี้จัดทำสำหรับทีม IT ที่ดูแลระบบ LMDS V6.0**
 >
-> **เวอร์ชันเอกสาร:** 1.4 (ปรับปรุงตามโค้ดจริง V5.5.022 CONSISTENCY-SYNC) | **วันที่:** มิถุนายน 2569
+> **เวอร์ชันเอกสาร:** 1.5 (ปรับปรุงตามโค้ดจริง V6.0.044 DOC-CODE SYNC) | **วันที่:** 13 กรกฎาคม 2569
 >
 > **✅ หมายเหตุ — เวอร์ชันซิงค์แล้ว:**
 >
-> 1. **APP_VERSION ในโค้ด = `5.5.022`** — ตรงกันกับ System Guide แล้ว (ความแตกต่างเดิมระหว่าง 5.5.001 และ V5.5.014 ได้รับการแก้ไขแล้ว; V5.5.017 SECURITY-POSTFIX เพิ่ม SEC-008→012, OAuth scopes 10→6, isAuthorizedUser_ 13/13, Sheet Protection 8/19 + Q_REVIEW range, Production Readiness 95%→97%)
+> 1. **APP_VERSION ในโค้ด = `6.0.044`** — ตรงกันกับ System Guide แล้ว (V5.5.017 SECURITY-POSTFIX เพิ่ม SEC-008→012, OAuth scopes 10→6, isAuthorizedUser_ 13/13, Sheet Protection 8/19 + Q_REVIEW range, Production Readiness 95%→97%)
 > 2. **Search Service ในโค้ดใช้ 2 Tier เท่านั้น** (Tier 0: M_ALIAS Fast Track + Tier 1: resolvePerson → getDestsByPersonId + NOT_FOUND) ตามนโยบาย ShipToName-Only v5.4.003 — นี่คือการใช้งานจริง (System Guide ฉบับเก่าอธิบาย 6 Tier ซึ่งเป็นแบบเก่าที่ถูกลบออกไปแล้ว)
 > 3. **ID Format ในโค้ด** ใช้ prefix + 12 hex chars (เช่น Person = `PA3F7B2C9D0E1`) แต่ System Guide แสดงแบบสั้น 6 chars (เช่น `PS3k7x`)
 > 4. **SYS_LOG auto-clean** ในโค้ด trigger เมื่อเกิน 5,001 แถว และเก็บไว้ 1,000 แถวล่าสุด (ไม่ใช่ 5,000 ตามที่ System Guide เขียน)
 > 5. **SHEET count** ในโค้ดมี 19 entries (หลัง V5.5.013 ลบ MAPS_CACHE ออก; V5.5.014 เพิ่ม 2 cols ใน FACT_DELIVERY/SOURCE/DAILY_JOB)
 >
-> **สถิติระบบ:** ฟังก์ชัน 385 | บรรทัดโค้ด ~16,545 | IDX sets 16 | Compliance 16/16 COMPLIANT (Rule 16: Security-First Design, SEC-001→012, 18 audit cycles, 116 issues fixed, 97% Production Readiness, OAuth scopes 10→6, isAuthorizedUser_ 13/13, Sheet Protection 8/19 + Q_REVIEW range)
+> **สถิติระบบ:** ฟังก์ชัน 535 | บรรทัดโค้ด ~27,213 | IDX sets 16 | Compliance 16/16 COMPLIANT (Rule 16: Security-First Design, SEC-001→012, 18 audit cycles, 116 issues fixed, 97% Production Readiness, OAuth scopes 10→6, isAuthorizedUser_ 13/13, Sheet Protection 8/19 + Q_REVIEW range)

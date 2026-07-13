@@ -1,5 +1,5 @@
 <!-- DOC-TYPE: living -->
-# 📋 กฎการเขียนโค้ด LMDS V5.5 (16 ข้อ — ฉบับสมบูรณ์และละเอียด)
+# 📋 กฎการเขียนโค้ด LMDS V6.0 (16 ข้อ — ฉบับสมบูรณ์และละเอียด)
 
 > **เป้าหมาย:** โค้ดสะอาด บำรุงรักษาง่าย ปลอดภัย ทำงานได้จริงใน GAS (Time Limit 6 นาที, Shared Global Scope) และทีมพัฒนาสามารถทำงานร่วมกันได้โดยไม่ชนกัน
 
@@ -700,7 +700,7 @@ function oldFunction() {
 
 ให้ AI ตรวจสอบก่อนส่งโค้ดทุกครั้ง:
 
-> ✅ **FIRST_AUDIT_REVIEW15 + REFACTOR (2026-06-12) ได้ดำเนินการเสร็จสิ้นแล้ว** — กฎข้อ 1, 2, 3, 5, 7, 9, 13 ที่เคยมีการละเมิด ได้รับการแก้ไขครบถ้วนแล้ว (SHOULD_FIX/NICE_TO_HAVE → PASS) ผล Compliance: 8/16 PASS → **16/16 COMPLIANT** (+8). REFACTOR cycle: 21 REF issues, 16 files changed. APP_VERSION = '5.5.022', SCHEMA_VERSION = '5.5.022' (post-CONSISTENCY-SYNC (V5.5.022), 14 audit cycles, 116 issues fixed, 97% production readiness).
+> ✅ **FIRST_AUDIT_REVIEW15 + REFACTOR (2026-06-12) ได้ดำเนินการเสร็จสิ้นแล้ว** — กฎข้อ 1, 2, 3, 5, 7, 9, 13 ที่เคยมีการละเมิด ได้รับการแก้ไขครบถ้วนแล้ว (SHOULD_FIX/NICE_TO_HAVE → PASS) ผล Compliance: 8/16 PASS → **16/16 COMPLIANT** (+8). REFACTOR cycle: 21 REF issues, 16 files changed. APP_VERSION = '6.0.044', SCHEMA_VERSION = '6.0.044' (DOC-CODE SYNC, 18 audit cycles, 116 issues fixed, 97% production readiness).
 
 ### Syntax & Naming
 - [ ] ใช้ `camelCase` สำหรับชื่อทั้งหมด
@@ -778,7 +778,7 @@ function oldFunction() {
 
 ---
 
-> **เวอร์ชัน:** 5.5.017 (post-CONSISTENCY-SYNC (V5.5.022)) — รวมจาก 2 ไฟล์เดิม + ปรับปรูงข้อ 1.1 + อัปเดตล่าสุด V5.5.017 (SEC-001→012 ครบ, 14 audit cycles, 97% readiness)
-> **APP_VERSION:** '5.5.022' | **SCHEMA_VERSION:** '5.5.022'
-> **อัปเดตล่าสุด:** 2026-06-21
+> **เวอร์ชัน:** 6.0.044 (DOC-CODE SYNC) — รวมจาก 2 ไฟล์เดิม + ปรับปรูงข้อ 1.1 + อัปเดตล่าสุด V6.0.044 (SEC-001→012 ครบ, 18 audit cycles, 97% readiness)
+> **APP_VERSION:** '6.0.044' | **SCHEMA_VERSION:** '6.0.044'
+> **อัปเดตล่าสุด:** 2026-07-13
 > **ตัวอย่างโค้ดทั้งหมด:** Google Apps Script (JavaScript)

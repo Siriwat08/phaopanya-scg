@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.044
+ * VERSION: 6.0.045
  * FILE: 01_Config.gs
  * LMDS V6.0 — System Configuration & Constants
  * ===================================================
@@ -39,8 +39,8 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.044';
-const SCHEMA_VERSION = '6.0.044';
+const APP_VERSION = '6.0.045';
+const SCHEMA_VERSION = '6.0.045';
 const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs

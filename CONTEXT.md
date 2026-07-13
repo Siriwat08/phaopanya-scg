@@ -1,6 +1,6 @@
 <!-- DOC-TYPE: living -->
 # 🚀 Project Overview
-**Logistics Master Data System (LMDS) V6.0.011** คือระบบจัดการฐานข้อมูลหลักด้านการขนส่ง (Master Data & Matching Engine + RBAC + WebApp) เป็น Full-stack solution บน Google Apps Script + Google Sheets
+**Logistics Master Data System (LMDS) V6.0.044** คือระบบจัดการฐานข้อมูลหลักด้านการขนส่ง (Master Data & Matching Engine + RBAC + WebApp) เป็น Full-stack solution บน Google Apps Script + Google Sheets
 
 ---
 
@@ -14,7 +14,7 @@
 ---
 
 # 📂 Architecture & Domain Separation
-โปรเจกต์มี **26 ไฟล์** (24 production + 1 legacy `99_Legacy.gs` + 1 investigation `scripts/investigations/`) — รวม 449 ฟังก์ชัน ~22,424 บรรทัด
+โปรเจกต์มี **35 ไฟล์ `.gs`** (34 production + 1 legacy `99_Legacy.gs`) + 19 ไฟล์ `.html` — รวม 535 ฟังก์ชัน ~27,213 บรรทัด (.gs only)
 
 ### Domain Groups
 
@@ -142,7 +142,7 @@ clasp push
 
 # 🎯 Current Focus & Known Issues
 
-- **Focus:** V6.0.011 Production Ready — โค้ด ↔ เอกสารตรง 100% — 18 audit cycles complete
+- **Focus:** V6.0.044 Production Ready — โค้ด ↔ เอกสารตรง 100% — 18 audit cycles complete
 - **Status:** 96% Ready (Roadmap 68% → Target 100% by Phase completion)
 - **Pending Features:** SYS_AUDIT_TRAIL (design ready), Semantic Note Parser (design ready)
 - **Gotchas:** ถ้าระบบขึ้นสีแดง `NOT_FOUND` ตอนโหลดงาน มักเกิดจาก Schema หัวคอลัมน์ในชีตไม่ตรงกับ `SCHEMA` ใน 02_Schema.gs
@@ -153,7 +153,7 @@ clasp push
 
 ห้ามเขียนหรือแก้ไขโค้ดใดๆ จนกว่าคุณจะได้อ่านและทำความเข้าใจกฎทั้ง 16 ข้อ
 
-1. ให้ดูสรุปกฎแบบตารางที่ไฟล์: [`docs/📋 กฎการเขียนโค้ด LMDS V5.5.md`](docs/📋%20กฎการเขียนโค้ด%20LMDS%20V5.5.md)
+1. ให้ดูสรุปกฎแบบตารางที่ไฟล์: [`docs/📋 กฎการเขียนโค้ด LMDS V6.0.md`](docs/📋%20กฎการเขียนโค้ด%20LMDS%20V6.0.md)
 2. ให้ดูคำอธิบายเชิงลึกและข้อห้าม (Anti-patterns) ที่ไฟล์: [`docs/Code Reviewer สำหรับโปรเจกต์ LMDS.md`](docs/Code%20Reviewer%20สำหรับโปรเจกต์%20LMDS.md)
 3. หากคุณละเมิดกฎแม้แต่ข้อเดียว (เช่น แอบใช้ Hardcode Index, แอบตัดทอนโค้ดด้วยจุด..., หรือเก็บ secret ใน Cell) — ระบบจะ **REJECT** Pull Request ทันที
 4. **กฎข้อ 16 (Security-First Design):** ห้ามเก็บ Secret ใน Cell, Destructive Op ต้องมี AuthZ Guard, PII ต้อง Masking, API Key ส่งผ่าน Header

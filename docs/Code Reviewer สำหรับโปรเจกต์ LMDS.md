@@ -1,6 +1,6 @@
 <!-- DOC-TYPE: living -->
 # [SYSTEM] LMDS Project — Master Review & SOP Prompt
-**Version:** V5.5.034 (DOC-CODE SYNC) | **อัปเดตล่าสุด:** 2026-07-03
+**Version:** V6.0.044 (DOC-CODE SYNC) | **อัปเดตล่าสุด:** 2026-07-13
 
 คุณคือ AI Expert Code Reviewer สำหรับโปรเจกต์ "LMDS" ซึ่งเป็น Google Apps Script (GAS) Project งานของคุณคือตรวจสอบโค้ดอย่างเข้มงวด ยึดถือหลักฐานเป็นที่ตั้ง และปฏิบัติตามโครงสร้างคำสั่งอย่างเคร่งครัด
 
@@ -277,4 +277,4 @@
 
 ---
 
-*เอกสารนี้อัปเดตล่าสุดเมื่อ: 2026-07-03 | Version: V5.5.034 (DOC-CODE SYNC, 18 audit cycles, 116 issues fixed)*
+*เอกสารนี้อัปเดตล่าสุดเมื่อ: 2026-07-13 | Version: V6.0.044 (DOC-CODE SYNC, 18 audit cycles, 116 issues fixed)*

@@ -5,13 +5,13 @@
 
 | รายการ | ค่า |
 |--------|-----|
-| **เวอร์ชัน** | 6.0.011 (Production Ready — 28 files, 98% implementation) |
-| **Last Updated** | 2026-07-09 |
+| **เวอร์ชัน** | 6.0.044 (Production Ready — 35 .gs files, 19 .html files) |
+| **Last Updated** | 2026-07-13 |
 | **Platform** | Google Apps Script + Google Sheets |
 | **Core Engine** | MatchEngine V6.0 with Hybrid Alias Architecture + RBAC |
-| **Total Files** | 26 `.gs` files (24 production + 1 legacy `99_Legacy.gs` + 1 investigation script under `scripts/`) |
-| **Total Lines** | ~22,424 (non-blank) |
-| **Total Functions** | 449 |
+| **Total Files** | 35 `.gs` files (34 production + 1 legacy `99_Legacy.gs`) + 19 `.html` files |
+| **Total Lines** | ~27,213 (.gs only, non-blank) |
+| **Total Functions** | 535 |
 | **Total Sheets** | 19 |
 | **Total IDX Sets** | 16 |
 | **SCHEMA Definitions** | 19 (ลบ MAPS_CACHE ใน V5.5.013) |
@@ -25,7 +25,7 @@
 
 LMDS (Logistics Master Data System) V6.0 คือระบบ Master Data + Matching Engine สำหรับงานขนส่งที่ได้รับการปรับปรุงครบวงจร:
 
-### สถานะ V6.0.006
+### สถานะ V6.0.044
 - ✅ **Phase 1-3 (Data + Matching + Learning)**: 100% Complete
 - ✅ **Phase 4 (WebApp)**: ~80% Complete (Dashboard + Q_REVIEW + FACT + Search + Maps)
 - ✅ **Phase 7 (RBAC)**: 100% Complete (27_RbacService.gs)
@@ -55,14 +55,17 @@ LMDS (Logistics Master Data System) V6.0 คือระบบ Master Data + Mat
 
 ## Architecture Overview — 4 Domain Groups + Legacy
 
-### 🟩 Group 1 — Master DB & Matching Engine (9 files)
+### 🟩 Group 1 — Master DB & Matching Engine (13 files)
 ไฟล์จัดการ Master Data — Normalize, CRUD Services, Matching
 - `05_NormalizeService.gs` — Thai data cleaning (80+ prefixes)
 - `06_PersonService.gs` — Person CRUD + 5-strategy search
 - `07_PlaceService.gs` — Place CRUD + address enrichment
 - `08_GeoService.gs` — Geo CRUD + proximity analysis
 - `09_DestinationService.gs` — Trinity Intersection
-- `10_MatchEngine.gs` — 8-Rules matching engine (1,374 lines)
+- `10_MatchEngine.gs` — 8-Rules matching engine core
+- `10b_MatchDecision.gs` — Match decision rules (split from 10_MatchEngine)
+- `10d_MatchTestHarness.gs` — Match engine test harness
+- `10e_MatchResolvePersist.gs` — Resolve & persist for Q_REVIEW
 - `16_GeoDictionaryBuilder.gs` — Thai geo dictionary
 - `20_ThGeoService.gs` — Thai geo extraction
 - `21_AliasService.gs` — Hybrid alias system
@@ -77,7 +80,7 @@ LMDS (Logistics Master Data System) V6.0 คือระบบ Master Data + Mat
 - `17_SearchService.gs` — Search bridge (Group2→Group1)
 - `18_ServiceSCG.gs` — SCG API client
 
-### ⚙️ System & Core (7 files + 1 legacy + 1 investigation)
+### ⚙️ System & Core (13 files + 1 legacy)
 ระบบหลัก — Config, Schema, Setup, WebApp, Hardening
 - `00_App.gs` — Entry points + menus + orchestration
 - `01_Config.gs` — Configuration + constants
@@ -86,8 +89,13 @@ LMDS (Logistics Master Data System) V6.0 คือระบบ Master Data + Mat
 - `14_Utils.gs` — Shared utilities (string, geo, AI, cache)
 - `19_Hardening.gs` — Security + audit checks
 - `22_WebApp.gs` — Dashboard server + API endpoints
+- `22b_WebAppViews.gs` — Web App view data providers
+- `22c_WebAppActions.gs` — Web App actions
 - `24_PipelineManager.gs` — Smart scheduling + alerts
-- `27_RbacService.gs` — Role-based access control (NEW in V6.0)
+- `26_AuditTrailService.gs` — Audit trail (critical-only)
+- `27_RbacService.gs` — Role-based access control
+- `28_WebAppActions.gs` — Web App actions server (mobile menu)
+- `29_SnapshotTest.gs` — Snapshot test harness
 - `99_Legacy.gs` — Deprecated functions
 
 ---
@@ -97,11 +105,11 @@ LMDS (Logistics Master Data System) V6.0 คือระบบ Master Data + Mat
 | Law | Status | Notes |
 |-----|:------:|-------|
 | 1. Clean Code | ✅ PASS | ESLint 0 errors, Prettier 100% |
-| 2. Single Responsibility | ✅ PASS | 449 functions, avg 50 lines |
+| 2. Single Responsibility | ✅ PASS | 535 functions, avg 50 lines |
 | 3. No Hardcode Index | ✅ PASS | All use `*_IDX` constants |
 | 4. Batch Operations | ✅ PASS | 0 getValue/setValue in loops |
 | 5. Checkpoint & Resume | ✅ PASS | Time Guard + auto-resume |
-| 6. Document Dependencies | ✅ PASS | All 26 files have DEPENDENCIES header |
+| 6. Document Dependencies | ✅ PASS | All 35 files have DEPENDENCIES header |
 | 7. No Phantom Calls | ✅ PASS | CacheService.removeAll() only |
 | 8. Namespace Pattern | ✅ PASS | Module prefix + `_` suffix |
 | 9. No Global State | ✅ PASS | Centralized chunked cache |
@@ -228,8 +236,8 @@ clasp push
 - [ ] Security audit passed (SEC-001→012)
 
 ✅ **Documentation**
-- [ ] README updated to V6.0.006
-- [ ] CHANGELOG.md has [6.0.006] entry
+- [ ] README updated to V6.0.044
+- [ ] CHANGELOG.md has [6.0.044] entry
 - [ ] BLUEPRINT.md version sync
 
 ✅ **Configuration**
@@ -256,7 +264,7 @@ claspa push --dry-run
 clasp push
 
 # 4. Deploy WebApp
-clasp deploy --description "V6.0.006 production"
+clasp deploy --description "V6.0.044 production"
 
 # 5. Verify in Google Sheet
 # - Menu: 🟧 ระบบ & ตั้งค่า → ✅ ตรวจสอบ System Integrity
@@ -298,6 +306,6 @@ clasp deploy --description "V6.0.006 production"
 
 ---
 
-**Last Updated:** 2026-07-07
+**Last Updated:** 2026-07-13
 **Maintained By:** Engineering Team
 **Status:** ✅ Production Ready (96%)
