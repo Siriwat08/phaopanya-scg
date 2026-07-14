@@ -44,11 +44,8 @@ jobs:
         uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc  # v2 pinned to full SHA (SonarCloud S7637)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional: use a custom config for allowlist
-          # GITLEAKS_CONFIG: .gitleaks.toml
-        with:
-          # Scan only changed files in PR mode (faster)
-          scan-mode: ${{ github.event_name == 'pull_request' && 'diff' || 'noscan' }}
+          # Project-specific allowlist (sonar-project.properties false positive, etc.)
+          GITLEAKS_CONFIG: .gitleaks.toml
 
       - name: 📊 Summary
         if: always()
