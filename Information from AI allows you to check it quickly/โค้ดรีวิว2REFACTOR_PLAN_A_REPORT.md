@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # Refactor Plan A — แตก 10_MatchEngine.gs (Execution Report)
 
 ## สิ่งที่ทำเสร็จแล้ว
