@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.046
+ * VERSION: 6.0.048
  * FILE: 22_WebApp.gs
  * LMDS V6.0 — Web App Server (Dashboard)
  * ===================================================
@@ -79,7 +79,7 @@ function doGet(e) {
 
     return template
       .evaluate()
-      .setTitle('LMDS V5.5 Dashboard')
+      .setTitle('LMDS V6.0 Dashboard')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setFaviconUrl('https://www.gstatic.com/images/branding/product/1x/sheets_64dp.png')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);

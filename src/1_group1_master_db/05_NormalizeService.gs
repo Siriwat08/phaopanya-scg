@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.046
+ * VERSION: 6.0.048
  * FILE: 05_NormalizeService.gs
  * LMDS V6.0 — Thai Name & Place Normalization
  * ===================================================
