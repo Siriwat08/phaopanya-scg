@@ -1,0 +1,25 @@
+# 🔐 Gitleaks Configuration — LMDS Project
+#
+# This file extends Gitleaks' default rule set with project-specific allowlists.
+# Default rules (800+ patterns) are still active — this only adds exceptions.
+#
+# Format: https://github.com/gitleaks/gitleaks#configuration
+# Gitleaks 8.x uses `[[allowlists]]` (array of tables, plural).
+
+[[allowlists]]
+description = "SonarCloud project config — sonar.projectKey is a public project identifier, not a secret"
+
+# `sonar.projectKey=Siriwat08_phaopanya-scg` triggers `generic-api-key`
+# because of high entropy. This is NOT a secret — it's a public project
+# identifier visible on:
+# https://sonarcloud.io/project/overview?id=Siriwat08_phaopanya-scg
+paths = [
+  '''sonar-project\.properties$''',
+]
+
+# Also allowlist the specific SonarCloud key/organization values, in case
+# they appear in documentation or CI scripts.
+regexes = [
+  '''sonar\.projectKey=.*''',
+  '''sonar\.organization=.*''',
+]
