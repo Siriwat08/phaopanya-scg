@@ -8,6 +8,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Cycle | Issues |
 |---------|------|-------|--------|
+| 6.0.048 | 2026-07-14 | QUICK WINS | V5.5→V6.0 branding in UI (3 files) + CHANGELOG sync 6.0.039-048 + README 6.0.044→6.0.048 + remove package-lock from .gitignore + Jest/Playwright→Snapshot Test Harness |
+| 6.0.047 | 2026-07-14 | DOC-TYPE FIX | Add DOC-TYPE: historical to 15 .md files in 'Information from AI' folder (check_09 regression fix) |
+| 6.0.046 | 2026-07-13 | SKILLS SUITE | Add 11 LMDS skills (.skills/) + exports (Claude/Gemini/Universal) + SKILLS_INSTALL/README docs |
+| 6.0.045 | 2026-07-13 | LIVING DOCS SYNC | Sync 23 living .md files: version 6.0.044, 35 files, 535 functions, 27,213 lines, 8 workflows, 9 checks |
+| 6.0.044 | 2026-07-13 | DETAILED HEADERS | .gs headers with REQUIRES/CALLS/EXPORTS TO/SHEETS ACCESSED/TRIGGERS/ARCHITECTURE (35 files) |
+| 6.0.043 | 2026-07-13 | DOC-TYPE SYSTEM | DOC-TYPE tags (39 .md files: 23 living + 16 historical) + check_09_doc_type_coverage.sh |
+| 6.0.042 | 2026-07-13 | CLEANUP | Remove 'คำแนะนำ' folder (recommendations implemented in V6.0.041) |
+| 6.0.041 | 2026-07-13 | CI IMPROVEMENTS | check_07/08 + Gitleaks workflow + fix actions/checkout@v7→v4 + eslint-plugin-googleappsscript + health check file count 22→≥30 |
+| 6.0.040 | 2026-07-13 | CODEQL FIX | Fix returnless function in 28_WebAppActions.gs (CodeQL #52-#55) |
+| 6.0.039 | 2026-07-13 | PROCESS IMPROVEMENTS | check_06_verify_fixes.sh (8 audit fix indicators) + PR template (grep verify + rebase safety) |
 | 6.0.038 | 2026-07-13 | DOCS SYNC | Rename V5.5 docs → V6.0 + CHANGELOG sync V6.0.012-038 |
 | 6.0.037 | 2026-07-13 | HEADER SYNC | Unified header format for all 35 .gs files (VERSION/PURPOSE/CHANGELOG/DEPENDENCIES/ARCHITECTURE) |
 | 6.0.036 | 2026-07-13 | SCG COOKIE FIX | Fix readInputConfig_ to call getSCGCookie_ (PropertiesService primary) + setSCGCookie_UI writes PropertiesService + clears cell |

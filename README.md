@@ -5,7 +5,7 @@
 
 | รายการ | ค่า |
 |--------|-----|
-| **เวอร์ชัน** | 6.0.044 (Production Ready — 35 .gs files, 19 .html files) |
+| **เวอร์ชัน** | 6.0.048 (Production Ready — 35 .gs files, 19 .html files) |
 | **Last Updated** | 2026-07-13 |
 | **Platform** | Google Apps Script + Google Sheets |
 | **Core Engine** | MatchEngine V6.0 with Hybrid Alias Architecture + RBAC |
@@ -25,7 +25,7 @@
 
 LMDS (Logistics Master Data System) V6.0 คือระบบ Master Data + Matching Engine สำหรับงานขนส่งที่ได้รับการปรับปรุงครบวงจร:
 
-### สถานะ V6.0.044
+### สถานะ V6.0.048
 - ✅ **Phase 1-3 (Data + Matching + Learning)**: 100% Complete
 - ✅ **Phase 4 (WebApp)**: ~80% Complete (Dashboard + Q_REVIEW + FACT + Search + Maps)
 - ✅ **Phase 7 (RBAC)**: 100% Complete (27_RbacService.gs)
@@ -236,8 +236,8 @@ clasp push
 - [ ] Security audit passed (SEC-001→012)
 
 ✅ **Documentation**
-- [ ] README updated to V6.0.044
-- [ ] CHANGELOG.md has [6.0.044] entry
+- [ ] README updated to V6.0.048
+- [ ] CHANGELOG.md has [6.0.048] entry
 - [ ] BLUEPRINT.md version sync
 
 ✅ **Configuration**
@@ -264,7 +264,7 @@ claspa push --dry-run
 clasp push
 
 # 4. Deploy WebApp
-clasp deploy --description "V6.0.044 production"
+clasp deploy --description "V6.0.048 production"
 
 # 5. Verify in Google Sheet
 # - Menu: 🟧 ระบบ & ตั้งค่า → ✅ ตรวจสอบ System Integrity
@@ -302,7 +302,7 @@ clasp deploy --description "V6.0.044 production"
 - **License:** MIT
 - **Code Style:** 16 Immutable Laws (enforced)
 - **Security:** OWASP Top 10 + custom checklist
-- **Testing:** Jest + Playwright (E2E)
+- **Testing:** Snapshot Test Harness (in-GAS) + Match Test Harness (Dry Run)
 
 ---
 
