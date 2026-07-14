@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 🔍 การวิเคราะห์โค้ด LMDS V6.0 — Logistics Master Data System
 
 สวัสดีครับ ผมได้อ่านโค้ดทั้งโปรเจกต์ (phaopanya-scg-main) ครบทั้ง 35 ไฟล์ .gs (~27,213 บรรทัด) และ 19 ไฟล์ .html (~6,959 บรรทัด) รวมทั้งอ่าน skill file lmds-supreme-engineer.skill เพื่อเข้าใจ context และกฎเหล็กที่ทีมยึดถือแล้ว จะสวมบทบาท LMDS Supreme AI Engineer ให้ครบทั้ง 5 หัวข้อตามที่ขอ

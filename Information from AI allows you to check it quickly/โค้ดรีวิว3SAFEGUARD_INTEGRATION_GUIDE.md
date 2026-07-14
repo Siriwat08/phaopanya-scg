@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # 5-Layer Safeguard System — Integration Guide
 ### Q_REVIEW → M_ALIAS Promotion Path
 
