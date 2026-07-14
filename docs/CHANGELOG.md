@@ -8,6 +8,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Cycle | Issues |
 |---------|------|-------|--------|
+| 6.0.049 | 2026-07-15 | DEAD CODE CLEANUP | Remove `matchCalcFullScore_` + `matchCalcGeoAnchorScore_` (47 lines, zero callers — V6.0.015 P2.2 backward-compat shims that delegate to `calculateWeightedScore`) |
 | 6.0.048 | 2026-07-14 | QUICK WINS | V5.5→V6.0 branding in UI (3 files) + CHANGELOG sync 6.0.039-048 + README 6.0.044→6.0.048 + remove package-lock from .gitignore + Jest/Playwright→Snapshot Test Harness |
 | 6.0.047 | 2026-07-14 | DOC-TYPE FIX | Add DOC-TYPE: historical to 15 .md files in 'Information from AI' folder (check_09 regression fix) |
 | 6.0.046 | 2026-07-13 | SKILLS SUITE | Add 11 LMDS skills (.skills/) + exports (Claude/Gemini/Universal) + SKILLS_INSTALL/README docs |
