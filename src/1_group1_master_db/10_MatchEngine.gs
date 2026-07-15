@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.048
+ * VERSION: 6.0.049
  * FILE: 10_MatchEngine.gs
  * LMDS V6.0 — Core Match & Resolution Engine
  * ===================================================
@@ -1361,54 +1361,12 @@ function calculateWeightedScore(srcObj, personResult, placeResult, geoResult) {
   return Math.min(100, Math.max(0, score));
 }
 
-/**
- * matchCalcFullScore_ — [F-8] Confidence for Rule 4 (Full Match: geo + person + place)
- * [UPGRADE v5.5.046] รับ srcObj/personResult เพิ่มเติมเพื่อ Dynamic Weighting (2.2) — optional, backward compatible
- * [V6.0.015 P2.2] Delegates to `calculateWeightedScore` — backward compatible for existing callers
- *   that pass (geoConf, personConf, placeConf, srcObj, personResult) directly.
- * [V6.0.016] Base Weight: person=0.45, geo=0.35, place=0.20 (name primary, geo reduced)
- * @param {number} geoConf - geoResult.confidence
- * @param {number} personConf - personResult.confidence
- * @param {number} placeConf - placeResult.confidence
- * @param {Object} [srcObj] - source row (optional — for dynamic weighting)
- * @param {Object} [personResult] - resolvePerson result (optional)
- * @returns {number} confidence (0-100)
- */
-function matchCalcFullScore_(geoConf, personConf, placeConf, srcObj, personResult) {
-  // [V6.0.015 P2.2] Delegate to unified calculateWeightedScore for consistency with Rule 5
-  return calculateWeightedScore(
-    srcObj,
-    personResult ? Object.assign({}, personResult, { confidence: personConf }) : { confidence: personConf },
-    { confidence: placeConf },
-    { confidence: geoConf }
-  );
-}
-
-/**
- * matchCalcGeoAnchorScore_ — [F-8] Confidence for Rule 5 (Geo Anchor: geo + one of person/place)
- * [V6.0.015 P2.2] Delegates to `calculateWeightedScore` — backward compatible for existing callers
- *   that pass (geoConf, personConf, placeConf, hasPerson) directly. The unused half (person or
- *   place) is zeroed out so that only the matched entity contributes to the final score.
- *   The result is capped at 95 to preserve the pre-V6.0.015 behavior of Rule 5 (geo anchor
- *   partial match should never reach 100 since one signal is missing).
- * [V6.0.016] Weight: person=0.45, geo=0.35, place=0.20 (capped at 95)
- * @param {number} geoConf - geoResult.confidence
- * @param {number} personConf - personResult.confidence (0 if not found)
- * @param {number} placeConf - placeResult.confidence (0 if not found)
- * @param {boolean} hasPerson - true if person matched, false if place matched
- * @returns {number} confidence (0-95)
- */
-function matchCalcGeoAnchorScore_(geoConf, personConf, placeConf, hasPerson) {
-  const personScore = hasPerson ? personConf : 0;
-  const placeScore = hasPerson ? 0 : placeConf;
-  const raw = calculateWeightedScore(
-    null,
-    { confidence: personScore },
-    { confidence: placeScore },
-    { confidence: geoConf }
-  );
-  return Math.min(95, raw);
-}
+// [V6.0.049] Removed `matchCalcFullScore_` and `matchCalcGeoAnchorScore_` (dead code).
+//   Both were backward-compat shims from V6.0.015 P2.2 that simply delegated to
+//   `calculateWeightedScore` above. Verified zero callers via repo-wide grep.
+//   The historical design note in `calculateWeightedScore`'s docstring still
+//   references these names as the predecessors it replaced — that note is
+//   intentionally kept for design-rationale context.
 
 // ============================================================
 // SECTION 4: executeDecision — [REFACTOR-04] Dispatcher Pattern
