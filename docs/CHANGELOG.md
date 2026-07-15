@@ -8,6 +8,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Cycle | Issues |
 |---------|------|-------|--------|
+| 6.0.055 | 2026-07-15 | SECURITY — B2 INPUT VALIDATION | Add `validateInput_()` helper in 19_Hardening.gs (validates type/required/maxLength/minLength/enum/pattern/control-charts). Applied to 3 high-risk WebApp endpoints: `submitReviewDecision` (reviewId pattern + decision enum + note maxLength), `searchLocations` (query length + limit range), `getMapAnalyticsData` (days range + filterStatus length). Prevents injection + DoS from malformed WebApp params. |
 | 6.0.054 | 2026-07-15 | SECURITY DOC — B1 XFRAME OPTIONS | Document `XFrameOptionsMode.ALLOWALL` risk in SECURITY.md §1 (clickjacking risk, mitigations, decision rationale). Added inline comments in 22_WebApp.gs linking to SECURITY.md. Kept ALLOWALL (required for GAS sandbox) + documented 5-layer mitigation already in place. |
 | 6.0.053 | 2026-07-15 | BUG FIX — PERSIST SYS_NOTES | Fix: AUTO_MATCH + MERGE paths now persist semantic notes (CONTACT/TIME/COD/FRAGILE/INSTRUCTION/OTHER) to SYS_NOTES — previously only CREATE_NEW stored them (Reviewer 2 finding). Added `persistSemanticNotesForEntity_()` helper in 10e, called from 3 paths (CREATE_NEW/MERGE/AUTO_MATCH). |
 | 6.0.052 | 2026-07-15 | GROUP A QUICK WINS | (1) Add `resetAliasEnrichmentContext_()` wrapper in 10f + update 3 call sites in 10 (reduce cross-file coupling) (2) Add `scripts/bump_version.sh` helper to automate version bumps (prevents check_01 failures) |
