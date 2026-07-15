@@ -46,18 +46,21 @@ jobs:
           distribution: 'temurin'
 
       - name: 🔬 Run SonarCloud Scanner
-        uses: SonarSource/sonarcloud-github-action@v2
+        uses: SonarSource/sonarqube-scan-action@0303d6b62e310685c0e34d0b9cde218036885c4d  # v5.0.0 pinned to full SHA (SonarCloud S7637) — replaces deprecated sonarcloud-github-action
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          args: >
+          # NOTE: Do NOT include paths with spaces in args (shell splits on whitespace).
+          # The "Information from AI..." folder was deleted in V6.0.049 anyway.
+          # All exclusions are also in sonar-project.properties as backup.
+          args: >-
             -Dsonar.projectKey=Siriwat08_phaopanya-scg
             -Dsonar.organization=siriwat08
             -Dsonar.sources=src
             -Dsonar.language=js
             -Dsonar.sourceEncoding=UTF-8
-            -Dsonar.exclusions=**/node_modules/**,**/Information from AI allows you to check it quickly/**,**/exports/**,**/.skills/**,**/docs/**,**/scripts/**,**/*.html,**/*.css,**/*.zip,**/*.skill
+            -Dsonar.exclusions=**/node_modules/**,**/exports/**,**/.skills/**,**/docs/**,**/scripts/**,**/*.html,**/*.css,**/*.zip,**/*.skill
             -Dsonar.coverage.exclusions=**/*.html,**/*.css,**/*.zip,**/*.skill,**/docs/**,**/scripts/**,**/.skills/**,**/exports/**
             -Dsonar.cpd.exclusions=**/*.html,**/*.css
             -Dsonar.javascript.exclusions=**/*.html,**/*.css
