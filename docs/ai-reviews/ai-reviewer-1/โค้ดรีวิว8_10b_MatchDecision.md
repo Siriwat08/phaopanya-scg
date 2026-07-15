@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 /**
  * VERSION: 6.0.046
  * FILE: 10b_MatchDecision.gs
