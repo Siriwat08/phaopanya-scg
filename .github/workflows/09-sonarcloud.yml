@@ -1,0 +1,81 @@
+# 🔬 SonarCloud Code Analysis
+#
+# ทำงานแทน SonarCloud GitHub App ที่ auto-detect (ซึ่งไม่อ่าน sonar-project.properties
+# แบบเดิมในบางครั้ง) — ใช้ sonar-scanner CLI พร้อม args ที่ override ทุกอย่าง
+#
+# Triggers:
+#   - pull_request: สแกนทุก PR ที่แตะ src/
+#   - push to main: สแกนทุกครั้งที่ merge เข้า main
+
+name: 🔬 SonarCloud Analysis
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'sonar-project.properties'
+      - '.github/workflows/09-sonarcloud.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'sonar-project.properties'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  sonarcloud:
+    name: 🔬 SonarCloud Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for blame + new code detection
+
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 🔬 Run SonarCloud Scanner
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=Siriwat08_phaopanya-scg
+            -Dsonar.organization=siriwat08
+            -Dsonar.sources=src
+            -Dsonar.language=js
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.exclusions=**/node_modules/**,**/Information from AI allows you to check it quickly/**,**/exports/**,**/.skills/**,**/docs/**,**/scripts/**,**/*.html,**/*.css,**/*.zip,**/*.skill
+            -Dsonar.coverage.exclusions=**/*.html,**/*.css,**/*.zip,**/*.skill,**/docs/**,**/scripts/**,**/.skills/**,**/exports/**
+            -Dsonar.cpd.exclusions=**/*.html,**/*.css
+            -Dsonar.javascript.exclusions=**/*.html,**/*.css
+
+      - name: 📊 Summary
+        if: always()
+        run: |
+          echo "## 🔬 SonarCloud Analysis Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Scan completed with explicit CLI args that override all dashboard settings." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Excluded from analysis:" >> $GITHUB_STEP_SUMMARY
+          echo "- All \`.html\` files (GAS templates + AI review dashboards)" >> $GITHUB_STEP_SUMMARY
+          echo "- All \`.css\` files" >> $GITHUB_STEP_SUMMARY
+          echo "- All \`.zip\` and \`.skill\` files" >> $GITHUB_STEP_SUMMARY
+          echo "- \`docs/\`, \`scripts/\`, \`.skills/\`, \`exports/\` folders" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Analyzed:" >> $GITHUB_STEP_SUMMARY
+          echo "- All \`.gs\` files in \`src/\` (38 files — production JavaScript code)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View full analysis on SonarCloud](https://sonarcloud.io/project/overview?id=Siriwat08_phaopanya-scg)" >> $GITHUB_STEP_SUMMARY
