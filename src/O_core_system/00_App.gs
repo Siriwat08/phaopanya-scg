@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.048
+ * VERSION: 6.0.049
  * FILE: 00_App.gs
  * LMDS V6.0 — Application Entry Point & Menu Controller
  * ===================================================
