@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.053
+ * VERSION: 6.0.054
  * FILE: 18_ServiceSCG.gs
  * LMDS V6.0 — SCG API Service (Group 2 Commander)
  * ===================================================

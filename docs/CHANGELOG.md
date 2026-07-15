@@ -8,6 +8,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Cycle | Issues |
 |---------|------|-------|--------|
+| 6.0.054 | 2026-07-15 | SECURITY DOC — B1 XFRAME OPTIONS | Document `XFrameOptionsMode.ALLOWALL` risk in SECURITY.md §1 (clickjacking risk, mitigations, decision rationale). Added inline comments in 22_WebApp.gs linking to SECURITY.md. Kept ALLOWALL (required for GAS sandbox) + documented 5-layer mitigation already in place. |
 | 6.0.053 | 2026-07-15 | BUG FIX — PERSIST SYS_NOTES | Fix: AUTO_MATCH + MERGE paths now persist semantic notes (CONTACT/TIME/COD/FRAGILE/INSTRUCTION/OTHER) to SYS_NOTES — previously only CREATE_NEW stored them (Reviewer 2 finding). Added `persistSemanticNotesForEntity_()` helper in 10e, called from 3 paths (CREATE_NEW/MERGE/AUTO_MATCH). |
 | 6.0.052 | 2026-07-15 | GROUP A QUICK WINS | (1) Add `resetAliasEnrichmentContext_()` wrapper in 10f + update 3 call sites in 10 (reduce cross-file coupling) (2) Add `scripts/bump_version.sh` helper to automate version bumps (prevents check_01 failures) |
 | 6.0.051 | 2026-07-15 | PHASE 3.5 — SCORING TO 10B | ย้าย calculateWeightedScore + calcDynamicWeights_ + getCandidateResolvedCoords_ + _CANDIDATE_COORDS_CACHE_ จาก 10_MatchEngine.gs → 10b_MatchDecision.gs (10: 1027→904 บรรทัด, 10b: 354→488 บรรทัด) — ให้อยู่ใกล้ callers ใน evaluateRule4/5/5b/6 |
