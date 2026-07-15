@@ -88,25 +88,35 @@
 
 ## 2. OAuth Scopes (Least Privilege)
 
-### สถานะ: ✅ Compliant
+### สถานะ: ✅ Compliant — All 6 scopes verified in use (V6.0.056)
 
 ### ไฟล์
 
 - `appsscript.json`
 
-### Scopes ปัจจุบัน (6 ตัว)
+### Scopes ปัจจุบัน (6 ตัว) — verified V6.0.056
 
-1. `script.appsscript.run` — สำหรับ `google.script.run`
-2. `script.external_request` — สำหรับ SCG API + Google Maps
-3. `script.spreadsheets` — สำหรับอ่าน/เขียน Google Sheets
-4. `script.userinfo.email` — สำหรับดึง email ผู้ใช้ (RBAC)
-5. `script.locale` — สำหรับ locale formatting
-6. `script.timezone` — สำหรับ timezone handling
+| #   | Scope                     | Used By                                 | Usage Count | Purpose                                                                   |
+| --- | ------------------------- | --------------------------------------- | ----------- | ------------------------------------------------------------------------- |
+| 1   | `spreadsheets`            | `SpreadsheetApp`                        | 30 files    | อ่าน/เขียน Google Sheets (master data, FACT_DELIVERY, Q_REVIEW, SYS_LOG)  |
+| 2   | `userinfo.email`          | `Session.getEffectiveUser().getEmail()` | 21 calls    | ดึง email ผู้ใช้สำหรับ RBAC + audit trail (verified_by, created_by)       |
+| 3   | `script.storage`          | `PropertiesService`                     | 19 files    | เก็บ secrets (GEMINI_API_KEY, SCG_COOKIE, LMDS_ADMINS) + processing state |
+| 4   | `script.container.ui`     | `SpreadsheetApp.getUi()`                | 33 calls    | Custom menu, alerts, modals, sidebar                                      |
+| 5   | `script.scriptapp`        | `ScriptApp.getProjectTriggers()`        | 3 files     | Auto-resume triggers + trigger cleanup                                    |
+| 6   | `script.external_request` | `UrlFetchApp`                           | 4 files     | SCG API + Google Maps geocoding                                           |
 
 ### การตัดสินใจ
 
-- ลดจาก 10 scopes (V5.5.017) → 6 scopes (V5.5.017+)
-- ทุก scope ใช้จริง — ไม่มี unused scope
+- **ลดจาก 10 scopes (V5.5.017) → 6 scopes (V5.5.017+)**
+- **V6.0.056 audit:** ทุก scope ใช้จริง — ไม่มี unused scope (verified via grep)
+- ไม่มี scope ที่ขาด — ทุก feature ทำงานได้โดยไม่ต้องเพิ่ม scope
+
+### หมายเหตุ
+
+- `google.script.run` ไม่ต้องการ scope แยก — ใช้ `script.container.ui` ครอบคลุมแล้ว
+- `Logger.log` ไม่ต้องการ scope
+- `CacheService` ใช้ `script.storage` (same as PropertiesService)
+- `LockService` ใช้ `script.scriptapp` (same as ScriptApp triggers)
 
 ---
 
@@ -128,18 +138,39 @@
 - `access: MYSELF` — เฉพาะคน deploy เท่านั้นเข้า WebApp ได้
 - `executeAs: USER_DEPLOYING` — โค้ดทำงานในฐานะคน deploy (ไม่ใช่ผู้ใช้ที่เรียก)
 
-### ก่อนส่งมอบ production
+### ก่อนส่งมอบ production — Checklist
 
 **ต้อง** เปลี่ยน `access` เป็น:
 
-- `DOMAIN` — ถ้าใช้ Google Workspace (คนในองค์กรเข้าได้)
-- `ANYONE` — ถ้าเปิดให้คนนอกองค์กร (ต้อง login Google)
+| ค่า      | เหมาะสำหรับ             | หมายเหตุ                               |
+| -------- | ----------------------- | -------------------------------------- |
+| `MYSELF` | Development / staging   | ค่าปัจจุบัน — ไม่เหมาะ production      |
+| `DOMAIN` | Google Workspace องค์กร | คนในองค์กรเข้าได้ (ต้อง login)         |
+| `ANYONE` | เปิดสาธารณะ             | คนนอกองค์กรเข้าได้ (ต้อง login Google) |
 
-แล้วให้ RBAC (`27_RbacService.gs`) เป็นตัวคุมสิทธิ์จริง
+**หลังเปลี่ยน access:**
+
+1. ทดสอบว่า RBAC (`27_RbacService.gs`) ยังทำงาน — คนที่ไม่ใช่ admin ไม่สามารถใช้ danger actions
+2. ทดสอบว่า `isAuthorizedDashboardUser_()` ยัง reject คนที่ไม่ใน `DASHBOARD_USERS` list
+3. ตั้ง `LMDS_ADMINS` ใน PropertiesService — รายชื่อ email ของ admin (comma-separated)
+4. ตั้ง `DASHBOARD_USERS` ใน `01_Config.gs` — รายชื่อ email ของผู้ใช้ที่เข้า dashboard ได้
+
+### `executeAs` — ข้อควรระวัง
+
+`USER_DEPLOYING` หมายถึง:
+
+- โค้ดทำงานในฐานะคน deploy → ผู้ใช้ทุกคนแชร์ quota ของคน deploy
+- ข้อดี: ไม่ต้อง share Google Sheet กับผู้ใช้ทุกคน
+- ข้อเสีย: ถ้าโค้ดเขียนข้อมูลผิด → ใช้ quota ของคน deploy (อาจหมดเร็ว)
+
+ถ้าต้องการให้ผู้ใช้ใช้ quota ของตัวเอง → เปลี่ยนเป็น `USER_ACCESSING`
+
+- ข้อเสีย: ต้อง share Google Sheet กับผู้ใช้ทุกคนที่จะเข้า dashboard
 
 ### หมายเหตุ
 
 ค่า `MYSELF` เหมาะสำหรับ development/staging เท่านั้น — ไม่ใช่ production
+หลังเปลี่ยน `access` → ให้ RBAC (`27_RbacService.gs`) เป็นตัวคุมสิทธิ์จริง
 
 ---
 
