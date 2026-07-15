@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.051
+ * VERSION: 6.0.052
  * FILE: 10f_MatchAliasEnrichment.gs
  * LMDS V6.0 — Match Alias Enrichment (Single Writer Pattern for M_ALIAS)
  * ===================================================
@@ -69,6 +69,26 @@ function addEntityToEnrichmentContext_(entityType, entityId, masterUuid, canonic
       masterUuid: masterUuid
     };
   }
+}
+
+/**
+ * resetAliasEnrichmentContext_ — [V6.0.052] Reset the module-level alias context
+ *
+ * Wrapper สำหรับล้าง _ALIAS_ENRICHMENT_CONTEXT ให้เป็น null
+ * เรียกจาก 10_MatchEngine.gs runMatchEngine() ที่ 3 จุด:
+ *   - preflight failed → early return
+ *   - empty pendingRows → early return
+ *   - finally block (เคลียร์เมื่อ execution จบ)
+ *
+ * ประโยชน์: ถ้าวันหนึ่งโครงสร้าง context เปลี่ยน หรือต้องเพิ่ม side effect
+ * (เช่น log, flush cache) แก้จุดเดียวพอ ไม่ต้องไล่หา 3 จุดข้ามไฟล์
+ * เป็นการลด coupling surface ตามแนวทาง releaseScriptLock_() pattern
+ *
+ * [V6.0.052] Previously 3 call sites in 10_MatchEngine.gs used raw
+ *   `_ALIAS_ENRICHMENT_CONTEXT = null;` — now updated to use this wrapper.
+ */
+function resetAliasEnrichmentContext_() {
+  _ALIAS_ENRICHMENT_CONTEXT = null;
 }
 
 /**
