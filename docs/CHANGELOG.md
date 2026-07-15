@@ -8,6 +8,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Cycle | Issues |
 |---------|------|-------|--------|
+| 6.0.051 | 2026-07-15 | PHASE 3.5 — SCORING TO 10B | ย้าย calculateWeightedScore + calcDynamicWeights_ + getCandidateResolvedCoords_ + _CANDIDATE_COORDS_CACHE_ จาก 10_MatchEngine.gs → 10b_MatchDecision.gs (10: 1027→904 บรรทัด, 10b: 354→488 บรรทัด) — ให้อยู่ใกล้ callers ใน evaluateRule4/5/5b/6 |
 | 6.0.050 | 2026-07-15 | PHASE 3.4 — MATCH ENGINE SPLIT (10f/10g/10h) | แตก 10_MatchEngine.gs 2234→1023 บรรทัด + 10f_MatchAliasEnrichment.gs (717 บรรทัด, 13 functions) + 10g_MatchRowProcessor.gs (335 บรรทัด, 5 functions) + 10h_MatchAutoResume.gs (296 บรรทัด, 6 functions) |
 | 6.0.049 | 2026-07-15 | DEAD CODE CLEANUP | Remove `matchCalcFullScore_` + `matchCalcGeoAnchorScore_` (47 lines, zero callers — V6.0.015 P2.2 backward-compat shims that delegate to `calculateWeightedScore`) |
 | 6.0.048 | 2026-07-14 | QUICK WINS | V5.5→V6.0 branding in UI (3 files) + CHANGELOG sync 6.0.039-048 + README 6.0.044→6.0.048 + remove package-lock from .gitignore + Jest/Playwright→Snapshot Test Harness |

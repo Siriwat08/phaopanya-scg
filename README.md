@@ -5,12 +5,12 @@
 
 | รายการ | ค่า |
 |--------|-----|
-| **เวอร์ชัน** | 6.0.050 (Production Ready — 38 .gs files, 19 .html files) |
+| **เวอร์ชัน** | 6.0.051 (Production Ready — 38 .gs files, 19 .html files) |
 | **Last Updated** | 2026-07-13 |
 | **Platform** | Google Apps Script + Google Sheets |
 | **Core Engine** | MatchEngine V6.0 with Hybrid Alias Architecture + RBAC |
 | **Total Files** | 38 `.gs` files (37 production + 1 legacy `99_Legacy.gs`) + 19 `.html` files |
-| **Total Lines** | ~24,732 (.gs only, non-blank) |
+| **Total Lines** | ~24749 (.gs only, non-blank) |
 | **Total Functions** | 533 |
 | **Total Sheets** | 19 |
 | **Total IDX Sets** | 16 |
