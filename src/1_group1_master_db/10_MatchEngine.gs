@@ -64,7 +64,6 @@
 // [V6.0.050] Moved to 10f/10g/10h: _ALIAS_ENRICHMENT_CONTEXT + addEntityToEnrichmentContext_ → 10f
 //   See 10f_MatchAliasEnrichment.gs, 10g_MatchRowProcessor.gs, 10h_MatchAutoResume.gs
 
-
 function runMatchEngine() {
   // [REF-004] V5.5.019: Refactored into 4 section helpers for Separation of Concerns
   //   1. acquireMatchEngineLock_   — SECTION A: Lock + AuthZ
@@ -476,7 +475,6 @@ function flushBatches_(
 // [V6.0.050] Moved to 10f/10g/10h: processOneRow (SECTION 2) → 10g
 //   See 10f_MatchAliasEnrichment.gs, 10g_MatchRowProcessor.gs, 10h_MatchAutoResume.gs
 
-
 // ============================================================
 // SECTION 3: makeMatchDecision — 8 Rules
 // ============================================================
@@ -659,7 +657,6 @@ function calculateWeightedScore(srcObj, personResult, placeResult, geoResult) {
 // [V6.0.050] Moved to 10f/10g/10h: executeDecision + handle* (SECTION 4) → 10g
 //   See 10f_MatchAliasEnrichment.gs, 10g_MatchRowProcessor.gs, 10h_MatchAutoResume.gs
 
-
 // ============================================================
 // SECTION 5: Helper Functions
 // ============================================================
@@ -752,7 +749,6 @@ function getCandidateResolvedCoords_(entityType, entityId) {
 
 // [V6.0.050] Moved to 10f/10g/10h: resetProcessingState_ + installAutoResume_ + stop signal (SECTION 6) → 10h
 //   See 10f_MatchAliasEnrichment.gs, 10g_MatchRowProcessor.gs, 10h_MatchAutoResume.gs
-
 
 // ============================================================
 // SECTION 6: Abstraction Layer [REF-002]
