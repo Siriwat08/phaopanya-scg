@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.054
+ * VERSION: 6.0.055
  * FILE: 19_Hardening.gs
  * LMDS V6.0 — System Hardening & Preflight Audit
  * ===================================================
@@ -918,4 +918,137 @@ function runDedupAuditUI_(entityType) {
     logError('Hardening', 'runDedupAuditUI_ failed: ' + e.message, e);
     safeUiAlert_('❌ สแกนล้มเหลว: ' + e.message);
   }
+}
+
+// ============================================================
+// SECTION: [V6.0.055] Input Validation Helper for WebApp Endpoints
+//   ป้องกัน injection + malformed input จาก WebApp params
+//   ใช้สำหรับ google.script.run endpoints ที่รับ user input
+// ============================================================
+
+/**
+ * validateInput_ — [V6.0.055] Centralized input validation for WebApp endpoints
+ *
+ * ตรวจสอบความถูกต้องของ input ที่รับจาก WebApp (ผ่าน google.script.run)
+ * ป้องกัน:
+ *   - Empty/undefined required fields
+ *   - Type mismatch (เช่น ส่ง string แทน number)
+ *   - ความยาวเกิน limit (ป้องกัน DoS + buffer overflow)
+ *   - อักขระต้องห้าม (control characters, null bytes)
+ *   - ค่าที่ไม่อยู่ใน allowed set (enum validation)
+ *
+ * @param {Object} input - object ที่จะตรวจสอบ
+ * @param {Object} schema - validation schema
+ *   Example: {
+ *     reviewId: { type: 'string', required: true, maxLength: 50 },
+ *     decision: { type: 'string', required: true, enum: ['CREATE_NEW', 'MERGE_TO_CANDIDATE', 'IGNORE', 'ESCALATE'] },
+ *     note: { type: 'string', required: false, maxLength: 500 }
+ *   }
+ * @return {{ valid: boolean, errors: string[], sanitized: Object }}
+ *   - valid: true ถ้าผ่านทุกเงื่อนไข
+ *   - errors: array ของ error messages (empty ถ้า valid)
+ *   - sanitized: object ที่ผ่านการ trim + type coercion แล้ว
+ * @private
+ */
+function validateInput_(input, schema) {
+  const result = { valid: true, errors: [], sanitized: {} };
+
+  if (!input || typeof input !== 'object') {
+    input = {};
+  }
+
+  const CONTROL_CHARS_REGEX = /[\x00-\x1F\x7F]/; // null bytes + control chars (except \t \n \r)
+  const ALLOWED_NEWLINES_REGEX = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/; // stricter — also blocks \n \r in single-line fields
+
+  Object.keys(schema).forEach(function (field) {
+    const rules = schema[field];
+    const value = input[field];
+
+    // 1. Required check
+    if (rules.required && (value === undefined || value === null || value === '')) {
+      result.valid = false;
+      result.errors.push('กรุณาระบุ ' + field);
+      return;
+    }
+
+    // 2. Skip optional empty fields
+    if (value === undefined || value === null || value === '') {
+      if (rules.default !== undefined) {
+        result.sanitized[field] = rules.default;
+      }
+      return;
+    }
+
+    // 3. Type coercion + check
+    let coerced = value;
+    if (rules.type === 'string') {
+      coerced = String(value).trim();
+    } else if (rules.type === 'number') {
+      coerced = Number(value);
+      if (isNaN(coerced)) {
+        result.valid = false;
+        result.errors.push(field + ' ต้องเป็นตัวเลข');
+        return;
+      }
+    } else if (rules.type === 'boolean') {
+      coerced = value === true || value === 'true' || value === 1 || value === '1';
+    }
+
+    // 4. String-specific checks
+    if (rules.type === 'string') {
+      // maxLength check (DoS prevention)
+      if (rules.maxLength && coerced.length > rules.maxLength) {
+        result.valid = false;
+        result.errors.push(field + ' ยาวเกินไป (สูงสุด ' + rules.maxLength + ' ตัวอักษร)');
+        return;
+      }
+
+      // minLength check
+      if (rules.minLength && coerced.length < rules.minLength) {
+        result.valid = false;
+        result.errors.push(field + ' สั้นเกินไป (อย่างน้อย ' + rules.minLength + ' ตัวอักษร)');
+        return;
+      }
+
+      // Control character check (injection prevention)
+      const regex = rules.allowNewlines ? CONTROL_CHARS_REGEX : ALLOWED_NEWLINES_REGEX;
+      if (regex.test(coerced)) {
+        result.valid = false;
+        result.errors.push(field + ' มีอักขระต้องห้าม (control characters)');
+        return;
+      }
+    }
+
+    // 5. Number range check
+    if (rules.type === 'number') {
+      if (rules.min !== undefined && coerced < rules.min) {
+        result.valid = false;
+        result.errors.push(field + ' ต้องไม่น้อยกว่า ' + rules.min);
+        return;
+      }
+      if (rules.max !== undefined && coerced > rules.max) {
+        result.valid = false;
+        result.errors.push(field + ' ต้องไม่มากกว่า ' + rules.max);
+        return;
+      }
+    }
+
+    // 6. Enum check (whitelist)
+    if (rules.enum && rules.enum.indexOf(coerced) === -1) {
+      result.valid = false;
+      result.errors.push(field + ' ไม่ถูกต้อง ต้องเป็น: ' + rules.enum.join(', '));
+      return;
+    }
+
+    // 7. Pattern check (regex)
+    if (rules.pattern && !rules.pattern.test(coerced)) {
+      result.valid = false;
+      result.errors.push(field + ' รูปแบบไม่ถูกต้อง');
+      return;
+    }
+
+    result.sanitized[field] = coerced;
+  });
+
+  return result;
 }

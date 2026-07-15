@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.054
+ * VERSION: 6.0.055
  * FILE: 22c_WebAppActions.gs
  * LMDS V6.0 — Web App Actions
  * ===================================================
@@ -89,14 +89,25 @@ function submitReviewDecision(reviewId, decision, note) {
   // [V6.0.004] RBAC: require reviewer/admin
   if (typeof requirePermission_ === 'function') requirePermission_('action:approve_review');
 
-  if (!reviewId || !decision) {
-    return { ok: false, message: 'กรุณาระบุ reviewId และ decision' };
+  // [V6.0.055] Use centralized input validation (B2 — Security Hardening)
+  const validation = validateInput_(
+    { reviewId: reviewId, decision: decision, note: note },
+    {
+      reviewId: { type: 'string', required: true, maxLength: 50, pattern: /^[A-Za-z0-9_-]+$/ },
+      decision: {
+        type: 'string',
+        required: true,
+        enum: ['CREATE_NEW', 'MERGE_TO_CANDIDATE', 'IGNORE', 'ESCALATE']
+      },
+      note: { type: 'string', required: false, maxLength: 500, allowNewlines: true }
+    }
+  );
+  if (!validation.valid) {
+    return { ok: false, message: validation.errors.join('; ') };
   }
-
-  const validDecisions = ['CREATE_NEW', 'MERGE_TO_CANDIDATE', 'IGNORE', 'ESCALATE'];
-  if (validDecisions.indexOf(decision) === -1) {
-    return { ok: false, message: 'decision ไม่ถูกต้อง ต้องเป็น: ' + validDecisions.join(', ') };
-  }
+  reviewId = validation.sanitized.reviewId;
+  decision = validation.sanitized.decision;
+  note = validation.sanitized.note || '';
 
   // [V6.0.009 P2.1] LockService guard — ป้องกัน double-submit จาก WebApp
   //   (user กด Approve สองครั้งรวด → ไม่ให้ applyReviewDecision ทำงานซ้อนกัน
@@ -527,19 +538,27 @@ function haversineDistanceMeters_(lat1, lng1, lat2, lng2) {
 function searchLocations(query, limit) {
   if (!isAuthorizedDashboardUser_()) throw new Error('Unauthorized');
 
-  const startTime = Date.now();
-  const maxResults = limit || 20;
-  const rawQuery = String(query || '').trim();
-
-  if (rawQuery.length < 2) {
+  // [V6.0.055] Use centralized input validation (B2 — Security Hardening)
+  const validation = validateInput_(
+    { query: query, limit: limit },
+    {
+      query: { type: 'string', required: true, minLength: 2, maxLength: 200 },
+      limit: { type: 'number', required: false, min: 1, max: 100, default: 20 }
+    }
+  );
+  if (!validation.valid) {
     return {
       results: [],
       total: 0,
-      query: rawQuery,
+      query: String(query || ''),
       elapsedMs: 0,
-      message: 'คำค้นหาสั้นเกินไป (อย่างน้อย 2 ตัวอักษร)'
+      message: validation.errors.join('; ')
     };
   }
+
+  const startTime = Date.now();
+  const maxResults = validation.sanitized.limit;
+  const rawQuery = validation.sanitized.query;
 
   const normQuery = rawQuery.toLowerCase().replace(/\s+/g, '');
   const isPhoneQuery = /^\d{6,}$/.test(normQuery.replace(/[-\s]/g, ''));
@@ -802,8 +821,21 @@ function buildAddressStr_(place) {
  */
 function getMapAnalyticsData(days, filterStatus) {
   if (!isAuthorizedDashboardUser_()) throw new Error('Unauthorized');
-  const lookbackDays = days || 30;
-  const statusFilter = filterStatus || '';
+
+  // [V6.0.055] Use centralized input validation (B2 — Security Hardening)
+  const validation = validateInput_(
+    { days: days, filterStatus: filterStatus },
+    {
+      days: { type: 'number', required: false, min: 1, max: 365, default: 30 },
+      filterStatus: { type: 'string', required: false, maxLength: 50 }
+    }
+  );
+  if (!validation.valid) {
+    return { error: validation.errors.join('; ') };
+  }
+
+  const lookbackDays = validation.sanitized.days;
+  const statusFilter = validation.sanitized.filterStatus || '';
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
