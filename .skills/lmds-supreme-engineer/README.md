@@ -1,40 +1,34 @@
 <!-- DOC-TYPE: living -->
-# lmds-supreme-engineer
+# LMDS Supreme AI Engineer - Single Skill
 
-> **All-in-one consolidated skill — super-set of all 11 specialty skills in one file.**
+All-in-one consolidated LMDS skills suite. 11 specialties -> 1 file.
 
-## Status
+## How to install
 
-🔴 **Awaiting upload** — This folder was created as a placeholder.
+### Mavis cloud runtime (/workspace/.skills/)
+```
+unzip lmds-skills-suite.zip -d /workspace/
+# the lmds-supreme-engineer/ folder will be picked up by the skill syncer
+```
 
-The `SKILL.md` file for this skill was lost during PR #133 (empty commit bug).
-It needs to be re-uploaded.
+### Local mavis install
+```
+unzip lmds-skills-suite.zip
+mkdir -p ~/.mavis/skills/lmds-supreme-engineer
+cp lmds-supreme-engineer/SKILL.md ~/.mavis/skills/lmds-supreme-engineer/
+# restart mavis daemon
+```
 
-## What to Upload
-
-Upload the original `SKILL.md` file (approximately 7,287 lines) to this folder.
-
-The file should be the consolidated version containing all 11 specialty skills:
-- lmds-architect
-- lmds-bug-hunter
-- lmds-cicd-pipeline
-- lmds-code-reviewer
-- lmds-gas-best-practices
-- lmds-match-engine-builder
-- lmds-predeploy-checker
-- lmds-refactor-advisor
-- lmds-security-auditor
-- lmds-thai-data-helper
-- skill-creator
-
-## How to Upload
-
-1. Go to: https://github.com/Siriwat08/phaopanya-scg/tree/main/.skills/lmds-supreme-engineer
-2. Click **"Add file"** → **"Upload files"**
-3. Drag and drop the `SKILL.md` file
-4. Commit message: `chore: restore lmds-supreme-engineer SKILL.md`
-5. Click **"Commit changes"**
-
-## After Upload
-
-Once uploaded, this README.md can be deleted or updated with proper skill documentation.
+## Sections inside SKILL.md
+- Section 0: Orchestrator Role & Routing
+- Section 1: Architecture
+- Section 2: Bug Hunter
+- Section 3: CI/CD Pipeline
+- Section 4: Code Reviewer
+- Section 5: GAS Best Practices
+- Section 6: Match Engine
+- Section 7: Pre-Deploy Checker
+- Section 8: Refactor Advisor
+- Section 9: Security Auditor
+- Section 10: Thai Data Helper
+- Section 11: Original Orchestrator Body

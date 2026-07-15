@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 ## วิเคราะห์ [LMDS V6.0](https://github.com/Siriwat08/phaopanya-scg) แบบตอบตรงคำถาม
 
 สรุปสั้นก่อนเลย: ระบบนี้ **แนวคิดหลักถูกทาง** ถ้าเป้าหมายคือ “เอาข้อมูลส่งของดิบ → จับคู่ Person/Place/Geo → เก็บผลลง master + fact + review queue” แต่ถ้าเป้าหมายของคุณคือ “มีชั้น clean data ที่ชัดเจน ตรวจสอบ before/after ได้ง่าย และเอาไปใช้ต่อได้แบบ data engineering” ตอนนี้ระบบยัง **ไม่ครบในมุมนั้น** เพราะการทำความสะอาดถูกฝังอยู่ใน flow ของ matching มากกว่าจะเป็น output ชั้นกลางที่แยกชัดเจน [Source](https://raw.githubusercontent.com/Siriwat08/phaopanya-scg/main/src/O_core_system/00_App.gs) [Source](https://raw.githubusercontent.com/Siriwat08/phaopanya-scg/main/src/1_group1_master_db/05_NormalizeService.gs) [Source](https://raw.githubusercontent.com/Siriwat08/phaopanya-scg/main/src/1_group1_master_db/10_MatchEngine.gs)

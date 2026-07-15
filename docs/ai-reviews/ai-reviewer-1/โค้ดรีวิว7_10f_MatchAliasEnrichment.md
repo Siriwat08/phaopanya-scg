@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 /**
  * VERSION: 6.0.046 (extracted from 10_MatchEngine.gs — no logic changes)
  * FILE: 10f_MatchAliasEnrichment.gs
