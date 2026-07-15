@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.050
+ * VERSION: 6.0.051
  * FILE: 10_MatchEngine.gs
  * LMDS V6.0 — Core Match & Resolution Engine
  * ===================================================
@@ -8,9 +8,10 @@
  *   เป็นหัวใจหลักของ Pipeline
  *   ตั้งแต่ V6.0.030+ decision rules แยกไป 10b, test harness ไป 10d, resolve/persist ไป 10e
  *   ตั้งแต่ V6.0.050 alias enrichment แยกไป 10f, row processor แยกไป 10g, auto-resume แยกไป 10h
+ *   ตั้งแต่ V6.0.051 scoring functions (calculateWeightedScore, calcDynamicWeights_,
+ *   getCandidateResolvedCoords_) ย้ายไป 10b เพื่อให้ใกล้ callers ที่สุด
  *   ตอนนี้ 10_MatchEngine.gs เก็บเฉพาะ: lifecycle (runMatchEngine + 4 helpers) +
- *   makeMatchDecision + scoring (calculateWeightedScore/calcDynamicWeights_) +
- *   geo helpers (getGeoProvince_/getCandidateResolvedCoords_) + abstraction layer + tie-breaker
+ *   makeMatchDecision + getGeoProvince_ + abstraction layer + tie-breaker
  *
  * CHANGELOG:
  *   See /docs/CHANGELOG.md for full history.
@@ -22,7 +23,7 @@
  *     - 05_NormalizeService.gs, 06_PersonService, 07_PlaceService, 08_GeoService, 09_DestinationService
  *     - 11_TransactionService.gs (upsertFactDelivery)
  *     - 12_ReviewService.gs (enqueueReview for ambiguous matches)
- *     - 10b_MatchDecision.gs (decision rules dispatcher + evaluateRule* functions)
+ *     - 10b_MatchDecision.gs (decision rules + scoring + geo coordinate cache)
  *     - 10d_MatchTestHarness.gs (test harness — referenced)
  *     - 10e_MatchResolvePersist.gs (resolve/persist for Q_REVIEW reprocessing)
  *     - 10f_MatchAliasEnrichment.gs (autoEnrichAliasesFromFactBatch_ — single writer for M_ALIAS)
@@ -572,87 +573,8 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
   };
 }
 
-/**
- * calcDynamicWeights_ — [NEW v5.5.046 Dynamic Weighting 2.2]
- * ปรับน้ำหนัก geo/person/place ตามความสมบูรณ์ของข้อมูล
- *   - ที่อยู่ดิบสั้นมาก (< 10 ตัวอักษร = สัญญาณรบกวนสูง) → ลด weight place, เพิ่ม weight person
- *   - เบอร์โทรตรงเป๊ะ (personResult.confidence >= 95) → เพิ่ม weight person อีกเล็กน้อย
- * Backward compatible: ไม่ส่ง srcObj มา → คืน baseWeights เดิมทุกประการ
- * @param {{geo:number, person:number, place:number}} baseWeights
- * @param {Object} [srcObj] - source row object (optional — backward compatible)
- * @param {Object} [personResult] - resolvePerson result (optional)
- * @return {{geo:number, person:number, place:number}}
- * @private
- */
-function calcDynamicWeights_(baseWeights, srcObj, personResult) {
-  const geo = baseWeights.geo;
-  let person = baseWeights.person;
-  let place = baseWeights.place;
-  if (!srcObj) return { geo, person, place };
-
-  const SHIFT = 0.08;
-  const rawAddrLen = String(srcObj.rawAddress || '').trim().length;
-  const addressIsThin = rawAddrLen > 0 && rawAddrLen < 10;
-  const personIsStrongPhoneMatch = !!(personResult && personResult.confidence >= 95);
-
-  if (addressIsThin && place > SHIFT) {
-    place -= SHIFT;
-    person += SHIFT;
-  } else if (personIsStrongPhoneMatch && place > SHIFT / 2) {
-    const bump = SHIFT / 2;
-    place -= bump;
-    person += bump;
-  }
-  return { geo, person, place };
-}
-
-/**
- * calculateWeightedScore — [V6.0.015 P2.2] Single weighted score across geo/person/place
- *   Replaces the binary per-rule scoring formulas (`matchCalcFullScore_` /
- *   `matchCalcGeoAnchorScore_`) with a unified weighted approach. Both Rule 4
- *   (Full Match) and Rule 5 (Geo Anchor) use this function so that confidence
- *   is always computed with the same dynamic-weight logic, eliminating the
- *   inconsistency that previously existed between the two rules.
- *
- * [V6.0.016] Re-balanced weights — name [12] is now the primary decision maker.
- *   Rationale: ที่อยู่ ([18]+[24]) กับพิกัด [4] ล้วนบอกแค่ "ตรงไหน" ไม่บอก "ร้านไหน"
- *   เฉพาะชื่อ [12] เท่านั้นที่แยกร้านในห้าง/ปั๊มที่มีหลายร้านในพิกัดใกล้กันได้
- *   นอกจากนี้ [24] มาจากพิกัด [4] อยู่แล้ว ไม่ใช่ข้อมูลอิสระ — ถ้าให้ geo กับ place
- *   (ที่มาจาก [24]) น้ำหนักเต็ม ๆ พร้อมกัน จะเท่ากับนับสัญญาณเดียวซ้ำสองรอบ
- *
- * Weights (V6.0.016):
- *   - person : 0.45 (PRIMARY — เพิ่มจาก 0.25 — ตัวเดียวที่บอก "ร้านไหน")
- *   - geo    : 0.35 (ลดจาก 0.60 — ซ้ำกับ [24] ที่อยู่ใน place score)
- *   - place  : 0.20 (เพิ่มจาก 0.15 — ตอนนี้ใช้ better of [18]/[24])
- *
- * Dynamic adjustment via `calcDynamicWeights_`:
- *   - If raw address is thin (< 10 chars) → shift 0.08 from place → person
- *   - If person confidence is very high (>= 95, phone match) → shift 0.04 from place → person
- *
- * @param {Object} srcObj - source row (for dynamic weighting; pass null/undefined to skip)
- * @param {Object} personResult - resolvePerson result (must have .confidence)
- * @param {Object} placeResult - resolvePlace result (must have .confidence)
- * @param {Object} geoResult - resolveGeo result (must have .confidence)
- * @return {number} weighted confidence score (0-100, clamped)
- */
-function calculateWeightedScore(srcObj, personResult, placeResult, geoResult) {
-  const geoScore = (geoResult && geoResult.confidence) || 0;
-  const personScore = (personResult && personResult.confidence) || 0;
-  const placeScore = (placeResult && placeResult.confidence) || 0;
-
-  // [V6.0.016] New base weights — name primary, geo reduced (overlaps with [24] in place)
-  const w = calcDynamicWeights_({ geo: 0.35, person: 0.45, place: 0.2 }, srcObj, personResult);
-
-  const score = Math.round(geoScore * w.geo + personScore * w.person + placeScore * w.place);
-  return Math.min(100, Math.max(0, score));
-}
-
-// [V6.0.049] Removed `matchCalcFullScore_` and `matchCalcGeoAnchorScore_` (dead code).
-//   Both were backward-compat shims from V6.0.015 P2.2 that simply delegated to
-//   `calculateWeightedScore` above. Verified zero callers via repo-wide grep.
-//   The historical design note in `calculateWeightedScore`'s docstring still
-//   references these names as the predecessors it replaced — that note is
-//   intentionally kept for design-rationale context.
+// [V6.0.051] Moved to 10b: calcDynamicWeights_ + calculateWeightedScore + dead code comment → 10b
+//   See 10b_MatchDecision.gs (SECTION: Scoring + Geo Helpers)
 
 // [V6.0.050] Moved to 10f/10g/10h: executeDecision + handle* (SECTION 4) → 10g
 //   See 10f_MatchAliasEnrichment.gs, 10g_MatchRowProcessor.gs, 10h_MatchAutoResume.gs
@@ -700,52 +622,8 @@ function getGeoProvince_(geoId) {
   return geo ? geo.province || '' : '';
 }
 
-/**
- * getCandidateResolvedCoords_ — [V6.0.011] Get resolved lat/lng for a candidate entity
- *   Looks up M_DESTINATION by placeId or personId and returns its lat/lng directly
- *   (destinations already store resolved coordinates — no need to look up M_GEO_POINT)
- *
- *   Uses in-memory cache (_CANDIDATE_COORDS_CACHE_) built once per execution context
- *   to avoid repeated loadAllDestinations_() calls per row.
- *
- * @param {string} entityType — 'PLACE' or 'PERSON'
- * @param {string} entityId — placeId or personId
- * @return {{lat: number, lng: number}|null} coordinates or null if not found
- * @private
- */
-let _CANDIDATE_COORDS_CACHE_ = null;
-function getCandidateResolvedCoords_(entityType, entityId) {
-  if (!entityType || !entityId) return null;
-
-  // Build cache once per execution
-  if (!_CANDIDATE_COORDS_CACHE_) {
-    _CANDIDATE_COORDS_CACHE_ = { PLACE: {}, PERSON: {} };
-    try {
-      if (typeof loadAllDestinations_ !== 'function') return null;
-      const dests = loadAllDestinations_();
-      for (let i = 0; i < dests.length; i++) {
-        const d = dests[i];
-        if (d.status !== APP_CONST.STATUS_ACTIVE) continue;
-        if (d.lat === null || d.lng === null) continue;
-
-        // Index by placeId
-        if (d.placeId) {
-          _CANDIDATE_COORDS_CACHE_.PLACE[d.placeId] = { lat: d.lat, lng: d.lng };
-        }
-        // Index by personId (first active destination wins)
-        if (d.personId && !_CANDIDATE_COORDS_CACHE_.PERSON[d.personId]) {
-          _CANDIDATE_COORDS_CACHE_.PERSON[d.personId] = { lat: d.lat, lng: d.lng };
-        }
-      }
-    } catch (e) {
-      // Non-fatal — return null
-    }
-  }
-
-  const cache = _CANDIDATE_COORDS_CACHE_[entityType];
-  if (!cache) return null;
-  return cache[entityId] || null;
-}
+// [V6.0.051] Moved to 10b: _CANDIDATE_COORDS_CACHE_ + getCandidateResolvedCoords_ → 10b
+//   See 10b_MatchDecision.gs (SECTION: Scoring + Geo Helpers)
 
 // [V6.0.050] Moved to 10f/10g/10h: resetProcessingState_ + installAutoResume_ + stop signal (SECTION 6) → 10h
 //   See 10f_MatchAliasEnrichment.gs, 10g_MatchRowProcessor.gs, 10h_MatchAutoResume.gs
