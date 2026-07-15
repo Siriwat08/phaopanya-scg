@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.052
+ * VERSION: 6.0.053
  * FILE: 10e_MatchResolvePersist.gs
  * LMDS V6.0 — Resolve & Persist for Q_REVIEW
  * ===================================================
@@ -65,6 +65,51 @@ function resolveAndPersist_(srcObj, decisionType, candidates, optReviewId) {
   }
   logWarn('MatchEngine', 'resolveAndPersist_: Unknown decisionType ' + decisionType);
   return null;
+}
+
+/**
+ * persistSemanticNotesForEntity_ — [V6.0.053] Centralized notes persistence
+ *
+ * ดึง structured notes (CONTACT/TIME/COD/FRAGILE/INSTRUCTION/OTHER) จาก raw text
+ * และเขียนไป SYS_NOTES sheet สำหรับ entity ที่กำหนด
+ *
+ * ใช้ใน 3 code paths:
+ *   - resolveAndPersistCreate_ (CREATE_NEW) — เดิมมีอยู่แล้ว, ปรับให้ใช้ helper นี้
+ *   - resolveAndPersistMerge_  (MERGE from Q_REVIEW) — [V6.0.053] เพิ่มใหม่
+ *   - handleAutoMatch_         (AUTO_MATCH) — [V6.0.053] เพิ่มใหม่
+ *
+ * ปัญหาที่แก้ (Reviewer 2 finding):
+ *   ก่อนหน้านี้ AUTO_MATCH และ MERGE ไม่ได้เก็บ notes จาก source row ปัจจุบัน
+ *   ทำให้ notes ใหม่ (เช่น "โทร 089-876-5432 ส่งด่วน") หายไปถ้าแถวนั้น match เข้า entity ที่มีอยู่แล้ว
+ *
+ * @param {string} rawPersonName - ชื่อดิบจาก source row
+ * @param {string|null} personId - personId ที่ resolved แล้ว (null = ไม่มี)
+ * @param {string} rawPlaceName - ชื่อสถานที่ดิบ
+ * @param {string} rawAddress - ที่อยู่ดิบ (fallback ถ้า rawPlaceName ว่าง)
+ * @param {string|null} placeId - placeId ที่ resolved แล้ว (null = ไม่มี)
+ * @private
+ */
+function persistSemanticNotesForEntity_(rawPersonName, personId, rawPlaceName, rawAddress, placeId) {
+  // PERSON notes
+  if (personId && rawPersonName) {
+    try {
+      if (typeof parseAndStoreSemanticNotes === 'function') {
+        parseAndStoreSemanticNotes(rawPersonName, 'PERSON', personId, 'SCG_RAW');
+      }
+    } catch (e) {
+      logDebug('MatchEngine', 'parseAndStoreSemanticNotes (PERSON) skipped: ' + e.message);
+    }
+  }
+  // PLACE notes
+  if (placeId && (rawPlaceName || rawAddress)) {
+    try {
+      if (typeof parseAndStoreSemanticNotes === 'function') {
+        parseAndStoreSemanticNotes(rawPlaceName || rawAddress, 'PLACE', placeId, 'SCG_RAW');
+      }
+    } catch (e) {
+      logDebug('MatchEngine', 'parseAndStoreSemanticNotes (PLACE) skipped: ' + e.message);
+    }
+  }
 }
 
 /**
@@ -200,6 +245,17 @@ function resolveAndPersistMerge_(srcObj, candidates, optReviewId) {
     logError('MatchEngine', 'Self-Healing Alias ล้มเหลว (ไม่กระทบ MERGE): ' + aliasErr.message, aliasErr);
   }
 
+  // [V6.0.053] Persist semantic notes from current source row → SYS_NOTES
+  //   Previously MERGE path skipped this — notes (phone, COD, time, etc.) from
+  //   the current source row were lost. Now stored against target entity IDs.
+  persistSemanticNotesForEntity_(
+    srcObj.rawPersonName,
+    targetPersonId,
+    srcObj.rawPlaceName,
+    srcObj.rawAddress,
+    targetPlaceId
+  );
+
   // Geo + Dest resolution
   let targetGeoId = null;
   let targetDestId = null;
@@ -251,19 +307,6 @@ function resolveAndPersistCreate_(srcObj) {
   let personId = personResult.personId;
   if (!personId) personId = createPerson(personResult.normResult);
 
-  // [V6.0.002] Store structured notes (CONTACT/TIME/COD/FRAGILE/INSTRUCTION/OTHER)
-  //   extracted from rawPersonName during normalizePersonNameFull → SYS_NOTES.
-  //   Defensive typeof check guards against Phase-1 partial deployment.
-  if (personId && personResult.normResult && personResult.normResult.structuredNotes) {
-    try {
-      if (typeof parseAndStoreSemanticNotes === 'function') {
-        parseAndStoreSemanticNotes(srcObj.rawPersonName, 'PERSON', personId, 'SCG_RAW');
-      }
-    } catch (e) {
-      logDebug('MatchEngine', 'parseAndStoreSemanticNotes (PERSON) skipped: ' + e.message);
-    }
-  }
-
   // Place
   const placeResult = resolvePlace(rawPlace, rawAddr);
   let placeId = placeResult.placeId;
@@ -279,17 +322,10 @@ function resolveAndPersistCreate_(srcObj) {
     );
   }
 
-  // [V6.0.002] Store structured notes extracted from rawPlaceName/rawAddress → SYS_NOTES.
-  //   Defensive typeof check guards against Phase-1 partial deployment.
-  if (placeId && placeResult.normResult && placeResult.normResult.structuredNotes) {
-    try {
-      if (typeof parseAndStoreSemanticNotes === 'function') {
-        parseAndStoreSemanticNotes(srcObj.rawPlaceName || srcObj.rawAddress, 'PLACE', placeId, 'SCG_RAW');
-      }
-    } catch (e) {
-      logDebug('MatchEngine', 'parseAndStoreSemanticNotes (PLACE) skipped: ' + e.message);
-    }
-  }
+  // [V6.0.002 → V6.0.053] Store structured notes → SYS_NOTES
+  //   Refactored to use persistSemanticNotesForEntity_ helper for consistency
+  //   with MERGE and AUTO_MATCH paths. Same behavior, less duplication.
+  persistSemanticNotesForEntity_(srcObj.rawPersonName, personId, srcObj.rawPlaceName, srcObj.rawAddress, placeId);
 
   // Geo
   let geoId = null;
