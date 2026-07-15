@@ -5,7 +5,7 @@
 
 | รายการ | ค่า |
 |--------|-----|
-| **เวอร์ชัน** | 6.0.052 (Production Ready — 38 .gs files, 19 .html files) |
+| **เวอร์ชัน** | 6.0.053 (Production Ready — 38 .gs files, 19 .html files) |
 | **Last Updated** | 2026-07-13 |
 | **Platform** | Google Apps Script + Google Sheets |
 | **Core Engine** | MatchEngine V6.0 with Hybrid Alias Architecture + RBAC |

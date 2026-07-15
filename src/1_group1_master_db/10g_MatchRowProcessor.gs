@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.052
+ * VERSION: 6.0.053
  * FILE: 10g_MatchRowProcessor.gs
  * LMDS V6.0 — Match Row Processor (processOneRow + Decision Dispatcher)
  * ===================================================
@@ -199,6 +199,12 @@ function handleAutoMatch_(srcObj, decision, personId, placeId, geoId) {
   } else {
     destId = createDestination(personId, placeId, geoId, srcObj.rawLat, srcObj.rawLng, srcObj.deliveryDate);
   }
+
+  // [V6.0.053] Persist semantic notes from current source row → SYS_NOTES
+  //   Previously AUTO_MATCH skipped this — notes (phone, COD, time, etc.) from
+  //   the current source row were lost when matching existing entities.
+  //   Now stored against the matched personId/placeId.
+  persistSemanticNotesForEntity_(srcObj.rawPersonName, personId, srcObj.rawPlaceName, srcObj.rawAddress, placeId);
 
   const txRes = upsertFactDelivery(srcObj, personId, placeId, geoId, destId, enrichedDecision);
   return {
