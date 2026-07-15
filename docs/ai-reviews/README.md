@@ -9,37 +9,47 @@ material for future refactoring decisions.
 
 ```
 docs/ai-reviews/
-├── ai-reviewer-1/   ← AI ท่านที่ 1 (multiple .md files)
-├── ai-reviewer-2/   ← AI ท่านที่ 2 (multiple .md files)
-├── ai-reviewer-3/   ← AI ท่านที่ 3 (multiple .md files)
-└── README.md        ← This file
+├── ai-reviewer-1/   ← AI ท่านที่ 1 (.md, .html, .zip — อัปโหลดได้ทุกประเภท)
+├── ai-reviewer-2/   ← AI ท่านที่ 2
+├── ai-reviewer-3/   ← AI ท่านที่ 3
+└── README.md        ← This file (คู่มือ — ไม่ต้องแก้ไข)
 ```
+
+## What Can Be Uploaded
+
+| ประเภทไฟล์ | ต้องทำอะไรก่อนอัปโหลด? | หมายเหตุ |
+|-----------|------------------------|---------|
+| `.md` | ไม่ต้อง — บอทจะเพิ่ม `<!-- DOC-TYPE: historical -->` ให้หลังอัปโหลด | ไฟล์หลักที่ใช้บทวิเคราะห์ |
+| `.html` | ไม่ต้อง — SonarCloud ไม่ตรวจโฟลเดอร์นี้ | มักเป็น report ที่ export จาก AI |
+| `.txt` | ไม่ต้อง | ข้อความดิบ |
+| `.pdf` | ไม่ต้อง | เอกสาร |
+| `.zip` | ไม่ต้อง | ไฟล์บีบอัด (เช่น lmds-supreme-engineer) |
+
+**สรุป:** อัปโหลดได้ทุกประเภทเลยครับ ไม่ต้องเตรียมอะไรก่อน
 
 ## How to Upload
 
-### Step 1: Rename folders (optional)
-If you know the AI names/identifiers, rename the folders:
-- `ai-reviewer-1/` → e.g., `gemini-review/` or `claude-review/`
-- `ai-reviewer-2/` → e.g., `chatgpt-review/`
-- `ai-reviewer-3/` → e.g., `copilot-review/`
-
-### Step 2: Upload .md files
-For each AI reviewer folder:
-1. Navigate to the folder on GitHub
+### สำหรับแต่ละ AI reviewer folder:
+1. Navigate to the folder on GitHub (เช่น `docs/ai-reviews/ai-reviewer-1/`)
 2. Click **"Add file"** → **"Upload files"**
-3. Drag and drop all .md files for that AI
+3. Drag and drop all files for that AI (.md, .html, .zip, ฯลฯ)
 4. Commit message: `docs: add AI review from <AI name>`
 5. Click **"Commit changes"**
 
-### Step 3: Add DOC-TYPE tag (IMPORTANT)
-Each .md file MUST have a DOC-TYPE tag as the first line for check_09 to pass:
+### กรณีพิเศษ: lmds-supreme-engineer
+หากคุณมี `.zip` ของ lmds-supreme-engineer อัปโหลดได้ที่:
+- `docs/ai-reviews/ai-reviewer-X/lmds-supreme-engineer.zip`
 
-```markdown
-<!-- DOC-TYPE: historical -->
-```
+บอทจะแตกไฟล์และย้ายไป `.skills/lmds-supreme-engineer/SKILL.md` ให้หลังอัปโหลด
 
-**Option A (recommended):** Add the tag yourself before uploading
-**Option B:** Upload first, then ask the bot to add tags in a follow-up commit
+## Bot Workflow (หลังอัปโหลด)
+
+เมื่อคุณอัปโหลดเสร็จทั้ง 3 ท่าน บอทจะ:
+1. ✅ เพิ่ม `<!-- DOC-TYPE: historical -->` ให้ทุกไฟล์ .md ที่ยังไม่มี
+2. ✅ อ่านเนื้อหาทุกไฟล์ครบถ้วน
+3. ✅ เขียนเอกสารสรุป + เปรียบเทียบวิธีการวิเคราะห์ของ 3 ท่าน
+4. ✅ สร้าง task list สำหรับข้อเสนอที่ยังไม่ได้ทำ
+5. ⚠️ **ถามคุณก่อนลบไฟล์** — บอทจะไม่ลบไฟล์ใดๆ โดยไม่ได้รับการยืนยันจากคุณ
 
 ## What's Already Implemented from These Reviews
 
@@ -58,4 +68,4 @@ This folder is excluded from SonarCloud analysis via `sonar-project.properties`:
 sonar.exclusions=...,**/docs/**,...
 ```
 
-So .md and .html files here will NOT trigger SonarCloud issues.
+So .md, .html, .zip files here will NOT trigger SonarCloud issues.
