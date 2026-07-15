@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.051
+ * VERSION: 6.0.052
  * FILE: 10_MatchEngine.gs
  * LMDS V6.0 — Core Match & Resolution Engine
  * ===================================================
@@ -107,7 +107,8 @@ function runMatchEngine() {
       safeUiAlert_('⚠️ Pipeline ไม่พร้อมรัน', msg);
       // Release lock + cleanup before returning — preserve existing pattern
       if (setup.lock && setup.lock.hasLock()) setup.lock.releaseLock();
-      _ALIAS_ENRICHMENT_CONTEXT = null;
+      // [V6.0.052] Use wrapper instead of raw `_ALIAS_ENRICHMENT_CONTEXT = null`
+      resetAliasEnrichmentContext_();
       if (typeof flushLogBuffer_ === 'function') flushLogBuffer_();
       return;
     }
@@ -117,7 +118,8 @@ function runMatchEngine() {
   if (ctx === null) {
     // Empty pendingRows path — release lock + cleanup + return
     if (setup.lock && setup.lock.hasLock()) setup.lock.releaseLock();
-    _ALIAS_ENRICHMENT_CONTEXT = null;
+    // [V6.0.052] Use wrapper instead of raw `_ALIAS_ENRICHMENT_CONTEXT = null`
+    resetAliasEnrichmentContext_();
     if (typeof flushLogBuffer_ === 'function') flushLogBuffer_();
     return;
   }
@@ -133,7 +135,8 @@ function runMatchEngine() {
   } finally {
     if (setup.lock && setup.lock.hasLock()) setup.lock.releaseLock();
     // [FIX CRIT-018] ล้าง alias enrichment context เมื่อ execution จบ
-    _ALIAS_ENRICHMENT_CONTEXT = null;
+    // [V6.0.052] Use wrapper instead of raw `_ALIAS_ENRICHMENT_CONTEXT = null`
+    resetAliasEnrichmentContext_();
     // [PERF-012] Flush log buffer ก่อน execution จบ — ป้องกัน log entries สูญหาย
     if (typeof flushLogBuffer_ === 'function') flushLogBuffer_();
   }
