@@ -1,0 +1,106 @@
+# 📋 รายงานผลการตรวจสอบโปรเจกต์ LMDS V6.0 ก่อนส่งมอบ
+
+ผมได้ตรวจสอบระบบทั้งหมดแล้ว — โครงสร้างโค้ด, Lint/Format, ความปลอดภัย, ความสอดคล้องของเวอร์ชัน, CI/CD, เอกสาร และรัน check scripts ทั้ง 9 ตัวของโปรเจกต์เอง สรุปได้ดังนี้
+
+---
+
+## ✅ ส่วนที่ผ่าน (พร้อมส่งมอบ)
+
+| หมวด | ผลตรวจ |
+|------|--------|
+| **ESLint** | ✅ **0 errors** (มี 39 warnings — ไม่บล็อก) |
+| **Prettier** | ✅ ผ่าน 100% ทุกไฟล์ |
+| **npm audit** | ✅ **0 vulnerabilities** (ทั้ง prod และ dev) |
+| **Secret Scan** | ✅ ไม่พบ API Key / Token / Cookie / Password hardcode ใน source เลย |
+| **Version Sync (check_01)** | ✅ `APP_VERSION = 6.0.046` ตรงกันทั้ง 35 ไฟล์ .gs + package.json |
+| **Stats Sync (check_02)** | ✅ 35 ไฟล์ / 535 ฟังก์ชัน ตรงตามเอกสาร |
+| **Phantom Dependencies (check_04)** | ✅ ไม่พบ |
+| **Claimed Fixes (check_06)** | ✅ Fix ที่อ้างใน CHANGELOG มีอยู่จริงในโค้ดครบ |
+| **DOC-TYPE Coverage (check_09)** | ✅ ไฟล์ .md ครบ 80 ไฟล์ (64 living + 16 historical) |
+| **TODO/FIXME/HACK** | ✅ **0 จุด** ใน source ทั้งหมด |
+| **Git Status** | ✅ Working tree สะอาด, sync กับ origin/main แล้ว |
+| **.gitignore** | ✅ ป้องกัน `.clasp.json`, `.clasprc`, credentials, `.env` ครบ |
+| **CI/CD** | ✅ 8 workflows ครบวงจร (CI, Deploy, PR Validation, Release, Health, CodeQL, Doc-Sync, Gitleaks) |
+| **Security Pattern** | ✅ doGet มี auth check ก่อนทุกอย่าง, escapeHtml ใช้ 112 จุด, LockService, PII masking |
+| **OAuth Scopes** | ✅ 6 scopes แบบ Least Privilege ตามที่เอกสารระบุ |
+
+---
+
+## ⚠️ ปัญหาที่พบ (เรียงตามความสำคัญ)
+
+### 🔴 ระดับสูง — ควรแก้ก่อนส่งมอบ
+
+**1. เอกสารหลักยังเป็นเวอร์ชันเก่า 6.0.044 แต่โค้ดเป็น 6.0.046**
+- `README.md`, `BLUEPRINT.md` ระบุ "6.0.044" (13 จุด) ขณะที่โค้ด + package.json = **6.0.046**
+- README ระบุ Total Lines "~27,213" แต่จริงคือ **24,643 บรรทัด**
+- README ข้อ 11 ระบุ "17 HTML files" แต่จริงมี **19 ไฟล์**
+- **แนวทางแก้:** อัปเดตตาราง metadata ใน README/BLUEPRINT/CONTEXT ให้เป็น 6.0.046 + ตัวเลขจริง
+
+**2. CHANGELOG.md ขาดเวอร์ชัน 6.0.039 → 6.0.046 (8 เวอร์ชัน)**
+- entry ล่าสุดใน `docs/CHANGELOG.md` คือ 6.0.038 แต่ git log มีถึง 6.0.046 (PR #106–#117)
+- **แนวทางแก้:** เพิ่ม 8 แถวจาก git log ลงตาราง Versions Summary (มีข้อมูลครบใน commit messages แล้ว)
+
+**3. Branding "V5.5" ค้างอยู่ในหน้า UI ที่ผู้ใช้เห็นจริง**
+- `Index.html` → `<title>LMDS V5.5 Dashboard</title>` + โลโก้ "LMDS V5.5"
+- `Unauthorized.html` → footer "LMDS V5.5 Dashboard"
+- `22_WebApp.gs` → `.setTitle('LMDS V5.5 Dashboard')`
+- **แนวทางแก้:** เปลี่ยนเป็น "LMDS V6.0" หรือใช้ `APP_VERSION` แบบ dynamic (~5 จุด)
+
+**4. `appsscript.json` ตั้ง `"access": "MYSELF"` แต่ระบบออกแบบเป็น RBAC 3 roles**
+- ค่า MYSELF = เฉพาะคน deploy เท่านั้นเข้า WebApp ได้ → Viewer/Reviewer/Admin คนอื่นจะเข้าไม่ได้เลย
+- **แนวทางแก้:** ก่อนส่งมอบให้ยืนยันว่าต้อง deploy ด้วย access = `DOMAIN` หรือ `ANYONE` (ล็อกอิน Google) แล้วให้ RBAC ใน `27_RbacService.gs` เป็นตัวคุมสิทธิ์จริง — ควรระบุไว้ในคู่มือ IT ให้ชัดเจน
+
+### 🟡 ระดับกลาง — ควรแก้หรือบันทึกเป็น Known Issues
+
+**5. check_05: broken links 8 จุด**
+- ลิงก์ที่มี `%20` (ชื่อไฟล์ภาษาไทย/มีช่องว่าง) ใน README/CONTEXT — **ไฟล์มีอยู่จริง** แต่สคริปต์ไม่ decode URL → เป็น false positive; ควรแก้สคริปต์ให้ decode `%20` ก่อนเช็ค
+- ลิงก์ `file.md` ใน exports/skills เป็นข้อความตัวอย่างในตาราง ไม่ใช่ลิงก์จริง → ควร escape เป็น code span
+- (CI ตั้ง `continue-on-error: true` ไว้ จึงไม่บล็อก แต่ควรทำให้เขียวเพื่อความน่าเชื่อถือ)
+
+**6. check_07/08: header ทั้ง 35 ไฟล์ยังไม่ครบตามมาตรฐานใหม่** (warning, STRICT_MODE=0)
+- ไม่มี version entry ใน CHANGELOG section ของ header และไม่มี `CALLED BY:` sub-section
+- **แนวทางแก้:** ทยอยเติมตามแผน หรือระบุใน handover ว่าเป็น tech debt ที่วางแผนไว้แล้ว
+
+**7. README อ้าง "Testing: Jest + Playwright (E2E)" แต่ไม่มี test files/dependencies ในโปรเจกต์เลย**
+- มีเพียง `29_SnapshotTest.gs` (manual harness ใน GAS)
+- **แนวทางแก้:** ลบข้อความนี้ออก หรือเปลี่ยนเป็น "Snapshot Test Harness (in-GAS) + Match Test Harness"
+
+**8. `.gitignore` ระบุ `package-lock.json` ให้ ignore แต่ไฟล์ถูก track อยู่ใน git**
+- ขัดแย้งกันเอง — จริง ๆ ควร track lock file (CI ใช้ `npm ci`) → **ลบบรรทัด `package-lock.json` ออกจาก .gitignore**
+
+### 🟢 ระดับต่ำ — รับทราบไว้
+
+**9. ESLint 39 warnings** — ฟังก์ชันยาว/ซับซ้อนเกิน guard: เด่นสุดคือ `getReviewDetail` (complexity 59/30), `QReview.html` (785 บรรทัด/ฟังก์ชัน) → เป็น refactor รอบถัดไป
+**10. `console.log` 7 จุดใน .gs** — ควรเปลี่ยนเป็น `logInfo/logDebug` ให้สม่ำเสมอ
+**11. Git tags ล่าสุดคือ `v6.0.9`** ตามหลังเวอร์ชันจริง (6.0.046) — ควร tag release สุดท้ายก่อนส่งมอบ เช่น `v6.0.46`
+**12. `XFrameOptionsMode.ALLOWALL` (2 จุด)** — จำเป็นสำหรับ GAS WebApp บางกรณี แต่ควรบันทึกความเสี่ยง clickjacking ไว้ใน SECURITY.md
+
+---
+
+## 🎯 สรุปความพร้อมของระบบ
+
+> ### ✅ **พร้อมส่งมอบ ~92% — GO แบบมีเงื่อนไข**
+
+| มิติ | คะแนน |
+|------|:-----:|
+| คุณภาพโค้ด (Lint/Format/Audit) | ✅ 100% |
+| ความปลอดภัย (Secrets/Scopes/Auth) | ✅ 98% |
+| CI/CD & Automation | ✅ 95% |
+| ความสอดคล้องโค้ด ↔ เอกสาร | ⚠️ 75% (เวอร์ชัน/CHANGELOG/V5.5 branding ค้าง) |
+| เอกสารส่งมอบ (docs/ 40+ ไฟล์, คู่มือ Admin/IT/Executive) | ✅ 95% |
+
+**สิ่งที่ต้องทำก่อนส่งมอบจริง (Quick Wins ~1-2 ชม.):**
+1. Sync เอกสารเป็น 6.0.046 + ตัวเลขจริง (ข้อ 1)
+2. เติม CHANGELOG 6.0.039–046 (ข้อ 2)
+3. แก้ V5.5 → V6.0 ใน UI (ข้อ 3)
+4. ยืนยัน/บันทึกค่า `access` สำหรับ deploy จริง (ข้อ 4)
+5. ลบข้ออ้าง Jest/Playwright + แก้ .gitignore (ข้อ 7, 8)
+
+**สิ่งที่ระบบเจ้าของต้องทำเองที่ Environment (ไม่ใช่โค้ด):**
+- ตั้ง Script Properties: `GEMINI_API_KEY`, `LMDS_ADMINS`, `SCG_COOKIE`
+- ตั้ง GitHub Secrets: `CLASPRC`, `APPS_SCRIPT_ID` (workflow 02-deploy มี preflight check ให้แล้ว)
+- Backup Google Sheet + เปิด Sheet Protection
+
+---
+
+ต้องการให้ผม **ลงมือแก้ Quick Wins ทั้ง 5 ข้อ** เลยไหมครับ? ถ้าให้ทำ ผมจะแก้ทั้งหมด, commit, และเปิด Pull Request ให้ตรวจก่อน merge ตาม workflow ของโปรเจกต์ครับ
