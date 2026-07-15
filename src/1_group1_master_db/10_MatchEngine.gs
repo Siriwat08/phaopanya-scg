@@ -105,11 +105,8 @@ function runMatchEngine() {
         sendPipelineAlert_('Pipeline preflight failed:\n' + preflight.issues.join('\n'), 'WARN');
       }
       safeUiAlert_('⚠️ Pipeline ไม่พร้อมรัน', msg);
-      // Release lock + cleanup before returning — preserve existing pattern
-      if (setup.lock && setup.lock.hasLock()) setup.lock.releaseLock();
-      // [V6.0.052] Use wrapper instead of raw `_ALIAS_ENRICHMENT_CONTEXT = null`
-      resetAliasEnrichmentContext_();
-      if (typeof flushLogBuffer_ === 'function') flushLogBuffer_();
+      // Release lock + cleanup before returning
+      cleanupMatchEngineRun_(setup.lock);
       return;
     }
   }
@@ -117,10 +114,7 @@ function runMatchEngine() {
   const ctx = prepareMatchEngineContext_();
   if (ctx === null) {
     // Empty pendingRows path — release lock + cleanup + return
-    if (setup.lock && setup.lock.hasLock()) setup.lock.releaseLock();
-    // [V6.0.052] Use wrapper instead of raw `_ALIAS_ENRICHMENT_CONTEXT = null`
-    resetAliasEnrichmentContext_();
-    if (typeof flushLogBuffer_ === 'function') flushLogBuffer_();
+    cleanupMatchEngineRun_(setup.lock);
     return;
   }
 
@@ -133,13 +127,31 @@ function runMatchEngine() {
     safeUiAlert_('❌ Match Engine ล้มเหลว:\n' + err.message + '\n\nกรุณาตรวจสอบ SYS_LOG');
     throw err;
   } finally {
-    if (setup.lock && setup.lock.hasLock()) setup.lock.releaseLock();
     // [FIX CRIT-018] ล้าง alias enrichment context เมื่อ execution จบ
-    // [V6.0.052] Use wrapper instead of raw `_ALIAS_ENRICHMENT_CONTEXT = null`
-    resetAliasEnrichmentContext_();
     // [PERF-012] Flush log buffer ก่อน execution จบ — ป้องกัน log entries สูญหาย
-    if (typeof flushLogBuffer_ === 'function') flushLogBuffer_();
+    cleanupMatchEngineRun_(setup.lock);
   }
+}
+
+/**
+ * cleanupMatchEngineRun_ — [V6.0.052] Centralized cleanup for runMatchEngine
+ *
+ * รวม 3 cleanup steps ที่ซ้ำกันใน 3 จุด (preflight fail, empty pendingRows,
+ * finally block) เป็น helper เดียว — ลด code duplication และป้องกัน
+ * การแก้ไม่ครบจุดถ้า cleanup logic เปลี่ยนในอนาคต
+ *
+ * Steps:
+ *   1. Release lock (if held)
+ *   2. Reset alias enrichment context (via wrapper in 10f)
+ *   3. Flush log buffer (if function exists)
+ *
+ * @param {object} [lock] - Lock object from acquireMatchEngineLock_
+ * @private
+ */
+function cleanupMatchEngineRun_(lock) {
+  if (lock && lock.hasLock()) lock.releaseLock();
+  resetAliasEnrichmentContext_();
+  if (typeof flushLogBuffer_ === 'function') flushLogBuffer_();
 }
 
 /**
