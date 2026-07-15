@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.053
+ * VERSION: 6.0.054
  * FILE: 22_WebApp.gs
  * LMDS V6.0 — Web App Server (Dashboard)
  * ===================================================
@@ -55,10 +55,13 @@ function doGet(e) {
       logWarn('WebApp', 'doGet: unauthorized access attempt');
       // [FIX Deploy] Apps Script ไม่รองรับ subdirectories — ใช้ flat name 'Unauthorized'
       //   เดิม: 'views/Unauthorized' (ไม่ทำงานหลัง clasp push flatten)
-      return HtmlService.createHtmlOutputFromFile('Unauthorized')
-        .setTitle('LMDS — ไม่มีสิทธิ์เข้าถึง')
-        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      return (
+        HtmlService.createHtmlOutputFromFile('Unauthorized')
+          .setTitle('LMDS — ไม่มีสิทธิ์เข้าถึง')
+          .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+          // [V6.0.054] ALLOWALL required for GAS sandbox — see SECURITY.md §1 for risk + mitigations
+          .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      );
     }
 
     // สร้าง template จาก Index.html
@@ -77,12 +80,15 @@ function doGet(e) {
     template.initialData = null; // บังคับให้ frontend โหลดเอง
     template.deployedAt = new Date().toISOString();
 
-    return template
-      .evaluate()
-      .setTitle('LMDS V6.0 Dashboard')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setFaviconUrl('https://www.gstatic.com/images/branding/product/1x/sheets_64dp.png')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    return (
+      template
+        .evaluate()
+        .setTitle('LMDS V6.0 Dashboard')
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+        .setFaviconUrl('https://www.gstatic.com/images/branding/product/1x/sheets_64dp.png')
+        // [V6.0.054] ALLOWALL required for GAS sandbox — see SECURITY.md §1 for risk + mitigations
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    );
   } catch (err) {
     logError('WebApp', 'doGet ล้มเหลว: ' + err.message, err);
     return HtmlService.createHtmlOutput(
