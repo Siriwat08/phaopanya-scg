@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.065
+ * VERSION: 6.0.066
  * FILE: 21b_AliasSafeguard.gs
  * LMDS V6.0 — Alias Safeguard (Layer 1 + Layer 5)
  * ===================================================
