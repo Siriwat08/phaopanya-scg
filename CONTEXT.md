@@ -1,10 +1,13 @@
 <!-- DOC-TYPE: living -->
+
 # 🚀 Project Overview
-**Logistics Master Data System (LMDS) V6.0.044** คือระบบจัดการฐานข้อมูลหลักด้านการขนส่ง (Master Data & Matching Engine + RBAC + WebApp) เป็น Full-stack solution บน Google Apps Script + Google Sheets
+
+**Logistics Master Data System (LMDS) V6.0.064** คือระบบจัดการฐานข้อมูลหลักด้านการขนส่ง (Master Data & Matching Engine + RBAC + WebApp) เป็น Full-stack solution บน Google Apps Script + Google Sheets
 
 ---
 
 # 🛠️ Tech Stack & Environment
+
 - **Environment:** Google Apps Script (V8 Engine)
 - **Database:** Google Sheets (ใช้งานเสมือน RDBMS)
 - **APIs:** Google Maps API (Geocoding), Gemini API (AI Reasoning), Telegram Bot API (Alerts)
@@ -14,22 +17,23 @@
 ---
 
 # 📂 Architecture & Domain Separation
+
 โปรเจกต์มี **35 ไฟล์ `.gs`** (34 production + 1 legacy `99_Legacy.gs`) + 19 ไฟล์ `.html` — รวม 535 ฟังก์ชัน ~27,213 บรรทัด (.gs only)
 
 ### Domain Groups
 
 1. **🟩 Group 1 (The Brain & Master DB):** `05` ถึง `10`, `16`, `20`, `21`
-   - *หน้าที่:* ทำความสะอาดข้อมูล, จับคู่ (MatchEngine V6.0 + Dynamic Weights + Context Disambiguation), เป็นเจ้าของฐานข้อมูล `M_PERSON`, `M_PLACE`, `M_GEO_POINT`, `M_DESTINATION`, `M_ALIAS`
-   - *รวมถึง:* `16_GeoDictionaryBuilder` (พจนานุกรมภูมิศาสตร์ Thai), `20_ThGeoService` (บริการแกะภูมิศาสตร์), `21_AliasService` (Hybrid Alias + UUID crosslink)
+   - _หน้าที่:_ ทำความสะอาดข้อมูล, จับคู่ (MatchEngine V6.0 + Dynamic Weights + Context Disambiguation), เป็นเจ้าของฐานข้อมูล `M_PERSON`, `M_PLACE`, `M_GEO_POINT`, `M_DESTINATION`, `M_ALIAS`
+   - _รวมถึง:_ `16_GeoDictionaryBuilder` (พจนานุกรมภูมิศาสตร์ Thai), `20_ThGeoService` (บริการแกะภูมิศาสตร์), `21_AliasService` (Hybrid Alias + UUID crosslink)
    - **Single Writer Rule:** เฉพาะ Group 1 เขียน Master tables
 
 2. **🟦 Group 2 (Daily Ops & Consumers):** `04`, `11`, `12`, `13`, `15`, `17`, `18`
-   - *หน้าที่:* โหลดงานประจำวันจาก SCG API (`18_ServiceSCG`), ส่ง `SHIP_TO_NAME` ไปหาพิกัด (`17_SearchService`), อ่าน/คัดแยก Q_REVIEW
-   - *กฎเหล็ก:* Group 2 เป็น **ผู้บริโภคเท่านั้น** ห้ามเขียนข้อมูลลง Master tables (ยกเว้น FACT_DELIVERY + Q_REVIEW)
+   - _หน้าที่:_ โหลดงานประจำวันจาก SCG API (`18_ServiceSCG`), ส่ง `SHIP_TO_NAME` ไปหาพิกัด (`17_SearchService`), อ่าน/คัดแยก Q_REVIEW
+   - _กฎเหล็ก:_ Group 2 เป็น **ผู้บริโภคเท่านั้น** ห้ามเขียนข้อมูลลง Master tables (ยกเว้น FACT_DELIVERY + Q_REVIEW)
    - **Immutable Rule #2 (SRP):** หากจำเป็นต้องเขียน Master → เรียกผ่าน Group 1 helpers เท่านั้น
 
 3. **⚙️ System & Core:** `00`, `01`, `02`, `03`, `14`, `19`, `22`, `24`, `27`
-   - *หน้าที่:* เก็บ Config, โครงสร้างดัชนี (`PERSON_IDX`, `PLACE_IDX`, ...), Utilities, Security, WebApp, Pipeline Manager, RBAC
+   - _หน้าที่:_ เก็บ Config, โครงสร้างดัชนี (`PERSON_IDX`, `PLACE_IDX`, ...), Utilities, Security, WebApp, Pipeline Manager, RBAC
    - **Single Source of Truth:** ทุก config ต้องมาจาก `01_Config.gs`เท่านั้น
 
 ---
@@ -37,6 +41,7 @@
 # 🔄 Core Workflows
 
 ## Daily Flow (Group 2)
+
 ```
 fetchDataFromSCGJWD()
   ↓
@@ -52,6 +57,7 @@ applyMasterCoordinatesToDailyJob()
 ```
 
 ## Master Flow (Group 1)
+
 ```
 runMatchEngine()
   ↓
@@ -71,6 +77,7 @@ runMatchEngine()
 ---
 
 # 💻 Build, Test & Run Commands
+
 เนื่องจากเป็น Apps Script การรันและทดสอบจะทำผ่านเมนู UI บน Google Sheets:
 
 ```bash
@@ -142,7 +149,7 @@ clasp push
 
 # 🎯 Current Focus & Known Issues
 
-- **Focus:** V6.0.044 Production Ready — โค้ด ↔ เอกสารตรง 100% — 18 audit cycles complete
+- **Focus:** V6.0.064 Production Ready — โค้ด ↔ เอกสารตรง 100% — 18 audit cycles complete
 - **Status:** 96% Ready (Roadmap 68% → Target 100% by Phase completion)
 - **Pending Features:** SYS_AUDIT_TRAIL (design ready), Semantic Note Parser (design ready)
 - **Gotchas:** ถ้าระบบขึ้นสีแดง `NOT_FOUND` ตอนโหลดงาน มักเกิดจาก Schema หัวคอลัมน์ในชีตไม่ตรงกับ `SCHEMA` ใน 02_Schema.gs

@@ -1,22 +1,23 @@
 <!-- DOC-TYPE: living -->
+
 # LMDS Skills Suite
 
 ชุด Skills สำหรับ Mavis ที่ออกแบบมาเพื่อช่วย AI Agent และนักพัฒนาในการทำงานกับโปรเจกต์ **LMDS (Logistics Master Data System) V6.0** — ระบบจัดการข้อมูลหลักด้านการขนส่งที่พัฒนาบน **Google Apps Script + Google Sheets** สำหรับ SCG JWD Logistics
 
 ## รายการ Skills (10 ตัว)
 
-| # | Skill | Purpose | ใช้เมื่อ... |
-|---|---|---|---|
-| 1 | **`lmds-architect`** | Master architecture overview | ต้องการเข้าใจโครงสร้างโปรเจกต์, 3-Domain Groups, 16 Laws, 8 Rules, 35 .gs files, Sheet schema |
-| 2 | **`lmds-code-reviewer`** | 16 Immutable Laws enforcement | Review code, audit PR, enforce SRP / No Hardcode Index / Batch Operations / Security-First |
-| 3 | **`lmds-bug-hunter`** | BUGHUNT scanner (Critical + Performance) | หา bugs / critical issues / timeout / stale cache / scientific notation |
-| 4 | **`lmds-refactor-advisor`** | Refactor planning (SRP, complexity, length) | แตก god function, ลด coupling, plan major refactor |
-| 5 | **`lmds-predeploy-checker`** | Production go/no-go gate | ก่อน deploy, ตรวจ 35-item checklist, verify version sync |
-| 6 | **`lmds-match-engine-builder`** | Trinity + 8 Rules + Hybrid Alias | สร้าง/แก้ match logic, เพิ่ม rule ใหม่, debug matching |
-| 7 | **`lmds-gas-best-practices`** | GAS limitations & workarounds | 6-min limit, CacheService 100KB, LockService, custom function, clasp |
-| 8 | **`lmds-cicd-pipeline`** | GitHub Actions for clasp | ตั้ง CI/CD, แก้ deploy fail, เพิ่ม workflow, secret management |
-| 9 | **`lmds-security-auditor`** | SEC-001 → SEC-012 (12 fixes) | Security review, hardcoded secret, PII leak, OAuth scope, sheet protection |
-| 10 | **`lmds-thai-data-helper`** | Thai name/address/phonetic/geo | Thai prefix stripping, phone normalization, Double Metaphone, Thai geo lookup |
+| #   | Skill                           | Purpose                                     | ใช้เมื่อ...                                                                                   |
+| --- | ------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 1   | **`lmds-architect`**            | Master architecture overview                | ต้องการเข้าใจโครงสร้างโปรเจกต์, 3-Domain Groups, 16 Laws, 8 Rules, 35 .gs files, Sheet schema |
+| 2   | **`lmds-code-reviewer`**        | 16 Immutable Laws enforcement               | Review code, audit PR, enforce SRP / No Hardcode Index / Batch Operations / Security-First    |
+| 3   | **`lmds-bug-hunter`**           | BUGHUNT scanner (Critical + Performance)    | หา bugs / critical issues / timeout / stale cache / scientific notation                       |
+| 4   | **`lmds-refactor-advisor`**     | Refactor planning (SRP, complexity, length) | แตก god function, ลด coupling, plan major refactor                                            |
+| 5   | **`lmds-predeploy-checker`**    | Production go/no-go gate                    | ก่อน deploy, ตรวจ 35-item checklist, verify version sync                                      |
+| 6   | **`lmds-match-engine-builder`** | Trinity + 8 Rules + Hybrid Alias            | สร้าง/แก้ match logic, เพิ่ม rule ใหม่, debug matching                                        |
+| 7   | **`lmds-gas-best-practices`**   | GAS limitations & workarounds               | 6-min limit, CacheService 100KB, LockService, custom function, clasp                          |
+| 8   | **`lmds-cicd-pipeline`**        | GitHub Actions for clasp                    | ตั้ง CI/CD, แก้ deploy fail, เพิ่ม workflow, secret management                                |
+| 9   | **`lmds-security-auditor`**     | SEC-001 → SEC-012 (12 fixes)                | Security review, hardcoded secret, PII leak, OAuth scope, sheet protection                    |
+| 10  | **`lmds-thai-data-helper`**     | Thai name/address/phonetic/geo              | Thai prefix stripping, phone normalization, Double Metaphone, Thai geo lookup                 |
 
 ## Decision Tree — เลือก Skill ที่ถูกต้อง
 

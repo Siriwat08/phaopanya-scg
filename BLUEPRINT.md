@@ -1,9 +1,10 @@
 <!-- DOC-TYPE: living -->
-# BLUEPRINT: LMDS Architecture V6.0.044 (Production Ready)
+
+# BLUEPRINT: LMDS Architecture V6.0.064 (Production Ready)
 
 > เอกสารสถาปัตยกรรมระบบ LMDS (Logistics Master Data System) ฉบับเต็ม
-> ร่างสถาปัตยกรรมระดับ Core-System ชี้แจ้ง Data Schema, Pipeline Mechanics, Module Specification, Security Architecture, Production Deployment สำหรับ V6.0.044
-> Version: 6.0.044 (Production Ready) | Last Updated: 2026-07-13
+> ร่างสถาปัตยกรรมระดับ Core-System ชี้แจ้ง Data Schema, Pipeline Mechanics, Module Specification, Security Architecture, Production Deployment สำหรับ V6.0.064
+> Version: 6.0.064 (Production Ready) | Last Updated: 2026-07-16
 > **18 Audit Cycles Complete** | 116 Issues FIXED | **98% Ready for Production**
 
 ---
@@ -31,14 +32,14 @@ LMDS V6.0 ยกระดับจาก Master Data System เป็น **Intel
 
 ### Pillars of Excellence
 
-| เสาหลัก | Features | Status |
-|---------|----------|:------:|
-| **Data Quality** | Phonetic matching + Note extraction + Address enrichment | ✅ 95% |
-| **Intelligent Matching** | 8-Rules Matrix + Dynamic Weights + Context awareness | ✅ 100% |
-| **Self-Learning** | Auto-enrich from admin decisions + Negative samples | ✅ 100% |
-| **Real-time Monitoring** | WebApp Dashboard + Live Feed + Telegram alerts | ✅ 80% |
-| **Access Control** | RBAC 3-roles + Permission matrix + Audit trail | ✅ 100% |
-| **Production Safety** | Pre-flight checks + Error recovery + Logging | ✅ 100% |
+| เสาหลัก                  | Features                                                 | Status  |
+| ------------------------ | -------------------------------------------------------- | :-----: |
+| **Data Quality**         | Phonetic matching + Note extraction + Address enrichment | ✅ 95%  |
+| **Intelligent Matching** | 8-Rules Matrix + Dynamic Weights + Context awareness     | ✅ 100% |
+| **Self-Learning**        | Auto-enrich from admin decisions + Negative samples      | ✅ 100% |
+| **Real-time Monitoring** | WebApp Dashboard + Live Feed + Telegram alerts           | ✅ 80%  |
+| **Access Control**       | RBAC 3-roles + Permission matrix + Audit trail           | ✅ 100% |
+| **Production Safety**    | Pre-flight checks + Error recovery + Logging             | ✅ 100% |
 
 ---
 
@@ -62,7 +63,7 @@ LMDS V6.0 ยกระดับจาก Master Data System เป็น **Intel
 
 ## 5. Data Model
 
-[Same as before - Master tables, Alias tables, Transaction tables, System tables]
+Master tables (M_PERSON, M_PLACE, M_GEO_POINT, M_DESTINATION), Alias tables (M_ALIAS, M_PERSON_ALIAS, M_PLACE_ALIAS), Transaction tables (FACT_DELIVERY, Q_REVIEW), System tables (SYS_LOG, SYS_AUDIT_TRAIL, SYS_NOTES, SYS_NEGATIVE_SAMPLES, SYS_TH_GEO, PIPELINE_RUN_LOG, TEST_MATCH_RESULTS)
 
 ---
 
@@ -93,19 +94,23 @@ LMDS V6.0 ยกระดับจาก Master Data System เป็น **Intel
 ## 10. V6.0 Enhancements
 
 ### Phase 1: Data Cleansing ✅ 50% (Phonetic ✅, Notes 🟡)
+
 - ✅ Double Metaphone phonetic matching (V5.5.047)
 - 🟡 Semantic Note Parser (schema ready, code pending)
 
 ### Phase 2: Matching Engine ✅ 100%
+
 - ✅ Contextual Disambiguation via SoldToName (V5.5.047)
 - ✅ Dynamic Weighting by data completeness (V5.5.046)
 - ✅ Geofencing Tie-breaker with history (V5.5.047)
 
 ### Phase 3: System Learning ✅ 100%
+
 - ✅ Self-Healing Alias from admin decisions (V5.5.046)
 - ✅ Negative sample tracking (SYS_NEGATIVE_SAMPLES)
 
 ### Phase 4: WebApp & Dashboard ✅ 80%
+
 - ✅ Dashboard with stat cards + charts
 - ✅ Q_REVIEW with detail panel
 - ✅ FACT_DELIVERY viewer
@@ -116,14 +121,17 @@ LMDS V6.0 ยกระดับจาก Master Data System เป็น **Intel
 - 🟡 Dependency pre-flight (partial)
 
 ### Phase 5: Pipeline Management ✅ 50%
+
 - ✅ Telegram alerts (3 scenarios)
 - 🟡 Dependency-aware scheduler (partial)
 
 ### Phase 6: Architecture & Data ✅ 50%
+
 - ✅ Dedup Audit (Levenshtein)
 - 🟡 Audit Trail (schema ready)
 
 ### Phase 7: Security RBAC ✅ 100%
+
 - ✅ 3-role system (Viewer/Reviewer/Admin)
 - ✅ Permission matrix
 - ✅ Audit logging
@@ -134,20 +142,20 @@ LMDS V6.0 ยกระดับจาก Master Data System เป็น **Intel
 
 ### SEC-001 → SEC-012 Complete ✅
 
-| SEC | Issue | Fix | Status |
-|-----|-------|-----|:------:|
-| SEC-001 | Hardcoded secrets | PropertiesService only | ✅ |
-| SEC-002 | Authorization bypass | Guard on 13 destructive ops | ✅ |
-| SEC-003 | Cookie injection | RFC 6265 sanitization | ✅ |
-| SEC-004 | PII in logs | MD5 hashing + email masking | ✅ |
-| SEC-005 | Sheet access | 8 sheets protected | ✅ |
-| SEC-006 | API key exposure | x-goog-api-key header | ✅ |
-| SEC-007 | Scope creep | 10 → 6 OAuth scopes | ✅ |
-| SEC-008 | Error messages | Body truncation (200 chars) | ✅ |
-| SEC-009 | Admin impersonation | Email verification | ✅ |
-| SEC-010 | Cookie theft | Secure flag + SameSite | ✅ |
-| SEC-011 | Data exfiltration | Range protection | ✅ |
-| SEC-012 | API rate limiting | Retry with backoff | ✅ |
+| SEC     | Issue                | Fix                         | Status |
+| ------- | -------------------- | --------------------------- | :----: |
+| SEC-001 | Hardcoded secrets    | PropertiesService only      |   ✅   |
+| SEC-002 | Authorization bypass | Guard on 13 destructive ops |   ✅   |
+| SEC-003 | Cookie injection     | RFC 6265 sanitization       |   ✅   |
+| SEC-004 | PII in logs          | MD5 hashing + email masking |   ✅   |
+| SEC-005 | Sheet access         | 8 sheets protected          |   ✅   |
+| SEC-006 | API key exposure     | x-goog-api-key header       |   ✅   |
+| SEC-007 | Scope creep          | 10 → 6 OAuth scopes         |   ✅   |
+| SEC-008 | Error messages       | Body truncation (200 chars) |   ✅   |
+| SEC-009 | Admin impersonation  | Email verification          |   ✅   |
+| SEC-010 | Cookie theft         | Secure flag + SameSite      |   ✅   |
+| SEC-011 | Data exfiltration    | Range protection            |   ✅   |
+| SEC-012 | API rate limiting    | Retry with backoff          |   ✅   |
 
 ---
 
@@ -156,6 +164,7 @@ LMDS V6.0 ยกระดับจาก Master Data System เป็น **Intel
 ### Pre-Deployment Checklist ✅
 
 **Code Quality (20 items)**
+
 - [ ] ESLint: 0 errors
 - [ ] Prettier: 100% compliance
 - [ ] 16 Immutable Laws: 16/16 PASS
@@ -163,8 +172,8 @@ LMDS V6.0 ยกระดับจาก Master Data System เป็น **Intel
 - [ ] Dead code: 0 functions
 - [ ] Test coverage: All entry points
 - [ ] Documentation: 100% up-to-date
-- [ ] CHANGELOG: [6.0.044] entry added
-- [ ] VERSION headers: All 35 files at 6.0.044
+- [ ] CHANGELOG: [6.0.064] entry added
+- [ ] VERSION headers: All 35 files at 6.0.064
 - [ ] Hardcoded secrets: 0 found
 - [ ] TODO/FIXME: 0 remaining
 - [ ] Console.log: Removed (except debug)
@@ -178,6 +187,7 @@ LMDS V6.0 ยกระดับจาก Master Data System เป็น **Intel
 - [ ] API security: Headers correct
 
 **Environment Setup (10 items)**
+
 - [ ] Google Sheet created
 - [ ] Script Properties configured:
   - [ ] GEMINI_API_KEY (or empty)
@@ -192,6 +202,7 @@ LMDS V6.0 ยกระดับจาก Master Data System เป็น **Intel
 - [ ] WebApp loads without errors
 
 **Monitoring Setup (5 items)**
+
 - [ ] SYS_LOG monitoring configured
 - [ ] Error alerts enabled
 - [ ] Telegram bot configured (if using)
@@ -205,7 +216,7 @@ npm run lint      # Must pass
 npm run format:check  # Must pass
 clasp push --dry-run  # Review changes
 clasp push        # Deploy
-clasp deploy --description "V6.0.044 production"  # WebApp
+clasp deploy --description "V6.0.064 production"  # WebApp
 ```
 
 ### Post-Deployment Verification ✅
