@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.062
+ * VERSION: 6.0.063
  * FILE: 07_PlaceService.gs
  * LMDS V6.0 — Place Master Service
  * ===================================================
@@ -731,82 +731,95 @@ function computePlaceScore_(queryA, candidateB, candidate, srcProvince, isRevers
  */
 function createPlace(normResult, province, district, subDistrict, postcode, reverseGeocodeAddress) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET.M_PLACE);
-    const now = new Date();
-    const newId = generateShortId('PL');
-
-    // [FIX v5.2.002] รวบรวม Note ทั้งหมด (Suffix, Delivery Note)
-    const allNotes = normResult.notes || [];
-
-    const universalMasterId = typeof generateUUID === 'function' ? generateUUID() : generateShortId('UID');
-
-    // [V6.0.001] Compute Double Metaphone keys from cleanPlace (handles ล/ร confusion)
-    //   Falls back gracefully if buildThaiDoubleMetaphone is unavailable (defensive)
-    const phoneticKeys =
-      typeof buildThaiDoubleMetaphone === 'function'
-        ? buildThaiDoubleMetaphone(normResult.cleanPlace)
-        : { primary: '', secondary: '' };
-
-    // [V6.0.014 REVERT V6.0.013] canonical_name ใช้ normResult.cleanPlace ([18]) เป็นหลัก
-    //   ไม่ใช้ normResult.fullAddress อีกต่อไป เพราะ fullAddress อาจมาจาก [24] (reverse geocode)
-    //   ซึ่งจะถูกเก็บแยกใน canonical_reverse_geocode (col 16) แทน
-    //   [V6.0.005 BUG-DUPLICATE-PLACE] district-level fallback ไม่จำเป็นอีกต่อไป
-    //     เพราะ canonical = cleanPlace เสมอ (ไม่มี fullAddress มาเป็น district-level แล้ว)
-    const canonicalName = normResult.cleanPlace || '';
-
-    // [V6.0.014] Reverse geocode data — store raw [24] + normalized [24]
-    //   ใช้สำหรับ matching ในอนาคต (เทียบ [24] กับ M_PLACE.canonical_reverse_geocode)
-    //   ถ้า reverseGeocodeAddress เป็น undefined (backward compat) → ใช้ '' ทั้งคู่
-    const rawReverseGeocode = String(reverseGeocodeAddress || '').trim();
-    let normalizedReverseGeocode = '';
-    if (rawReverseGeocode) {
-      try {
-        const rgNorm = typeof normalizePlaceName === 'function' ? normalizePlaceName(rawReverseGeocode) : null;
-        normalizedReverseGeocode = (rgNorm && rgNorm.cleanPlace) || rawReverseGeocode;
-      } catch (normErr) {
-        // [FIX R13-01 REVIEW15] Rule 13: defensive — fall back to raw if normalizer fails
-        normalizedReverseGeocode = rawReverseGeocode;
-      }
+    // [V6.0.063] AuthZ + LockService guard (Reviewer #3 AUD3-SEC-002 + AUD2-ATD-010)
+    if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+      throw new Error('SEC-002: Unauthorized createPlace attempt');
+    }
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(5000)) {
+      throw new Error('createPlace: Lock timeout — another write in progress');
     }
 
-    const newRow = [
-      newId,
-      canonicalName, // [1] canonical — cleanPlace from [18] (REVERT V6.0.013)
-      normResult.cleanPlace, // [2] Normalized — cleanPlace from [18]
-      normResult.placeType || 'other',
-      subDistrict || '',
-      district || '',
-      province || '',
-      postcode || '',
-      now,
-      now,
-      1,
-      APP_CONST.STATUS_ACTIVE,
-      allNotes.join(','), // [12] [FIX v5.2.002] เก็บลง Note ห้ามทิ้ง
-      universalMasterId,
-      // [V6.0.001] Phonetic keys — used by MatchEngine for fuzzy place match
-      phoneticKeys.primary,
-      phoneticKeys.secondary,
-      // [V6.0.014] Reverse geocode columns — store [24] alongside [18]
-      rawReverseGeocode, // [16] canonical_reverse_geocode — raw [24]
-      normalizedReverseGeocode // [17] normalized_reverse_geocode — normalized [24]
-    ];
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(SHEET.M_PLACE);
+      const now = new Date();
+      const newId = generateShortId('PL');
 
-    // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
-    const lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
-    invalidatePlaceCache_();
+      // [FIX v5.2.002] รวบรวม Note ทั้งหมด (Suffix, Delivery Note)
+      const allNotes = normResult.notes || [];
 
-    // [REMOVED v5.4.001] ไม่เรียก createGlobalAlias() — M_ALIAS เขียนที่ autoEnrich เท่านั้น (Single Writer)
-    // autoEnrichAliasesFromFactBatch_() จะเขียน canonical+variant เข้า M_ALIAS เอง
+      const universalMasterId = typeof generateUUID === 'function' ? generateUUID() : generateShortId('UID');
 
-    logDebug(
-      'PlaceService',
-      `createPlace: ${newId} — ${normResult.cleanPlace}` +
-        (rawReverseGeocode ? ` (reverseGeocode: ${rawReverseGeocode.substring(0, 50)})` : '')
-    );
-    return newId;
+      // [V6.0.001] Compute Double Metaphone keys from cleanPlace (handles ล/ร confusion)
+      //   Falls back gracefully if buildThaiDoubleMetaphone is unavailable (defensive)
+      const phoneticKeys =
+        typeof buildThaiDoubleMetaphone === 'function'
+          ? buildThaiDoubleMetaphone(normResult.cleanPlace)
+          : { primary: '', secondary: '' };
+
+      // [V6.0.014 REVERT V6.0.013] canonical_name ใช้ normResult.cleanPlace ([18]) เป็นหลัก
+      //   ไม่ใช้ normResult.fullAddress อีกต่อไป เพราะ fullAddress อาจมาจาก [24] (reverse geocode)
+      //   ซึ่งจะถูกเก็บแยกใน canonical_reverse_geocode (col 16) แทน
+      //   [V6.0.005 BUG-DUPLICATE-PLACE] district-level fallback ไม่จำเป็นอีกต่อไป
+      //     เพราะ canonical = cleanPlace เสมอ (ไม่มี fullAddress มาเป็น district-level แล้ว)
+      const canonicalName = normResult.cleanPlace || '';
+
+      // [V6.0.014] Reverse geocode data — store raw [24] + normalized [24]
+      //   ใช้สำหรับ matching ในอนาคต (เทียบ [24] กับ M_PLACE.canonical_reverse_geocode)
+      //   ถ้า reverseGeocodeAddress เป็น undefined (backward compat) → ใช้ '' ทั้งคู่
+      const rawReverseGeocode = String(reverseGeocodeAddress || '').trim();
+      let normalizedReverseGeocode = '';
+      if (rawReverseGeocode) {
+        try {
+          const rgNorm = typeof normalizePlaceName === 'function' ? normalizePlaceName(rawReverseGeocode) : null;
+          normalizedReverseGeocode = (rgNorm && rgNorm.cleanPlace) || rawReverseGeocode;
+        } catch (normErr) {
+          // [FIX R13-01 REVIEW15] Rule 13: defensive — fall back to raw if normalizer fails
+          normalizedReverseGeocode = rawReverseGeocode;
+        }
+      }
+
+      const newRow = [
+        newId,
+        canonicalName, // [1] canonical — cleanPlace from [18] (REVERT V6.0.013)
+        normResult.cleanPlace, // [2] Normalized — cleanPlace from [18]
+        normResult.placeType || 'other',
+        subDistrict || '',
+        district || '',
+        province || '',
+        postcode || '',
+        now,
+        now,
+        1,
+        APP_CONST.STATUS_ACTIVE,
+        allNotes.join(','), // [12] [FIX v5.2.002] เก็บลง Note ห้ามทิ้ง
+        universalMasterId,
+        // [V6.0.001] Phonetic keys — used by MatchEngine for fuzzy place match
+        phoneticKeys.primary,
+        phoneticKeys.secondary,
+        // [V6.0.014] Reverse geocode columns — store [24] alongside [18]
+        rawReverseGeocode, // [16] canonical_reverse_geocode — raw [24]
+        normalizedReverseGeocode // [17] normalized_reverse_geocode — normalized [24]
+      ];
+
+      // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
+      const lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
+      invalidatePlaceCache_();
+
+      // [REMOVED v5.4.001] ไม่เรียก createGlobalAlias() — M_ALIAS เขียนที่ autoEnrich เท่านั้น (Single Writer)
+      // autoEnrichAliasesFromFactBatch_() จะเขียน canonical+variant เข้า M_ALIAS เอง
+
+      logDebug(
+        'PlaceService',
+        `createPlace: ${newId} — ${normResult.cleanPlace}` +
+          (rawReverseGeocode ? ` (reverseGeocode: ${rawReverseGeocode.substring(0, 50)})` : '')
+      );
+      return newId;
+    } finally {
+      lock.releaseLock();
+    }
   } catch (err) {
     // [FIX B3 v5.5.002] เพิ่ม try-catch ตาม Rule 12
     logError('PlaceService', `createPlace ล้มเหลว: ${err.message}`, err);

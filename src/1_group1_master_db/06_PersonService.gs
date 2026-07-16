@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.062
+ * VERSION: 6.0.063
  * FILE: 06_PersonService.gs
  * LMDS V6.0 — Person Master Service
  * ===================================================
@@ -594,70 +594,83 @@ function calculateNameScore_(nameA, nameB) {
  */
 function createPerson(normResult) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET.M_PERSON);
-    const now = new Date();
-    const newId = generateShortId('P');
-
-    const phoneStr = normResult.extractedPhone ? "'" + normResult.extractedPhone : '';
-
-    // [FIX v5.2.002] รวบรวม Note ทั้งหมด (Phone, Doc, Prefix)
-    const allNotes = normResult.deliveryNotes || [];
-
-    const universalMasterId = typeof generateUUID === 'function' ? generateUUID() : generateShortId('UID');
-
-    // [V6.0.001] Compute Double Metaphone keys from cleanName (handles ล/ร confusion)
-    //   Falls back gracefully if buildThaiDoubleMetaphone is unavailable (defensive)
-    const phoneticKeys =
-      typeof buildThaiDoubleMetaphone === 'function'
-        ? buildThaiDoubleMetaphone(normResult.cleanName)
-        : { primary: '', secondary: '' };
-
-    // [V6.0.025] Extract branchNo from structuredNotes — stored in M_PERSON.BRANCH_NO (col 12)
-    //   Used by scorePersonCandidate to prevent false-positive matches between
-    //   different branches of the same chain (e.g., "FIT Auto สาขา 51" vs "สาขา 24")
-    //   [V6.0.035 RE-APPLY] was lost during PR #93 rebase conflict resolution
-    let branchNo = '';
-    if (normResult.structuredNotes && Array.isArray(normResult.structuredNotes)) {
-      const branchNote = normResult.structuredNotes.find(function (n) {
-        return n.noteType === 'BRANCH' && n.noteValue;
-      });
-      if (branchNote) {
-        branchNo = String(branchNote.noteValue);
-      }
+    // [V6.0.063] AuthZ + LockService guard (Reviewer #3 AUD3-SEC-002 + AUD2-ATD-009)
+    if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+      throw new Error('SEC-002: Unauthorized createPerson attempt');
+    }
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(5000)) {
+      throw new Error('createPerson: Lock timeout — another write in progress');
     }
 
-    const newRow = [
-      newId,
-      normResult.cleanName,
-      normalizeForCompare(normResult.cleanName),
-      phoneStr,
-      now,
-      now,
-      1,
-      APP_CONST.STATUS_ACTIVE,
-      allNotes.join(','),
-      universalMasterId,
-      // [V6.0.001] Phonetic keys — used by MatchEngine for fuzzy name match
-      phoneticKeys.primary,
-      phoneticKeys.secondary,
-      // [V6.0.025] Branch number — empty string if no branch found
-      branchNo
-    ];
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(SHEET.M_PERSON);
+      const now = new Date();
+      const newId = generateShortId('P');
 
-    // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
-    const lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
-    invalidatePersonCache_();
-    logDebug(
-      'PersonService',
-      `createPerson: ${newId} (name hash: ${generateMd5Hash(String(normResult.cleanName || '')).substring(0, 8)})`
-    );
+      const phoneStr = normResult.extractedPhone ? "'" + normResult.extractedPhone : '';
 
-    // [REMOVED v5.4.001] ไม่เรียก createGlobalAlias() — M_ALIAS เขียนที่ autoEnrich เท่านั้น (Single Writer)
-    // autoEnrichAliasesFromFactBatch_() จะเขียน canonical+variant เข้า M_ALIAS เอง
+      // [FIX v5.2.002] รวบรวม Note ทั้งหมด (Phone, Doc, Prefix)
+      const allNotes = normResult.deliveryNotes || [];
 
-    return newId;
+      const universalMasterId = typeof generateUUID === 'function' ? generateUUID() : generateShortId('UID');
+
+      // [V6.0.001] Compute Double Metaphone keys from cleanName (handles ล/ร confusion)
+      //   Falls back gracefully if buildThaiDoubleMetaphone is unavailable (defensive)
+      const phoneticKeys =
+        typeof buildThaiDoubleMetaphone === 'function'
+          ? buildThaiDoubleMetaphone(normResult.cleanName)
+          : { primary: '', secondary: '' };
+
+      // [V6.0.025] Extract branchNo from structuredNotes — stored in M_PERSON.BRANCH_NO (col 12)
+      //   Used by scorePersonCandidate to prevent false-positive matches between
+      //   different branches of the same chain (e.g., "FIT Auto สาขา 51" vs "สาขา 24")
+      //   [V6.0.035 RE-APPLY] was lost during PR #93 rebase conflict resolution
+      let branchNo = '';
+      if (normResult.structuredNotes && Array.isArray(normResult.structuredNotes)) {
+        const branchNote = normResult.structuredNotes.find(function (n) {
+          return n.noteType === 'BRANCH' && n.noteValue;
+        });
+        if (branchNote) {
+          branchNo = String(branchNote.noteValue);
+        }
+      }
+
+      const newRow = [
+        newId,
+        normResult.cleanName,
+        normalizeForCompare(normResult.cleanName),
+        phoneStr,
+        now,
+        now,
+        1,
+        APP_CONST.STATUS_ACTIVE,
+        allNotes.join(','),
+        universalMasterId,
+        // [V6.0.001] Phonetic keys — used by MatchEngine for fuzzy name match
+        phoneticKeys.primary,
+        phoneticKeys.secondary,
+        // [V6.0.025] Branch number — empty string if no branch found
+        branchNo
+      ];
+
+      // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
+      const lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
+      invalidatePersonCache_();
+      logDebug(
+        'PersonService',
+        `createPerson: ${newId} (name hash: ${generateMd5Hash(String(normResult.cleanName || '')).substring(0, 8)})`
+      );
+
+      // [REMOVED v5.4.001] ไม่เรียก createGlobalAlias() — M_ALIAS เขียนที่ autoEnrich เท่านั้น (Single Writer)
+      // autoEnrichAliasesFromFactBatch_() จะเขียน canonical+variant เข้า M_ALIAS เอง
+
+      return newId;
+    } finally {
+      lock.releaseLock();
+    }
   } catch (err) {
     // [FIX B3 v5.5.002] เพิ่ม try-catch ตาม Rule 12
     logError('PersonService', `createPerson ล้มเหลว: ${err.message}`, err);
@@ -746,49 +759,62 @@ function updatePersonStats(personId) {
  */
 function mergePersonRecords(sourceId, targetId) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET.M_PERSON);
-    // [FIX B1 v5.5.002] Math.min guard: ป้องกัน Range error ถ้า sheet มีคอลัมน์น้อยกว่า SCHEMA
-    const colsToRead = Math.min(SCHEMA[SHEET.M_PERSON].length, sheet.getLastColumn());
-    const data = sheet.getRange(1, 1, sheet.getLastRow(), colsToRead).getValues();
-    // [FIX v5.5.001] Use PERSON_IDX constants consistently instead of headers.indexOf()
-    const idCol = PERSON_IDX.PERSON_ID;
-    const statCol = PERSON_IDX.STATUS;
-    // [FIX CodeQL js/unused-local-variable V5.5.035] noteCol ไม่ถูกใช้ — ลบทิ้ง
-    const canCol = PERSON_IDX.CANONICAL;
-
-    let sourceCanonical = sourceId; // fallback
-    let targetMasterUuid = '';
-
-    for (let i = 1; i < data.length; i++) {
-      const rowPersonId = String(data[i][idCol]);
-      if (rowPersonId === targetId && PERSON_IDX.MASTER_UUID < data[i].length) {
-        targetMasterUuid = String(data[i][PERSON_IDX.MASTER_UUID] || '');
-      }
-      if (rowPersonId !== sourceId) continue;
-
-      const targetRow = i + 1;
-
-      // [FIX v003] ดึง canonical_name ของ source ก่อน merge
-      if (data[i][canCol]) {
-        sourceCanonical = String(data[i][canCol]);
-      }
-
-      // [FIX v003] ห้ามลบ — เปลี่ยน Status เป็น Merged แทน
-      // [FIX S5 v5.5.002] Batch write: 2x setValue → 1x setValues (Rule 11)
-      const mergeRange = sheet.getRange(targetRow, statCol + 1, 1, 2);
-      const mergeNote = `Merged → ${targetId} on ${toThaiDateStr(new Date())}`;
-      mergeRange.setValues([[APP_CONST.STATUS_MERGED, mergeNote]]);
-      break;
+    // [V6.0.063] AuthZ guard on IRREVERSIBLE merge (Reviewer #3 AUD3-NEW-011)
+    if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+      throw new Error('SEC-002: Unauthorized mergePersonRecords attempt');
+    }
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(10000)) {
+      throw new Error('mergePersonRecords: Lock timeout — another write in progress');
     }
 
-    // [FIX v003] สร้าง Alias ด้วย canonical_name ของ source ไม่ใช่ sourceId
-    createPersonAlias(targetId, sourceCanonical, 100);
-    if (typeof createGlobalAlias === 'function' && targetMasterUuid) {
-      createGlobalAlias(targetMasterUuid, sourceCanonical, 'PERSON', 100, 'ADMIN_MERGE_ACT');
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(SHEET.M_PERSON);
+      // [FIX B1 v5.5.002] Math.min guard: ป้องกัน Range error ถ้า sheet มีคอลัมน์น้อยกว่า SCHEMA
+      const colsToRead = Math.min(SCHEMA[SHEET.M_PERSON].length, sheet.getLastColumn());
+      const data = sheet.getRange(1, 1, sheet.getLastRow(), colsToRead).getValues();
+      // [FIX v5.5.001] Use PERSON_IDX constants consistently instead of headers.indexOf()
+      const idCol = PERSON_IDX.PERSON_ID;
+      const statCol = PERSON_IDX.STATUS;
+      // [FIX CodeQL js/unused-local-variable V5.5.035] noteCol ไม่ถูกใช้ — ลบทิ้ง
+      const canCol = PERSON_IDX.CANONICAL;
+
+      let sourceCanonical = sourceId; // fallback
+      let targetMasterUuid = '';
+
+      for (let i = 1; i < data.length; i++) {
+        const rowPersonId = String(data[i][idCol]);
+        if (rowPersonId === targetId && PERSON_IDX.MASTER_UUID < data[i].length) {
+          targetMasterUuid = String(data[i][PERSON_IDX.MASTER_UUID] || '');
+        }
+        if (rowPersonId !== sourceId) continue;
+
+        const targetRow = i + 1;
+
+        // [FIX v003] ดึง canonical_name ของ source ก่อน merge
+        if (data[i][canCol]) {
+          sourceCanonical = String(data[i][canCol]);
+        }
+
+        // [FIX v003] ห้ามลบ — เปลี่ยน Status เป็น Merged แทน
+        // [FIX S5 v5.5.002] Batch write: 2x setValue → 1x setValues (Rule 11)
+        const mergeRange = sheet.getRange(targetRow, statCol + 1, 1, 2);
+        const mergeNote = `Merged → ${targetId} on ${toThaiDateStr(new Date())}`;
+        mergeRange.setValues([[APP_CONST.STATUS_MERGED, mergeNote]]);
+        break;
+      }
+
+      // [FIX v003] สร้าง Alias ด้วย canonical_name ของ source ไม่ใช่ sourceId
+      createPersonAlias(targetId, sourceCanonical, 100);
+      if (typeof createGlobalAlias === 'function' && targetMasterUuid) {
+        createGlobalAlias(targetMasterUuid, sourceCanonical, 'PERSON', 100, 'ADMIN_MERGE_ACT');
+      }
+      invalidatePersonCache_();
+      logInfo('PersonService', `mergePersonRecords: ${sourceId} → ${targetId}`);
+    } finally {
+      lock.releaseLock();
     }
-    invalidatePersonCache_();
-    logInfo('PersonService', `mergePersonRecords: ${sourceId} → ${targetId}`);
   } catch (err) {
     logError('PersonService', `mergePersonRecords ล้มเหลว: ${err.message}`, err);
     throw err;

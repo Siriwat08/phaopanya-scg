@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.062
+ * VERSION: 6.0.063
  * FILE: 10h_MatchAutoResume.gs
  * LMDS V6.0 — Match Auto-Resume + Emergency Stop Signal
  * ===================================================
