@@ -122,7 +122,10 @@
             // Markers for top points
             points.slice(0, 50).forEach(function (p) {
               const marker = L.marker([p.lat, p.lng]);
-              marker.bindPopup('<strong>' + p.count + ' deliveries</strong><br>Status: ' + p.matchStatus);
+              // [V6.0.064] XSS hardening — escape matchStatus (Reviewer #2 TD-014 + #3 AUD3-NEW-006)
+              marker.bindPopup(
+                '<strong>' + p.count + ' deliveries</strong><br>Status: ' + ViewHelpers.escapeHtml(p.matchStatus)
+              );
               marker.addTo(map);
             });
 
