@@ -24,14 +24,14 @@
 | ----- | ------------------------------------------ | ----------------------------------------- | ------- | ------- | ---- |
 | C-2.1 | 5-Layer Alias Safeguard (Layer 1 + 5 only) | Reviewer 1 (adjusted — ทำ 2/5 layer ก่อน) | 1 วัน   | ✅ Done | #TBD |
 
-### C-3: Process Improvements (ทำควบคู่กัน) — 🔜 รอ
+### C-3: Process Improvements (ทำควบคู่กัน) — ✅ เสร็จ (V6.0.059)
 
-| #     | งาน                                                       | สถานะ   | PR  |
-| ----- | --------------------------------------------------------- | ------- | --- |
-| C-3.1 | สร้าง `docs/TODO.md` track ทุกข้อเสนอ                     | 🔜 รอทำ | —   |
-| C-3.2 | สร้าง `docs/CI-CD-TROUBLESHOOTING.md`                     | 🔜 รอทำ | —   |
-| C-3.3 | เพิ่ม PR template บังคับเลือกประเภท (refactor vs feature) | 🔜 รอทำ | —   |
-| C-3.4 | เพิ่ม CI check: verify PR title vs actual diff            | 🔜 รอทำ | —   |
+| #     | งาน                                                       | สถานะ   | PR   |
+| ----- | --------------------------------------------------------- | ------- | ---- |
+| C-3.1 | สร้าง `docs/TODO.md` track ทุกข้อเสนอ                     | ✅ Done | #TBD |
+| C-3.2 | สร้าง `docs/CI-CD-TROUBLESHOOTING.md`                     | ✅ Done | #TBD |
+| C-3.3 | เพิ่ม PR template บังคับเลือกประเภท (refactor vs feature) | ✅ Done | #TBD |
+| C-3.4 | เพิ่ม CI check: verify PR title vs actual diff            | ✅ Done | #TBD |
 
 ---
 
