@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.062
+ * VERSION: 6.0.063
  * FILE: 09_DestinationService.gs
  * LMDS V6.0 — Destination Master Service
  * ===================================================
@@ -88,47 +88,60 @@ function resolveDestination(personId, placeId, geoId) {
  */
 function createDestination(personId, placeId, geoId, lat, lng, deliveryDate) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET.M_DESTINATION);
-    const now = new Date();
-    const newId = generateShortId('D');
-
-    // [FIX v003] Validate lat/lng เป็น Number
-    const numLat = Number(lat);
-    const numLng = Number(lng);
-    // [FIX v5.5.001] เก็บ '' แทน 0,0 เมื่อพิกัดไม่ถูกต้อง — 0,0 เป็นพิกัดที่ทำให้เสียใจ
-    const safeLat = !isNaN(numLat) && numLat !== 0 ? numLat : '';
-    const safeLng = !isNaN(numLng) && numLng !== 0 ? numLng : '';
-
-    // [FIX v003] deliveryDate instanceof Date check แทน || now
-    let safeDate = now;
-    if (deliveryDate instanceof Date && !isNaN(deliveryDate.getTime())) {
-      safeDate = deliveryDate;
-    } else if (deliveryDate) {
-      const parsed = new Date(deliveryDate);
-      safeDate = !isNaN(parsed.getTime()) ? parsed : now;
+    // [V6.0.063] AuthZ + LockService guard (Reviewer #3 AUD3-SEC-002 + AUD3-NEW-010)
+    if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+      throw new Error('SEC-002: Unauthorized createDestination attempt');
+    }
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(5000)) {
+      throw new Error('createDestination: Lock timeout — another write in progress');
     }
 
-    const newRow = [
-      newId,
-      personId || '',
-      placeId || '',
-      geoId || '',
-      safeLat,
-      safeLng,
-      '',
-      safeDate,
-      1,
-      now,
-      APP_CONST.STATUS_ACTIVE
-    ];
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(SHEET.M_DESTINATION);
+      const now = new Date();
+      const newId = generateShortId('D');
 
-    // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
-    const lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
-    invalidateDestCache_();
-    logDebug('DestinationService', `createDestination: ${newId} P:${personId} PL:${placeId} G:${geoId}`);
-    return newId;
+      // [FIX v003] Validate lat/lng เป็น Number
+      const numLat = Number(lat);
+      const numLng = Number(lng);
+      // [FIX v5.5.001] เก็บ '' แทน 0,0 เมื่อพิกัดไม่ถูกต้อง — 0,0 เป็นพิกัดที่ทำให้เสียใจ
+      const safeLat = !isNaN(numLat) && numLat !== 0 ? numLat : '';
+      const safeLng = !isNaN(numLng) && numLng !== 0 ? numLng : '';
+
+      // [FIX v003] deliveryDate instanceof Date check แทน || now
+      let safeDate = now;
+      if (deliveryDate instanceof Date && !isNaN(deliveryDate.getTime())) {
+        safeDate = deliveryDate;
+      } else if (deliveryDate) {
+        const parsed = new Date(deliveryDate);
+        safeDate = !isNaN(parsed.getTime()) ? parsed : now;
+      }
+
+      const newRow = [
+        newId,
+        personId || '',
+        placeId || '',
+        geoId || '',
+        safeLat,
+        safeLng,
+        '',
+        safeDate,
+        1,
+        now,
+        APP_CONST.STATUS_ACTIVE
+      ];
+
+      // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
+      const lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
+      invalidateDestCache_();
+      logDebug('DestinationService', `createDestination: ${newId} P:${personId} PL:${placeId} G:${geoId}`);
+      return newId;
+    } finally {
+      lock.releaseLock();
+    }
   } catch (err) {
     // [FIX B3 v5.5.002] เพิ่ม try-catch ตาม Rule 12
     logError('DestinationService', `createDestination ล้มเหลว: ${err.message}`, err);

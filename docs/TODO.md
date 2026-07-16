@@ -20,12 +20,33 @@
 
 ---
 
+## 🔴 P0 — Block deploy (รอบ 2 — V6.0.062 audit)
+
+| #    | งาน                                                                          | ที่ไหน                        | สถานะ              |
+| ---- | ---------------------------------------------------------------------------- | ----------------------------- | ------------------ |
+| P0-1 | **SSTI fix** — Index.html `<?= currentUser.name/email ?>` → escaped          | `Index.html:74-75`            | ✅ Done (V6.0.063) |
+| P0-2 | **LockService guards** — createPerson/Place/GeoPoint                         | `06, 07, 08`                  | ✅ Done (V6.0.063) |
+| P0-3 | **AuthZ guards** — destructive ops (create/merge)                            | `06, 07, 08, 09`              | ✅ Done (V6.0.063) |
+| P0-4 | **Group 2 writes FACT_DELIVERY directly** — route through TransactionService | `12_ReviewService.gs:266-282` | 🔜 ทำภายหลัง       |
+
+## 🟡 P1 — ควรทำเร็วๆ นี้ (รอบ 2 — V6.0.062 audit)
+
+| #    | งาน                                              | ที่ไหน                    | สถานะ |
+| ---- | ------------------------------------------------ | ------------------------- | ----- |
+| P1-1 | XSS escape ใน 5 WebApp components                | 5 .html files             | 🔜    |
+| P1-2 | PII masking — mask phone ใน log                  | `06_PersonService.gs:489` | 🔜    |
+| P1-3 | Documentation sync — README/BLUEPRINT → V6.0.062 | 6 docs                    | 🔜    |
+| P1-4 | Formula injection sanitizer                      | ทั่วโปรเจกต์              | 🔜    |
+
+---
+
 ## 🟡 Group D — รอเงื่อนไข (ทำเมื่อจำเป็น)
 
-| #   | งาน                                        | ที่มา                    | เงื่อนไขที่จะทำ                                                            |
-| --- | ------------------------------------------ | ------------------------ | -------------------------------------------------------------------------- |
-| D-1 | **STG_CLEANED / CLEAN_AUDIT middle layer** | Reviewer 2's #1 proposal | ทำเมื่อทีมโตขึ้น หรือเจอปัญหา audit จริง                                   |
-| D-2 | **Split 21_AliasService.gs (1,771 LOC)**   | Reviewer 2 TD-02         | ทำเมื่อเจอปัญหา maintenance จริง (cohesion สูง — อย่า split ถ้าไม่มีปัญหา) |
+| #   | งาน                                          | ที่มา                                        | เงื่อนไขที่จะทำ                                                            |
+| --- | -------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
+| D-1 | **STG_CLEANED / CLEAN_AUDIT middle layer**   | Reviewer 2's #1 proposal (รอบ 1)             | ทำเมื่อทีมโตขึ้น หรือเจอปัญหา audit จริง                                   |
+| D-2 | **Split 21_AliasService.gs (1,771 LOC)**     | Reviewer 2 TD-02 (รอบ 1) + รอบ 2 ทั้ง 3 ท่าน | ทำเมื่อเจอปัญหา maintenance จริง (cohesion สูง — อย่า split ถ้าไม่มีปัญหา) |
+| D-3 | **Split 05_NormalizeService.gs (1,419 LOC)** | Reviewer #3 (รอบ 2 AUD2-ATD-004)             | เหมือนกัน — cohesion สูง                                                   |
 
 ---
 
