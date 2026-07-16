@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.057
+ * VERSION: 6.0.058
  * FILE: 19_Hardening.gs
  * LMDS V6.0 — System Hardening & Preflight Audit
  * ===================================================

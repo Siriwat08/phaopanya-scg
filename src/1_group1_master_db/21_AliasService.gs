@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.057
+ * VERSION: 6.0.058
  * FILE: 21_AliasService.gs
  * LMDS V6.0 — Hybrid Alias Architecture (Global M_ALIAS)
  * ===================================================
@@ -109,6 +109,26 @@ function createGlobalAlias(masterUuid, variantName, entityType, confidence, sour
     const cleanVariant = normalizeForCompare(variantName);
     if (!cleanVariant || cleanVariant.length < 2) return null;
 
+    // [V6.0.058] Alias Safeguard (Layer 1 + Layer 5) — เฉพาะ source='HUMAN'
+    //   ป้องกัน misclick merge (Layer 1: similarity floor) + spam approve (Layer 5: circuit breaker)
+    //   Auto-aliases ('AI', 'AUTO', 'SCG_RAW') ไม่ต้องผ่าน safeguard — มี quality control อื่นอยู่แล้ว
+    if (source === 'HUMAN' && typeof runAliasSafeguardForHumanAlias_ === 'function') {
+      const safeguard = runAliasSafeguardForHumanAlias_(masterUuid, variantName, entityType);
+      if (!safeguard.allow) {
+        logDebug(
+          'AliasService',
+          'createGlobalAlias: BLOCKED by safeguard (' +
+            safeguard.layer +
+            ' — ' +
+            safeguard.reason +
+            ') — variant="' +
+            variantName +
+            '"'
+        );
+        return null;
+      }
+    }
+
     // ตรวจสอบ duplicate ใน RAM cache ก่อน (เร็วกว่าอ่านชีต)
     const existingMap = loadGlobalAliasesMap_();
     const uidKey = entityType + '_' + masterUuid;
@@ -152,6 +172,11 @@ function createGlobalAlias(masterUuid, variantName, entityType, confidence, sour
     // ล้าง Cache เพื่อให้การค้นหาครั้งถัดไปเห็นข้อมูลใหม่
     // [FIX CRIT-002] Use CACHE_KEY constants instead of hardcoded strings — Single Source of Truth
     CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+
+    // [V6.0.058] Increment Layer 5 circuit breaker counter (HUMAN source only)
+    if (source === 'HUMAN' && typeof incrementAliasCircuitBreakerCount_ === 'function') {
+      incrementAliasCircuitBreakerCount_();
+    }
 
     // [FIX CodeQL js/trivial-conditional V5.5.035] variantName ถูก guard แล้วในบรรทัด 152 — ไม่จำเป็นต้อง || ''
     logDebug(
