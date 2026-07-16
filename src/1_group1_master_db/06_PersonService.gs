@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.065
+ * VERSION: 6.0.066
  * FILE: 06_PersonService.gs
  * LMDS V6.0 — Person Master Service
  * ===================================================
@@ -662,7 +662,8 @@ function createPerson(normResult) {
 
       // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
       const lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
+      // [V6.0.066] Formula injection guard (Reviewer #3 AUD3-NEW-012)
+      sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([sanitizeRowForSheet_(newRow)]);
       invalidatePersonCache_();
       logDebug(
         'PersonService',

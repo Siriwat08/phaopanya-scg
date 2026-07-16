@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.065
+ * VERSION: 6.0.066
  * FILE: 08_GeoService.gs
  * LMDS V6.0 — Geo Point Master Service
  * ===================================================
@@ -306,7 +306,8 @@ function createGeoPoint(lat, lng, source, resolvedAddr, province, district, plac
 
       // [FIX v5.2.002] ใช้ getRange + setValues แทน appendRow เพื่อความแม่นยำสูง
       const lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
+      // [V6.0.066] Formula injection guard (Reviewer #3 AUD3-NEW-012)
+      sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([sanitizeRowForSheet_(newRow)]);
 
       // [FIX Phase-B #11] Defer invalidateGeoCache_() — set dirty flag instead of calling immediately
       //   Caller (10_MatchEngine.flushBatches_ / finalize) จะเรียก flushGeoCacheIfDirty_() ครั้งเดียว

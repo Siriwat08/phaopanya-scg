@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.065
+ * VERSION: 6.0.066
  * FILE: 07_PlaceService.gs
  * LMDS V6.0 — Place Master Service
  * ===================================================
@@ -805,7 +805,8 @@ function createPlace(normResult, province, district, subDistrict, postcode, reve
 
       // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
       const lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
+      // [V6.0.066] Formula injection guard (Reviewer #3 AUD3-NEW-012)
+      sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([sanitizeRowForSheet_(newRow)]);
       invalidatePlaceCache_();
 
       // [REMOVED v5.4.001] ไม่เรียก createGlobalAlias() — M_ALIAS เขียนที่ autoEnrich เท่านั้น (Single Writer)
