@@ -276,7 +276,7 @@
 
       // พิกัด + ปุ่ม Google Maps
       if (row.rawLat && row.rawLng) {
-        const mapsUrl = 'https://www.google.com/maps?q=' + row.rawLat + ',' + row.rawLng + '&z=17';
+        const mapsUrl = ViewHelpers.getGoogleMapsUrl(row.rawLat, row.rawLng);
         html +=
           '<div class="mt-3">' +
           '<p class="text-xs text-gray-500 mb-1">พิกัดดิบ:</p>' +
@@ -294,7 +294,7 @@
           '</div>';
       }
       if (row.resolvedLat && row.resolvedLng) {
-        const mapsUrl = 'https://www.google.com/maps?q=' + row.resolvedLat + ',' + row.resolvedLng + '&z=17';
+        const mapsUrl = ViewHelpers.getGoogleMapsUrl(row.resolvedLat, row.resolvedLng);
         html +=
           '<div class="mt-2">' +
           '<p class="text-xs text-gray-500 mb-1">พิกัดที่ resolve แล้ว:</p>' +

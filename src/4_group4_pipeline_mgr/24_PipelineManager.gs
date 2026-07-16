@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.056
+ * VERSION: 6.0.057
  * FILE: 24_PipelineManager.gs
  * LMDS V6.0 — Pipeline Manager (Standalone Module)
  * ===================================================
@@ -1446,21 +1446,81 @@ function sendPipelineAlert_(message, severity) {
     // [FIX V6.0.006] ใช้ HTML tags แทน Markdown (* ไม่ทำงานใน HTML mode)
     const text = icon + ' <b>LMDS Pipeline Alert</b>\n' + message;
 
-    const response = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
-      method: 'post',
-      contentType: 'application/json',
-      muteHttpExceptions: true,
-      // [FIX V6.0.006] เปลี่ยนจาก Markdown → HTML เพื่อหลีกเลี่ยง parse error
-      //   สาเหตุ: Markdown ตีความ _ เป็น italic → ถ้าข้อความมี _ จะทำให้ Telegram ตอบ 400
-      //   HTML ปลอดภัยกว่า — ไม่มีปัญหากับ _ หรือ * ในข้อความ
-      payload: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
-    });
+    // [V6.0.057] Exponential backoff retry for Telegram API (Reviewer 4 TD-004)
+    //   ถ้า Telegram ตอบ 429 (Rate Limit) หรือ 5xx → retry สูงสุด 3 ครั้ง
+    //   with exponential backoff (2s, 4s, 8s)
+    //   ถ้า retry หมดแล้วยัง fail → log warn (ไม่ throw — Rule 12: alert ห้ามพัง pipeline)
+    const maxRetries = 3;
+    const baseDelayMs = 2000;
+    let respCode = 0;
+    let respBody = '';
+    let lastError = null;
 
-    const respCode = response.getResponseCode();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+          method: 'post',
+          contentType: 'application/json',
+          muteHttpExceptions: true,
+          // [FIX V6.0.006] เปลี่ยนจาก Markdown → HTML เพื่อหลีกเลี่ยง parse error
+          payload: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
+        });
+
+        respCode = response.getResponseCode();
+        respBody = response.getContentText().substring(0, 200);
+
+        // Success or non-retryable error (400 Bad Request, 401 Unauthorized, etc.)
+        if (respCode === 200 || (respCode >= 400 && respCode < 500 && respCode !== 429)) {
+          break;
+        }
+
+        // Retryable: 429 (Rate Limit) or 5xx (Server Error)
+        if (attempt < maxRetries) {
+          const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
+          logDebug(
+            'PipelineManager',
+            'sendPipelineAlert_: Telegram ตอบ ' +
+              respCode +
+              ' — retry ' +
+              (attempt + 1) +
+              '/' +
+              maxRetries +
+              ' ใน ' +
+              delayMs +
+              'ms'
+          );
+          Utilities.sleep(delayMs);
+        }
+      } catch (fetchErr) {
+        lastError = fetchErr;
+        if (attempt < maxRetries) {
+          const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
+          logDebug(
+            'PipelineManager',
+            'sendPipelineAlert_: fetch error — retry ' +
+              (attempt + 1) +
+              '/' +
+              maxRetries +
+              ' ใน ' +
+              delayMs +
+              'ms — ' +
+              fetchErr.message
+          );
+          Utilities.sleep(delayMs);
+        }
+      }
+    }
+
     if (respCode !== 200) {
       logWarn(
         'PipelineManager',
-        'sendPipelineAlert_: Telegram API ตอบ ' + respCode + ' — ' + response.getContentText().substring(0, 200)
+        'sendPipelineAlert_: Telegram API ตอบ ' +
+          respCode +
+          ' หลัง ' +
+          maxRetries +
+          ' retries — ' +
+          respBody +
+          (lastError ? ' | lastError: ' + lastError.message : '')
       );
     }
   } catch (err) {

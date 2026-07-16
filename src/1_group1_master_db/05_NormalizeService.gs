@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.056
+ * VERSION: 6.0.057
  * FILE: 05_NormalizeService.gs
  * LMDS V6.0 — Thai Name & Place Normalization
  * ===================================================
@@ -212,11 +212,15 @@ const REF_NO_PATTERN = /#[0-9]+|No\.?\s*[0-9]+/gi;
  * runNormalize — Entry Point จาก Menu / Pipeline
  * [FIX v003] เพิ่ม comment อธิบายว่า Normalize เกิดใน processOneRow()
  * ไม่ใช่ Batch แยก — ฟังก์ชันนี้เป็น Placeholder สำหรับขยายอนาคต
+ * [V6.0.057] UI label fix (Reviewer 2 finding): เมนูบอก "Step 2 — Normalize"
+ *   แต่จริงๆ normalize ฝังอยู่ใน processOneRow() แล้ว — ฟังก์ชันนี้แค่ log
+ *   ไม่ควรหลอกผู้ใช้ว่ามี stage แยก จึงเปลี่ยนข้อความ log ให้ชัดเจน
  */
 function runNormalize() {
   // Normalize เกิดใน processOneRow() ของ 10_MatchEngine.gs ต่อทุก row
   // ไม่ต้องทำ Batch แยก เพราะ Source Repository ส่ง srcObj เข้า Engine แล้ว
-  logInfo('NormalizeService', 'Normalize ทำงานใน processOneRow() ของ MatchEngine');
+  // [V6.0.057] ข้อความชัดเจนว่าฟังก์ชันนี้เป็น no-op (normalize ทำใน MatchEngine แล้ว)
+  logInfo('NormalizeService', 'Normalize ทำงานอัตโนมัติใน Match Engine (processOneRow) — ไม่ต้องรันแยก');
 }
 
 /**

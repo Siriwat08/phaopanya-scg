@@ -155,13 +155,31 @@
         .replaceAll("'", '&#039;');
     }
 
+    /**
+     * getGoogleMapsUrl — [V6.0.057] Generate Google Maps URL (DRY — was duplicated in 6 spots)
+     *
+     * ใช้สำหรับสร้างลิงก์ Google Maps จาก lat/lng
+     * ก่อนหน้านี้มีการต่อ string 'https://www.google.com/maps?q=' + lat + ',' + lng + '&z=17'
+     * ซ้ำกัน 6 จุดใน Search.html, QReview.html, SourceSheet.html, FactDelivery.html
+     *
+     * @param {number|string} lat - latitude
+     * @param {number|string} lng - longitude
+     * @param {number} [zoom=17] - zoom level (default 17)
+     * @return {string} Google Maps URL
+     */
+    function getGoogleMapsUrl(lat, lng, zoom) {
+      const z = zoom || 17;
+      return 'https://www.google.com/maps?q=' + lat + ',' + lng + '&z=' + z;
+    }
+
     return {
       buildPaginationHtml: buildPaginationHtml,
       buildPageButton: buildPageButton,
       buildLoadingHtml: buildLoadingHtml,
       buildEmptyState: buildEmptyState,
       buildErrorState: buildErrorState,
-      escapeHtml: escapeHtml
+      escapeHtml: escapeHtml,
+      getGoogleMapsUrl: getGoogleMapsUrl
     };
   })();
 

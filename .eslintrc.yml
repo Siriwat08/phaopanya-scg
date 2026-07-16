@@ -57,14 +57,16 @@ rules:
     - selector: 'EmptyStatement'
       message: 'Empty statement — ลบ semicolon ที่ไม่จำเป็น'
 
-  # ─── [V6.0.027] Complexity Guards — ดัก god functions ไม่ให้แย่ลง ───
+  # ─── [V6.0.027 → V6.0.057] Complexity Guards — ดัก god functions ไม่ให้แย่ลง ───
   #   Audit finding 1.2: makeMatchDecision() = 267 บรรทัด, runTestMatchDryRun_ = 190 บรรทัด
   #   เป้าหมาย: ดักไม่ให้ฟังก์ชันใหม่เกิน threshold โดยไม่รู้ตัว
   #   ค่า threshold ตั้งสูงพอให้ไม่ break existing code แต่จะ warn สำหรับฟังก์ชันใหม่
   #   ใช้ 'warn' ไม่ใช่ 'error' — ไม่ block CI แต่ทำให้ developer เห็น
+  #   [V6.0.057] ลดจาก 300 → 200 (Reviewer 2 TD-05 adjusted — 100 โหดเกินไปสำหรับ GAS,
+  #     200 เป็น compromise ที่บังคับ function ขนาดเหมาะสมโดยไม่ break existing)
   max-lines-per-function:
     - warn
-    - max: 300 # เหตุผล: makeMatchDecision 267 → 300 ให้ buffer เล็กน้อย
+    - max: 200 # [V6.0.057] ลดจาก 300 → 200 (compromise — ไม่โหดเท่า 100 ที่ Reviewer 2 เสนอ)
       skipComments: true
       skipBlankLines: true
       IIFEs: true

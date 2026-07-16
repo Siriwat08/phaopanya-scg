@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.056
+ * VERSION: 6.0.057
  * FILE: 00_App.gs
  * LMDS V6.0 — Application Entry Point & Menu Controller
  * ===================================================
@@ -78,7 +78,7 @@ function onOpen(e) {
         .addItem('▶️ รัน Full Pipeline (ทั้งหมด)', 'runFullPipeline')
         .addSeparator()
         .addItem('Step 1 — โหลดข้อมูลดิบจากแหล่ง', 'runLoadSource')
-        .addItem('Step 2 — Normalize ชื่อ/ที่อยู่', 'runNormalize')
+        .addItem('Step 2 — Normalize (อัตโนมัติใน Step 3)', 'runNormalize')
         .addItem('Step 3 — Match Engine', 'runMatchEngine')
         .addSeparator()
         .addItem('🧪 [V6] Test Match (Dry Run)', 'runTestMatchDryRun_UI')
