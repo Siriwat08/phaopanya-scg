@@ -1,22 +1,23 @@
 <!-- DOC-TYPE: living -->
+
 # LMDS Skills Pack — Installation Guide
 
 ## What you get
 
 A `.skills/` folder containing **10 LMDS V6.0 skills** for Mavis:
 
-| # | Skill | Lines | Purpose |
-|---|-------|-------|---------|
-| 1 | `lmds-architect` | 657 | Master architecture overview (3-Domain, 16 Laws, 8 Rules, 35 .gs files) |
-| 2 | `lmds-code-reviewer` | 791 | Enforce 16 Immutable Laws + 5 Hard Rules on any .gs/.js change |
-| 3 | `lmds-bug-hunter` | 603 | BUGHUNT scanner (P0/P1/P2/P3, CRIT-001 to CRIT-012 regressions) |
-| 4 | `lmds-refactor-advisor` | 784 | Plan the split of god functions (>100 lines, complexity >30) |
-| 5 | `lmds-predeploy-checker` | 366 | 35-item pre-deployment go/no-go gate |
-| 6 | `lmds-match-engine-builder` | 657 | Trinity + 8 Rules + Hybrid Alias match engine builder |
-| 7 | `lmds-gas-best-practices` | 620 | GAS quotas/limits/workarounds (6-min, CacheService 100KB, etc.) |
-| 8 | `lmds-cicd-pipeline` | 666 | 8 GitHub Actions workflows + clasp deploy |
-| 9 | `lmds-security-auditor` | 870 | SEC-001 → SEC-012 (12 security fixes) |
-| 10 | `lmds-thai-data-helper` | 1066 | Thai name/address normalization + Double Metaphone + 7,537-row geo dict |
+| #   | Skill                       | Lines | Purpose                                                                 |
+| --- | --------------------------- | ----- | ----------------------------------------------------------------------- |
+| 1   | `lmds-architect`            | 657   | Master architecture overview (3-Domain, 16 Laws, 8 Rules, 35 .gs files) |
+| 2   | `lmds-code-reviewer`        | 791   | Enforce 16 Immutable Laws + 5 Hard Rules on any .gs/.js change          |
+| 3   | `lmds-bug-hunter`           | 603   | BUGHUNT scanner (P0/P1/P2/P3, CRIT-001 to CRIT-012 regressions)         |
+| 4   | `lmds-refactor-advisor`     | 784   | Plan the split of god functions (>100 lines, complexity >30)            |
+| 5   | `lmds-predeploy-checker`    | 366   | 35-item pre-deployment go/no-go gate                                    |
+| 6   | `lmds-match-engine-builder` | 657   | Trinity + 8 Rules + Hybrid Alias match engine builder                   |
+| 7   | `lmds-gas-best-practices`   | 620   | GAS quotas/limits/workarounds (6-min, CacheService 100KB, etc.)         |
+| 8   | `lmds-cicd-pipeline`        | 666   | 8 GitHub Actions workflows + clasp deploy                               |
+| 9   | `lmds-security-auditor`     | 870   | SEC-001 → SEC-012 (12 security fixes)                                   |
+| 10  | `lmds-thai-data-helper`     | 1066  | Thai name/address normalization + Double Metaphone + 7,537-row geo dict |
 
 Bonus: `skill-creator` — meta-skill for creating your own skills.
 
