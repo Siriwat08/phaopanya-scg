@@ -53,10 +53,10 @@
       if (this.title || this.subtitle) {
         html += '<div class="mb-3">';
         if (this.title) {
-          html += '<h3 class="text-sm font-semibold text-gray-800">' + this.title + '</h3>';
+          html += '<h3 class="text-sm font-semibold text-gray-800">' + ViewHelpers.escapeHtml(this.title) + '</h3>';
         }
         if (this.subtitle) {
-          html += '<p class="text-xs text-gray-500 mt-0.5">' + this.subtitle + '</p>';
+          html += '<p class="text-xs text-gray-500 mt-0.5">' + ViewHelpers.escapeHtml(this.subtitle) + '</p>';
         }
         html += '</div>';
       }

@@ -252,7 +252,8 @@
       if (col.badge) {
         return renderBadge_(val, col.badge);
       }
-      return String(val);
+      // [V6.0.064] XSS hardening — escape all cell values (Reviewer #2 TD-012 + #3 AUD3-NEW-004)
+      return ViewHelpers.escapeHtml(String(val));
     }
 
     /**

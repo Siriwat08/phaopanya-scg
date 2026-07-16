@@ -76,7 +76,9 @@
 
             content.innerHTML = html;
           } catch (err) {
-            content.innerHTML = '<div class="text-sm text-red-500">Error: ' + err.message + '</div>';
+            // [V6.0.064] XSS hardening — escape error message (Reviewer #2 TD-015 + #3 AUD3-NEW-015)
+            content.innerHTML =
+              '<div class="text-sm text-red-500">Error: ' + ViewHelpers.escapeHtml(err.message) + '</div>';
           }
         }
 

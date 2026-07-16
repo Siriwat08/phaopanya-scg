@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.063
+ * VERSION: 6.0.064
  * FILE: 06_PersonService.gs
  * LMDS V6.0 — Person Master Service
  * ===================================================
@@ -486,10 +486,15 @@ function scorePersonCandidate(queryName, candidate, queryPhone, sourceBranchNo) 
       }
       // phone ตรงแต่ชื่อไม่ตรง → คืน nameScore (อาจ < 70 → REVIEW หรือ < 50 → reject)
       //   ไม่ return 95 เพื่อป้องกัน AUTO_MATCH ผิดจากเบอร์บ้าน/บริษัทใช้ร่วมกัน
+      // [V6.0.064] PII masking — mask phone in log (Reviewer #3 AUD3-NEW-013 + SEC-004)
+      //   เบอร์โทรเป็น PDPA PII — ไม่ควร log แบบเต็ม ใช้ format 089-***-1234
+      const maskedPhone = queryPhone
+        ? queryPhone.substring(0, 3) + '-***-' + queryPhone.substring(queryPhone.length - 4)
+        : 'N/A';
       logInfo(
         'PersonService',
         'Phone match but name mismatch: phone=' +
-          queryPhone +
+          maskedPhone +
           ', nameScore=' +
           nameScore +
           ' (threshold=' +
