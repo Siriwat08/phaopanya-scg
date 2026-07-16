@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # 📊 LMDS V6.0 Pre-Delivery Audit Report
 
 ## Phase 0 — Full Read Status

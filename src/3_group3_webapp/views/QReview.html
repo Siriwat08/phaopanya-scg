@@ -627,9 +627,7 @@
     function buildReviewAnalysisHtml_(review) {
       const issue = ISSUE_LABELS[review.issueType] || { label: review.issueType, icon: '❓' };
       const mapsUrl =
-        review.rawLat && review.rawLng
-          ? 'https://www.google.com/maps?q=' + review.rawLat + ',' + review.rawLng + '&z=17'
-          : null;
+        review.rawLat && review.rawLng ? ViewHelpers.getGoogleMapsUrl(review.rawLat, review.rawLng) : null;
 
       const rows = [
         ['Issue Type', issue.icon + ' ' + issue.label],
@@ -699,7 +697,7 @@
         candidates.destinations.forEach(function (d) {
           // [SonarCloud S3358] แยก nested ternary เป็น helper function
           const distanceColor = chooseDistanceColor_(d.distanceFromRawMeters);
-          const mapsUrl = 'https://www.google.com/maps?q=' + d.lat + ',' + d.lng + '&z=17';
+          const mapsUrl = ViewHelpers.getGoogleMapsUrl(d.lat, d.lng);
           html +=
             '<div class="bg-blue-50 border border-blue-200 rounded p-3">' +
             '<div class="flex justify-between items-start gap-2">' +
