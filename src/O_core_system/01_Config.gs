@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.057
+ * VERSION: 6.0.058
  * FILE: 01_Config.gs
  * LMDS V6.0 — System Configuration & Constants
  * ===================================================
@@ -39,8 +39,8 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.057';
-const SCHEMA_VERSION = '6.0.057';
+const APP_VERSION = '6.0.058';
+const SCHEMA_VERSION = '6.0.058';
 const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
@@ -603,6 +603,15 @@ const SCG_CONFIG = Object.freeze({
 // [FIX v002] THRESHOLD_IGNORE: 70→50
 // [ADD v003] SCORE_MIN_THRESHOLD, PLACE_SCORE_MIN
 // ============================================================
+
+// [V6.0.058] SAFEGUARD_CONFIG — 5-Layer Alias Safeguard (Phase C-2)
+//   Currently implements Layer 1 (Structural Validation) + Layer 5 (Circuit Breaker)
+//   Layer 2 (Repetition Consensus) + Layer 3 (Conflict Detection) + Layer 4 (Probation)
+//   are deferred to future PR if needed (per comparative analysis — over-engineering for small team)
+const SAFEGUARD_CONFIG = Object.freeze({
+  MIN_SIMILARITY_RATIO: 0.5, // Layer 1 — Levenshtein similarity floor (0-1) — reject if variant too dissimilar from canonical
+  MAX_DAILY_ALIAS_WRITES: 50 // Layer 5 — circuit breaker: max alias promotes per day (prevents spam approve)
+});
 
 const AI_CONFIG = Object.freeze({
   THRESHOLD_AUTO: 85, // [V6.0.015 P2.4] 90→85 — give borderline matches a chance

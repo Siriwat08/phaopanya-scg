@@ -18,11 +18,11 @@
 | C-1.3 | ESLint `max-lines-per-function` 300 → 200                                           | Reviewer 2 TD-05 (adjusted) | 1 ชม.   | ✅ Done | #TBD |
 | C-1.4 | Telegram retry wrapper — exponential backoff (2s/4s/8s, 3 retries)                  | Reviewer 4 TD-004           | 1 ชม.   | ✅ Done | #TBD |
 
-### C-2: Feature (2-3 วัน) — 🔜 รอ C-1 เสร็จ
+### C-2: Feature (2-3 วัน) — ✅ เสร็จ (V6.0.058)
 
-| #     | งาน                                       | ที่มา                                     | ความยาก | สถานะ   | PR  |
-| ----- | ----------------------------------------- | ----------------------------------------- | ------- | ------- | --- |
-| C-2.1 | 5-Layer Alias Safeguard (แค่ Layer 1 + 5) | Reviewer 1 (adjusted — ทำ 2/5 layer ก่อน) | 1-2 วัน | 🔜 รอทำ | —   |
+| #     | งาน                                        | ที่มา                                     | ความยาก | สถานะ   | PR   |
+| ----- | ------------------------------------------ | ----------------------------------------- | ------- | ------- | ---- |
+| C-2.1 | 5-Layer Alias Safeguard (Layer 1 + 5 only) | Reviewer 1 (adjusted — ทำ 2/5 layer ก่อน) | 1 วัน   | ✅ Done | #TBD |
 
 ### C-3: Process Improvements (ทำควบคู่กัน) — 🔜 รอ
 

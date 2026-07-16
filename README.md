@@ -9,7 +9,7 @@
 | **Last Updated** | 2026-07-13 |
 | **Platform** | Google Apps Script + Google Sheets |
 | **Core Engine** | MatchEngine V6.0 with Hybrid Alias Architecture + RBAC |
-| **Total Files** | 38 `.gs` files (37 production + 1 legacy `99_Legacy.gs`) + 19 `.html` files |
+| **Total Files** | 39 `.gs` files (38 production + 1 legacy `99_Legacy.gs`) + 19 `.html` files |
 | **Total Lines** | ~24749 (.gs only, non-blank) |
 | **Total Functions** | 533 |
 | **Total Sheets** | 19 |
@@ -109,7 +109,7 @@ LMDS (Logistics Master Data System) V6.0 คือระบบ Master Data + Mat
 | 3. No Hardcode Index | ✅ PASS | All use `*_IDX` constants |
 | 4. Batch Operations | ✅ PASS | 0 getValue/setValue in loops |
 | 5. Checkpoint & Resume | ✅ PASS | Time Guard + auto-resume |
-| 6. Document Dependencies | ✅ PASS | All 38 files have DEPENDENCIES header |
+| 6. Document Dependencies | ✅ PASS | All 39 files have DEPENDENCIES header |
 | 7. No Phantom Calls | ✅ PASS | CacheService.removeAll() only |
 | 8. Namespace Pattern | ✅ PASS | Module prefix + `_` suffix |
 | 9. No Global State | ✅ PASS | Centralized chunked cache |
