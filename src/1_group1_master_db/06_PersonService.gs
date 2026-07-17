@@ -488,9 +488,9 @@ function scorePersonCandidate(queryName, candidate, queryPhone, sourceBranchNo) 
       //   ไม่ return 95 เพื่อป้องกัน AUTO_MATCH ผิดจากเบอร์บ้าน/บริษัทใช้ร่วมกัน
       // [V6.0.064] PII masking — mask phone in log (Reviewer #3 AUD3-NEW-013 + SEC-004)
       //   เบอร์โทรเป็น PDPA PII — ไม่ควร log แบบเต็ม ใช้ format 089-***-1234
-      const maskedPhone = queryPhone
-        ? queryPhone.substring(0, 3) + '-***-' + queryPhone.substring(queryPhone.length - 4)
-        : 'N/A';
+      // [V6.0.067] CodeQL #56 fix — removed useless ternary (queryPhone is always truthy here
+      //   because we're inside `if (queryPhone && candidate.phone)` block at line 465)
+      const maskedPhone = queryPhone.substring(0, 3) + '-***-' + queryPhone.substring(queryPhone.length - 4);
       logInfo(
         'PersonService',
         'Phone match but name mismatch: phone=' +
