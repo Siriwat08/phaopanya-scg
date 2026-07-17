@@ -2,8 +2,8 @@
 
 # 📋 TODO — Pending Recommendations from AI Reviews
 
-> Track ทุกข้อเสนอที่ยังไม่ได้ทำ จาก AI reviewers ทั้ง 4 ท่าน
-> อัปเดต: 2026-07-16 | เวอร์ชั่นปัจจุบัน: V6.0.058
+> Track ทุกข้อเสนอที่ยังไม่ได้ทำ จาก AI reviewers ทั้งหมด
+> อัปเดต: 2026-07-17 | เวอร์ชั่นปัจจุบัน: V6.0.067
 
 ---
 
@@ -13,40 +13,54 @@
 | ----------------------- | ---------- | ----- | --------------------- |
 | ✅ Group A (Quick Wins) | 4          | 4     | เสร็จ (V6.0.052-053)  |
 | ✅ Group B (Security)   | 4          | 4     | เสร็จ (V6.0.054-056)  |
-| ✅ Group C (Code Fixes) | 5          | 5     | เสร็จ (V6.0.057-058)  |
-| 🟡 Group D (Defer)      | 2          | 0     | รอเงื่อนไข            |
+| ✅ Group C (Code Fixes) | 5          | 5     | เสร็จ (V6.0.057-059)  |
+| ✅ Phase D (Process)    | 12         | 12    | เสร็จ (V6.0.060-062)  |
+| ✅ P0 รอบ 2             | 3          | 3     | เสร็จ (V6.0.063)      |
+| ✅ P1 รอบ 2             | 4          | 4     | เสร็จ (V6.0.064-066)  |
+| ✅ P0 รอบ 3             | 4          | 4     | เสร็จ (V6.0.067)      |
+| ✅ P1 รอบ 3             | 4          | 4     | เสร็จ (V6.0.067-068)  |
+| 🟡 Group D (Defer)      | 3          | 0     | รอเงื่อนไข            |
 | 🔴 Group E (No-Go)      | 5          | 0     | ห้ามทำ (ไม่เหมาะ GAS) |
-| 🟡 Phase D (Process)    | 12         | 0     | กำลังทำ               |
 
 ---
 
-## 🔴 P0 — Block deploy (รอบ 2 — V6.0.062 audit)
+## ✅ งานที่เสร็จแล้วทั้งหมด (V6.0.049-068)
 
-| #    | งาน                                                                          | ที่ไหน                        | สถานะ              |
-| ---- | ---------------------------------------------------------------------------- | ----------------------------- | ------------------ |
-| P0-1 | **SSTI fix** — Index.html `<?= currentUser.name/email ?>` → escaped          | `Index.html:74-75`            | ✅ Done (V6.0.063) |
-| P0-2 | **LockService guards** — createPerson/Place/GeoPoint                         | `06, 07, 08`                  | ✅ Done (V6.0.063) |
-| P0-3 | **AuthZ guards** — destructive ops (create/merge)                            | `06, 07, 08, 09`              | ✅ Done (V6.0.063) |
-| P0-4 | **Group 2 writes FACT_DELIVERY directly** — route through TransactionService | `12_ReviewService.gs:266-282` | 🔜 ทำภายหลัง       |
-
-## 🟡 P1 — ควรทำเร็วๆ นี้ (รอบ 2 — V6.0.062 audit)
-
-| #    | งาน                                              | ที่ไหน                    | สถานะ |
-| ---- | ------------------------------------------------ | ------------------------- | ----- |
-| P1-1 | XSS escape ใน 5 WebApp components                | 5 .html files             | 🔜    |
-| P1-2 | PII masking — mask phone ใน log                  | `06_PersonService.gs:489` | 🔜    |
-| P1-3 | Documentation sync — README/BLUEPRINT → V6.0.062 | 6 docs                    | 🔜    |
-| P1-4 | Formula injection sanitizer                      | ทั่วโปรเจกต์              | 🔜    |
+| เวอร์ชั่น | งาน                                                                   | ที่มา                  |
+| --------- | --------------------------------------------------------------------- | ---------------------- |
+| V6.0.049  | Dead code cleanup                                                     | Reviewer 1             |
+| V6.0.050  | Split 10_MatchEngine.gs → 10f/10g/10h                                 | Reviewer 1 + 2         |
+| V6.0.051  | Move scoring functions to 10b                                         | Reviewer 1             |
+| V6.0.052  | resetAliasEnrichmentContext_ wrapper + bump_version.sh                | Reviewer 1 + Lesson    |
+| V6.0.053  | Persist SYS_NOTES on all code paths                                   | Reviewer 2             |
+| V6.0.054  | SECURITY.md + XFrameOptions docs                                      | Reviewer 3             |
+| V6.0.055  | validateInput_() helper                                               | Reviewer 2 (adjusted)  |
+| V6.0.056  | OAuth scopes audit                                                    | Reviewer 3             |
+| V6.0.057  | Google Maps helper + runNormalize label + ESLint 200 + Telegram retry | Reviewer 2+4           |
+| V6.0.058  | 5-Layer Alias Safeguard (Layer 1+5)                                   | Reviewer 1 (adjusted)  |
+| V6.0.059  | TODO.md + CI-CD-TROUBLESHOOTING.md + PR template + check_18           | Process improvement    |
+| V6.0.060  | 8 new CI checks (check_10-17)                                         | Process improvement    |
+| V6.0.061  | AI Review Protocol + self_audit.sh                                    | Process improvement    |
+| V6.0.062  | Cleanup AI review files                                               | Cleanup                |
+| V6.0.063  | P0 รอบ 2: SSTI + LockService + AuthZ guards                           | Reviewer #3 (รอบ 2)    |
+| V6.0.064  | P1 รอบ 2: XSS escape (6 components) + PII masking (phone)             | Reviewer #2+#3 (รอบ 2) |
+| V6.0.065  | P1 รอบ 2: Documentation sync (6 docs)                                 | Reviewer #3 (รอบ 2)    |
+| V6.0.066  | P1 รอบ 2: Formula injection sanitizer                                 | Reviewer #3 (รอบ 2)    |
+| V6.0.067  | P0 รอบ 3: PII email + Cookie B1→PropsService + XSS LiveFeed + Lock    | Reviewer #1+#2 (รอบ 3) |
+| V6.0.067  | P1 รอบ 3: Auth fail-open → deny-by-default                            | Reviewer #2 (รอบ 3)    |
+| V6.0.067  | CodeQL #56: Useless conditional fix                                   | CodeQL                 |
+| V6.0.068  | P1 รอบ 3: TODO.md update + BLUEPRINT.md update + wire check_10-18     | Reviewer #1 (รอบ 3)    |
 
 ---
 
 ## 🟡 Group D — รอเงื่อนไข (ทำเมื่อจำเป็น)
 
-| #   | งาน                                          | ที่มา                                        | เงื่อนไขที่จะทำ                                                            |
-| --- | -------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
-| D-1 | **STG_CLEANED / CLEAN_AUDIT middle layer**   | Reviewer 2's #1 proposal (รอบ 1)             | ทำเมื่อทีมโตขึ้น หรือเจอปัญหา audit จริง                                   |
-| D-2 | **Split 21_AliasService.gs (1,771 LOC)**     | Reviewer 2 TD-02 (รอบ 1) + รอบ 2 ทั้ง 3 ท่าน | ทำเมื่อเจอปัญหา maintenance จริง (cohesion สูง — อย่า split ถ้าไม่มีปัญหา) |
-| D-3 | **Split 05_NormalizeService.gs (1,419 LOC)** | Reviewer #3 (รอบ 2 AUD2-ATD-004)             | เหมือนกัน — cohesion สูง                                                   |
+| #   | งาน                                          | ที่มา                                         | เงื่อนไขที่จะทำ                                                            |
+| --- | -------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------- |
+| D-1 | **STG_CLEANED / CLEAN_AUDIT middle layer**   | Reviewer 2's #1 proposal (รอบ 1)              | ทำเมื่อทีมโตขึ้น หรือเจอปัญหา audit จริง                                   |
+| D-2 | **Split 21_AliasService.gs (1,796 LOC)**     | รอบ 1 + รอบ 2 ทั้ง 3 ท่าน + รอบ 3 ทั้ง 2 ท่าน | ทำเมื่อเจอปัญหา maintenance จริง (cohesion สูง — อย่า split ถ้าไม่มีปัญหา) |
+| D-3 | **Split 05_NormalizeService.gs (1,419 LOC)** | Reviewer #3 (รอบ 2 AUD2-ATD-004)              | เหมือนกัน — cohesion สูง                                                   |
+| D-4 | **Group 2 writes FACT_DELIVERY directly**    | Reviewer #3 (รอบ 2 AUD2-ATD-001)              | ทำเมื่อ refactor ReviewService                                             |
 
 ---
 
@@ -62,88 +76,13 @@
 
 ---
 
-## 🟡 Phase D — กระบวนการตรวจสอบ (กำลังทำ)
+## 🟡 P2 รอบ 3 — ทยอยแก้
 
-### D-1: CI checks ใหม่ (8 ตัว)
-
-| #     | Script                                | ตรวจอะไร                                | สถานะ   |
-| ----- | ------------------------------------- | --------------------------------------- | ------- |
-| D-1.1 | `check_10_dead_functions.sh`          | function ที่ไม่มี caller                | 🔜 รอทำ |
-| D-1.2 | `check_11_wrapper_usage.sh`           | wrapper ต้องถูกใช้ทุกที่                | 🔜 รอทำ |
-| D-1.3 | `check_12_path_consistency.sh`        | CREATE_NEW/AUTO_MATCH/MERGE consistency | 🔜 รอทำ |
-| D-1.4 | `check_13_no_runtime_cdn.sh`          | ห้าม CDN runtime                        | 🔜 รอทำ |
-| D-1.5 | `check_14_external_api_resilience.sh` | UrlFetchApp ต้องมี try-catch            | 🔜 รอทำ |
-| D-1.6 | `check_15_string_duplication.sh`      | string ซ้ำ > 2 ครั้ง                    | 🔜 รอทำ |
-| D-1.7 | `check_16_api_call_count.sh`          | นับ getSheetByName/getValue/setValue    | 🔜 รอทำ |
-| D-1.8 | `check_17_production_readiness.sh`    | appsscript.json access + executeAs      | 🔜 รอทำ |
-
-### D-2: AI Review Verification Protocol
-
-| #     | งาน                                | สถานะ   |
-| ----- | ---------------------------------- | ------- |
-| D-2.1 | สร้าง `docs/AI-REVIEW-PROTOCOL.md` | 🔜 รอทำ |
-
-### D-3: PR Template
-
-| #     | งาน                       | สถานะ                      |
-| ----- | ------------------------- | -------------------------- |
-| D-3.1 | เพิ่ม Pre-Merge Checklist | ✅ Done (V6.0.059 — C-3.3) |
-
-### D-4: Self-Audit Script
-
-| #     | งาน                           | สถานะ   |
-| ----- | ----------------------------- | ------- |
-| D-4.1 | สร้าง `scripts/self_audit.sh` | 🔜 รอทำ |
-
----
-
-## 📊 สรุปความคืบหน้าทั้งหมด
-
-### งานที่เสร็จแล้ว (V6.0.049-058)
-
-| เวอร์ชั่น | งาน                                                                   | ที่มา                 |
-| --------- | --------------------------------------------------------------------- | --------------------- |
-| V6.0.049  | Dead code cleanup (matchCalcFullScore_ + matchCalcGeoAnchorScore_)    | Reviewer 1            |
-| V6.0.050  | Split 10_MatchEngine.gs → 10f/10g/10h                                 | Reviewer 1 + 2        |
-| V6.0.051  | Move scoring functions to 10b                                         | Reviewer 1            |
-| V6.0.052  | resetAliasEnrichmentContext_ wrapper + bump_version.sh                | Reviewer 1 + Lesson   |
-| V6.0.053  | Persist SYS_NOTES on all code paths                                   | Reviewer 2            |
-| V6.0.054  | SECURITY.md + XFrameOptions docs                                      | Reviewer 3            |
-| V6.0.055  | validateInput_() helper                                               | Reviewer 2 (adjusted) |
-| V6.0.056  | OAuth scopes audit                                                    | Reviewer 3            |
-| V6.0.057  | Google Maps helper + runNormalize label + ESLint 200 + Telegram retry | Reviewer 2+4          |
-| V6.0.058  | 5-Layer Alias Safeguard (Layer 1+5)                                   | Reviewer 1 (adjusted) |
-| V6.0.059  | TODO.md + CI-CD-TROUBLESHOOTING.md + PR template + check_18           | Process improvement   |
-
-### งานที่ยังไม่ได้ทำ
-
-- **Group D:** 2 งาน (รอเงื่อนไข)
-- **Phase D:** 10 งาน (กำลังทำ — D-1 + D-2 + D-4)
-
----
-
-## ประวัติการอัปเดต
-
-| วันที่     | เวอร์ชั่น | งาน                   |
-| ---------- | --------- | --------------------- |
-| 2026-07-16 | V6.0.059  | สร้าง TODO.md (C-3.1) |
-
----
-
-## 🔴 P0 รอบ 3 — Block deploy (V6.0.066 audit)
-
-| #       | งาน                                                   | ที่ไหน                     | สถานะ              |
-| ------- | ----------------------------------------------------- | -------------------------- | ------------------ |
-| P0-R3-1 | **PII email ใน log** — maskEmailSafe_() + logDebug    | `22_WebApp.gs:140, 220`    | ✅ Done (V6.0.067) |
-| P0-R3-2 | **SCG Cookie B1 primary → PropertiesService primary** | `18_ServiceSCG.gs:329-339` | ✅ Done (V6.0.067) |
-| P0-R3-3 | **XSS LiveFeed.html:72** — escape JSON.stringify      | `LiveFeed.html:72`         | ✅ Done (V6.0.067) |
-| P0-R3-4 | **Lock double-release** — releaseScriptLock_()        | `00_App.gs:303`            | ✅ Done (V6.0.067) |
-
-## 🟡 P1 รอบ 3
-
-| #       | งาน                                         | ที่ไหน                 | สถานะ              |
-| ------- | ------------------------------------------- | ---------------------- | ------------------ |
-| P1-R3-1 | Auth fail-open — return true → return false | `22_WebApp.gs:184-186` | ✅ Done (V6.0.067) |
-| P1-R3-2 | TODO.md stale — version + status ผิด        | `docs/TODO.md`         | 🔜                 |
-| P1-R3-3 | BLUEPRINT.md stale + SEC-004 overstate      | `BLUEPRINT.md`         | 🔜                 |
-| P1-R3-4 | check_10-18 ไม่ได้ wire ใน workflow         | `07-doc-code-sync.yml` | 🔜                 |
+| #       | งาน                                               | ที่ไหน                      | สถานะ |
+| ------- | ------------------------------------------------- | --------------------------- | ----- |
+| P2-R3-1 | Dead functions ใน 16_GeoDictionaryBuilder.gs      | lines 245, 402, 408         | 🔜    |
+| P2-R3-2 | Pagination duplication 3 จุดใน 22b_WebAppViews.gs | lines 455, 619, 898         | 🔜    |
+| P2-R3-3 | `ratio <= floor` ควรเป็น `<`                      | `21b_AliasSafeguard.gs:85`  | 🔜    |
+| P2-R3-4 | try-catch รอบ tryLock ไม่จำเป็น                   | `10_MatchEngine.gs:166-172` | 🔜    |
+| P2-R3-5 | COOKIE_CELL: 'B1' ยังอยู่ใน config แม้ deprecated | `01_Config.gs:592`          | 🔜    |
+| P2-R3-6 | 99_Legacy.gs ไม่มี sunset version                 | `99_Legacy.gs`              | 🔜    |
