@@ -127,3 +127,23 @@
 | วันที่     | เวอร์ชั่น | งาน                   |
 | ---------- | --------- | --------------------- |
 | 2026-07-16 | V6.0.059  | สร้าง TODO.md (C-3.1) |
+
+---
+
+## 🔴 P0 รอบ 3 — Block deploy (V6.0.066 audit)
+
+| #       | งาน                                                   | ที่ไหน                     | สถานะ              |
+| ------- | ----------------------------------------------------- | -------------------------- | ------------------ |
+| P0-R3-1 | **PII email ใน log** — maskEmailSafe_() + logDebug    | `22_WebApp.gs:140, 220`    | ✅ Done (V6.0.067) |
+| P0-R3-2 | **SCG Cookie B1 primary → PropertiesService primary** | `18_ServiceSCG.gs:329-339` | ✅ Done (V6.0.067) |
+| P0-R3-3 | **XSS LiveFeed.html:72** — escape JSON.stringify      | `LiveFeed.html:72`         | ✅ Done (V6.0.067) |
+| P0-R3-4 | **Lock double-release** — releaseScriptLock_()        | `00_App.gs:303`            | ✅ Done (V6.0.067) |
+
+## 🟡 P1 รอบ 3
+
+| #       | งาน                                         | ที่ไหน                 | สถานะ              |
+| ------- | ------------------------------------------- | ---------------------- | ------------------ |
+| P1-R3-1 | Auth fail-open — return true → return false | `22_WebApp.gs:184-186` | ✅ Done (V6.0.067) |
+| P1-R3-2 | TODO.md stale — version + status ผิด        | `docs/TODO.md`         | 🔜                 |
+| P1-R3-3 | BLUEPRINT.md stale + SEC-004 overstate      | `BLUEPRINT.md`         | 🔜                 |
+| P1-R3-4 | check_10-18 ไม่ได้ wire ใน workflow         | `07-doc-code-sync.yml` | 🔜                 |

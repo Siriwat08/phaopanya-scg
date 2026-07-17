@@ -1,3 +1,4 @@
+<!-- DOC-TYPE: historical -->
 # 📊 LMDS V6.0 Pre-Delivery Audit Report
 **วันที่ตรวจ:** 2026-07-16 | **Auditor:** Principal Software Auditor (Claude Sonnet 4.6)  
 **Version ที่ตรวจ:** APP_VERSION = 6.0.062 | **Repo:** phaopanya-scg-main.zip

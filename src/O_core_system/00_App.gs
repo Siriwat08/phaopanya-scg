@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.066
+ * VERSION: 6.0.067
  * FILE: 00_App.gs
  * LMDS V6.0 — Application Entry Point & Menu Controller
  * ===================================================
@@ -300,7 +300,10 @@ function runFullPipeline() {
     safeUiAlert_('❌ Pipeline ล้มเหลว:\n' + e.message);
     throw e;
   } finally {
-    lock.releaseLock();
+    // [V6.0.067] Use releaseScriptLock_() instead of bare lock.releaseLock() (Reviewer #2 TD-001 Round 3)
+    //   ป้องกัน double-release: ถ้า runMatchEngine() release ไปแล้ว → bare releaseLock() จะ throw
+    //   releaseScriptLock_() มี hasLock() guard → null-safe
+    releaseScriptLock_(lock);
     // [PERF-012] Flush log buffer ก่อน execution จบ — ป้องกัน log entries สูญหาย
     if (typeof flushLogBuffer_ === 'function') flushLogBuffer_();
   }

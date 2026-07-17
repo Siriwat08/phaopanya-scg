@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.066
+ * VERSION: 6.0.067
  * FILE: 22_WebApp.gs
  * LMDS V6.0 — Web App Server (Dashboard)
  * ===================================================
@@ -137,7 +137,8 @@ function isAuthorizedDashboardUser_() {
       .trim()
       .toLowerCase();
 
-    logInfo('WebApp', '[Auth DEBUG] effectiveUser="' + email + '"');
+    // [V6.0.067] PII masking — mask email + downgrade to logDebug (Reviewer #1+#2 Round 3)
+    logDebug('WebApp', '[Auth DEBUG] effectiveUser="' + maskEmailSafe_(email) + '"');
 
     if (!email) {
       // [FIX BUG-PM-003 V5.5.041] เปลี่ยนเป็น Deny-by-default
@@ -181,9 +182,12 @@ function isAuthorizedDashboardUser_() {
       return authorized;
     }
 
-    // Last resort: Script Owner เท่านั้น — ปล่อยผ่านเพราะ executeAs=USER_DEPLOYING = เจ้าของเสมอ
-    logInfo('WebApp', '[Auth] No whitelist — ปล่อยผ่าน (Script Owner)');
-    return true;
+    // [V6.0.067] Security hardening — deny-by-default instead of fail-open (Reviewer #2 TD-006)
+    //   เดิม: return true (fail-open) → ถ้าไม่มี whitelist ใครก็เข้าได้
+    //   ใหม่: return false (deny-by-default) → ถ้าไม่มี whitelist ปฏิเสธทุกคน
+    //   Admin ต้องตั้ง DASHBOARD_USERS หรือ LMDS_ADMINS ให้ชัดเจน
+    logWarn('WebApp', '[Auth] No whitelist configured — access DENIED (deny-by-default)');
+    return false;
   } catch (err) {
     logError('WebApp', 'isAuthorizedDashboardUser_ ล้มเหลว: ' + err.message, err);
     return false; // Deny-by-default
@@ -217,7 +221,11 @@ function getCurrentDashboardUser_() {
     });
   }
 
-  logInfo('WebApp', '[Auth DEBUG] getCurrentDashboardUser_: email="' + email + '", name="' + displayName + '"');
+  // [V6.0.067] PII masking — mask email + downgrade to logDebug (Reviewer #1+#2 Round 3)
+  logDebug(
+    'WebApp',
+    '[Auth DEBUG] getCurrentDashboardUser_: email="' + maskEmailSafe_(email) + '", name="' + displayName + '"'
+  );
 
   return {
     authorized: true,
