@@ -281,3 +281,39 @@
 **ทำในสัปดาห์นี้ (P1):** 4. XSS escape ใน 5 components 5. PII masking — mask phone 6. Docs sync — อัปเดตเป็น V6.0.062
 
 **เก็บไว้ทีหลัง (P2 — รอเงื่อนไข):** 7. Split 21_AliasService.gs — cohesion สูง รอเจอปัญหาจริง 8. Split 05_NormalizeService.gs — เหมือนกัน 9. Formula injection sanitizer — low priority
+
+---
+
+## 10. รอบ 3 — สรุป AI Reviewers ใหม่ (V6.0.066)
+
+### ภาพรวม
+
+| Reviewer | ไฟล์                                         | คะแนน       | Findings       | จุดเด่น                                              |
+| -------- | -------------------------------------------- | ----------- | -------------- | ---------------------------------------------------- |
+| **#1**   | LMDS_V6_Audit_Report.md (47KB)               | 86/100 (B+) | 15 TDs + 3 SEC | STRIDE + รอบด้าน — พบ PII email ใน log               |
+| **#2**   | LMDS_V6.0_PreDelivery_Audit_Report.md (43KB) | 74/100 (B)  | 15 TDs + 6 SEC | เข้มข้น — พบ cookie regression + lock double-release |
+
+### P0 — 2 ท่านยืนยันตรงกัน (Block deploy)
+
+| #    | ปัญหา                                                        | ที่ไหน                     | ใครพบ       | สถานะ             |
+| ---- | ------------------------------------------------------------ | -------------------------- | ----------- | ----------------- |
+| P0-1 | **PII email ใน log** — `logInfo` เก็บ email ดิบ              | `22_WebApp.gs:140, 220`    | ทั้ง 2 ท่าน | ❌ แก้ใน V6.0.067 |
+| P0-2 | **SCG Cookie อ่าน B1 เป็น primary**                          | `18_ServiceSCG.gs:329-339` | Reviewer #2 | ❌ แก้ใน V6.0.067 |
+| P0-3 | **XSS ใน LiveFeed.html:72** — `JSON.stringify(m)` ไม่ escape | `LiveFeed.html:72`         | Reviewer #2 | ❌ แก้ใน V6.0.067 |
+| P0-4 | **Lock double-release** — `lock.releaseLock()` เดิม          | `00_App.gs:303`            | Reviewer #2 | ❌ แก้ใน V6.0.067 |
+
+### P1 — ควรแก้เร็วๆ นี้
+
+| #    | ปัญหา                                           | ที่ไหน                 | ใครพบ       |
+| ---- | ----------------------------------------------- | ---------------------- | ----------- |
+| P1-1 | Auth fail-open — `return true` ตอน no whitelist | `22_WebApp.gs:184-186` | Reviewer #2 |
+| P1-2 | TODO.md stale — version ค้าง V6.0.058           | `docs/TODO.md`         | Reviewer #1 |
+| P1-3 | BLUEPRINT.md stale + SEC-004 overstate          | `BLUEPRINT.md`         | Reviewer #1 |
+| P1-4 | check_10-18 ไม่ได้ wire ใน workflow             | `07-doc-code-sync.yml` | Reviewer #1 |
+
+### สิ่งที่เราเรียนรู้ (ใส่ใน logic)
+
+1. **PII masking ต้องครบทุก type** — เรา mask phone แต่ลืม email
+2. **XSS escape ต้อง grep หาครบทุกจุด** — เราทำ 6 จุดแต่พลาดจุดที่ 7 (LiveFeed:72)
+3. **Helper ต้องใช้ทุกที่** — มี `releaseScriptLock_()` แต่ไม่ได้ใช้ที่ `00_App.gs:303`
+4. **Cookie fix ถูก revert** — V6.0.036 เคยแก้แต่ถูก revert — check_06 ต้องครอบ cookie path
