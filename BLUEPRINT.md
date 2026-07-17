@@ -1,10 +1,10 @@
 <!-- DOC-TYPE: living -->
 
-# BLUEPRINT: LMDS Architecture V6.0.064 (Production Ready)
+# BLUEPRINT: LMDS Architecture V6.0.067 (Production Ready)
 
 > เอกสารสถาปัตยกรรมระบบ LMDS (Logistics Master Data System) ฉบับเต็ม
-> ร่างสถาปัตยกรรมระดับ Core-System ชี้แจ้ง Data Schema, Pipeline Mechanics, Module Specification, Security Architecture, Production Deployment สำหรับ V6.0.064
-> Version: 6.0.064 (Production Ready) | Last Updated: 2026-07-16
+> ร่างสถาปัตยกรรมระดับ Core-System สำหรับ V6.0.067
+> Version: 6.0.067 (Production Ready) | Last Updated: 2026-07-17
 > **18 Audit Cycles Complete** | 116 Issues FIXED | **98% Ready for Production**
 
 ---
@@ -69,7 +69,7 @@ Master tables (M_PERSON, M_PLACE, M_GEO_POINT, M_DESTINATION), Alias tables (M_A
 
 ## 6. Module Specification
 
-[Same as before - 35 modules with functions]
+39 modules with functions (34 production + 5 split helpers 10b/10d/10e/10f/10g/10h + 21b AliasSafeguard + 1 legacy 99_Legacy)
 
 ---
 
@@ -142,20 +142,20 @@ Master tables (M_PERSON, M_PLACE, M_GEO_POINT, M_DESTINATION), Alias tables (M_A
 
 ### SEC-001 → SEC-012 Complete ✅
 
-| SEC     | Issue                | Fix                         | Status |
-| ------- | -------------------- | --------------------------- | :----: |
-| SEC-001 | Hardcoded secrets    | PropertiesService only      |   ✅   |
-| SEC-002 | Authorization bypass | Guard on 13 destructive ops |   ✅   |
-| SEC-003 | Cookie injection     | RFC 6265 sanitization       |   ✅   |
-| SEC-004 | PII in logs          | MD5 hashing + email masking |   ✅   |
-| SEC-005 | Sheet access         | 8 sheets protected          |   ✅   |
-| SEC-006 | API key exposure     | x-goog-api-key header       |   ✅   |
-| SEC-007 | Scope creep          | 10 → 6 OAuth scopes         |   ✅   |
-| SEC-008 | Error messages       | Body truncation (200 chars) |   ✅   |
-| SEC-009 | Admin impersonation  | Email verification          |   ✅   |
-| SEC-010 | Cookie theft         | Secure flag + SameSite      |   ✅   |
-| SEC-011 | Data exfiltration    | Range protection            |   ✅   |
-| SEC-012 | API rate limiting    | Retry with backoff          |   ✅   |
+| SEC     | Issue                | Fix                                        | Status |
+| ------- | -------------------- | ------------------------------------------ | :----: |
+| SEC-001 | Hardcoded secrets    | PropertiesService only                     |   ✅   |
+| SEC-002 | Authorization bypass | Guard on 13 destructive ops                |   ✅   |
+| SEC-003 | Cookie injection     | RFC 6265 sanitization                      |   ✅   |
+| SEC-004 | PII in logs          | Phone masked + email masked (V6.0.064+067) |   ✅   |
+| SEC-005 | Sheet access         | 8 sheets protected                         |   ✅   |
+| SEC-006 | API key exposure     | x-goog-api-key header                      |   ✅   |
+| SEC-007 | Scope creep          | 10 → 6 OAuth scopes                        |   ✅   |
+| SEC-008 | Error messages       | Body truncation (200 chars)                |   ✅   |
+| SEC-009 | Admin impersonation  | Email verification                         |   ✅   |
+| SEC-010 | Cookie theft         | Secure flag + SameSite                     |   ✅   |
+| SEC-011 | Data exfiltration    | Range protection                           |   ✅   |
+| SEC-012 | API rate limiting    | Retry with backoff                         |   ✅   |
 
 ---
 
@@ -172,8 +172,8 @@ Master tables (M_PERSON, M_PLACE, M_GEO_POINT, M_DESTINATION), Alias tables (M_A
 - [ ] Dead code: 0 functions
 - [ ] Test coverage: All entry points
 - [ ] Documentation: 100% up-to-date
-- [ ] CHANGELOG: [6.0.064] entry added
-- [ ] VERSION headers: All 35 files at 6.0.064
+- [ ] CHANGELOG: [6.0.067] entry added
+- [ ] VERSION headers: All 39 files at 6.0.067
 - [ ] Hardcoded secrets: 0 found
 - [ ] TODO/FIXME: 0 remaining
 - [ ] Console.log: Removed (except debug)
@@ -216,7 +216,7 @@ npm run lint      # Must pass
 npm run format:check  # Must pass
 clasp push --dry-run  # Review changes
 clasp push        # Deploy
-clasp deploy --description "V6.0.064 production"  # WebApp
+clasp deploy --description "V6.0.067 production"  # WebApp
 ```
 
 ### Post-Deployment Verification ✅

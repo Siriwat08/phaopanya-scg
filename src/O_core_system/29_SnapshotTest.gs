@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.067
+ * VERSION: 6.0.068
  * FILE: 29_SnapshotTest.gs
  * LMDS V6.0 — Snapshot Test Harness for Refactoring Safety
  * ===================================================
