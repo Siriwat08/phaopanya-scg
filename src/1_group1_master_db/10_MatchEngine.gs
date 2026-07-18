@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.068
+ * VERSION: 6.0.069
  * FILE: 10_MatchEngine.gs
  * LMDS V6.0 — Core Match & Resolution Engine
  * ===================================================
@@ -163,13 +163,8 @@ function cleanupMatchEngineRun_(lock) {
 function acquireMatchEngineLock_() {
   const lock = LockService.getScriptLock();
   // [FIX CRIT-009] ใช้ tryLock แทน waitLock — ไม่รอคิว แจ้ง user ทันที่ถ้า lock ไม่ได้
-  try {
-    lock.tryLock(APP_CONST.LOCK_TIMEOUT_MS);
-  } catch (e) {
-    logWarn('MatchEngine', 'ไม่สามารถ Lock ได้ — อาจมีการรันซ้อน กรุณารันใหม่ภายหลัง');
-    safeUiAlert_('⚠️ ไม่สามารถรัน Match Engine ได้ — มีการรันซ้อนอยู่\nกรุณารอให้การรันก่อนหน้าเสร็จก่อน แล้วลองใหม่');
-    return null;
-  }
+  // [V6.0.069] Simplified — tryLock returns boolean in GAS V8, no try-catch needed (Reviewer #2 Tip #10)
+  lock.tryLock(APP_CONST.LOCK_TIMEOUT_MS);
   if (!lock.hasLock()) {
     logWarn('MatchEngine', 'ไม่สามารถ Lock ได้ — อาจมีการรันซ้อน กรุณารันใหม่ภายหลัง');
     safeUiAlert_('⚠️ ไม่สามารถรัน Match Engine ได้ — มีการรันซ้อนอยู่\nกรุณารอให้การรันก่อนหน้าเสร็จก่อน แล้วลองใหม่');

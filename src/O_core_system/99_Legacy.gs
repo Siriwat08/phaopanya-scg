@@ -1,12 +1,13 @@
 /**
- * VERSION: 6.0.068
+ * VERSION: 6.0.069
  * FILE: 99_Legacy.gs
  * LMDS V6.0 — Deprecated/Legacy Functions (Compatibility Layer)
  * ===================================================
  * PURPOSE:
  *   รวบรวมฟังก์ชันที่ถูก deprecated แล้วแต่ยังเก็บไว้เพื่อ backward compatibility
  *   สำหรับ external scripts ที่อาจยังเรียกใช้งานอยู่
- *   ⚠️ ฟังก์ชันในไฟล์นี้จะถูกลบออกในอนาคต — ควรย้ายไปใช้ API ใหม่
+ *   ⚠️ ฟังก์ชันในไฟล์นี้จะถูกลบออกใน V7.0 — ควรย้ายไปใช้ API ใหม่
+ *   [V6.0.069] Sunset target: V7.0.0 (Reviewer #1 TD-010 Round 3)
  *
  * CHANGELOG:
  *   See /docs/CHANGELOG.md for full history.

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.068
+ * VERSION: 6.0.069
  * FILE: 21b_AliasSafeguard.gs
  * LMDS V6.0 — Alias Safeguard (Layer 1 + Layer 5)
  * ===================================================
@@ -82,7 +82,8 @@ function validateAliasStructure_(variantName, canonicalName, entityType) {
   const ratio = maxLen === 0 ? 1 : 1 - dist / maxLen;
 
   const floor = typeof SAFEGUARD_CONFIG !== 'undefined' ? SAFEGUARD_CONFIG.MIN_SIMILARITY_RATIO : 0.5;
-  if (ratio <= floor) {
+  // [V6.0.069] Changed <= to < — names scoring exactly at floor should pass (borderline is OK)
+  if (ratio < floor) {
     return { pass: false, ratio: ratio, reason: 'BELOW_SIMILARITY_FLOOR (' + ratio.toFixed(2) + ' <= ' + floor + ')' };
   }
 

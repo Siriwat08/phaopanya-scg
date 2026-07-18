@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.068
+ * VERSION: 6.0.069
  * FILE: 22b_WebAppViews.gs
  * LMDS V6.0 — Web App View Data Providers
  * ===================================================
@@ -452,8 +452,8 @@ function getFactDeliveryPage(offset, limit, filter) {
   }
 
   // Pagination on filtered indices
-  const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
-  const safeLimit = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+  // [V6.0.069] DRY — use parsePaginationParams_ helper (was duplicated 3x)
+  const { offset: safeOffset, limit: safeLimit } = parsePaginationParams_(offset, limit);
   const pageIndices = filteredRowIndices.slice(safeOffset, safeOffset + safeLimit);
   const totalFiltered = filteredRowIndices.length;
 
@@ -616,8 +616,8 @@ function getQReviewPage(offset, limit, statusFilter) {
   });
 
   // Pagination
-  const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
-  const safeLimit = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+  // [V6.0.069] DRY — use parsePaginationParams_ helper (was duplicated 3x)
+  const { offset: safeOffset, limit: safeLimit } = parsePaginationParams_(offset, limit);
   const pageRows = filtered.slice(safeOffset, safeOffset + safeLimit);
 
   // แปลง rows เป็น objects (เลือกเฉพาะ field ที่ frontend ใช้)
@@ -895,8 +895,8 @@ function getSourcePage(offset, limit, filter) {
   }
 
   // Pagination on filtered indices
-  const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
-  const safeLimit = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+  // [V6.0.069] DRY — use parsePaginationParams_ helper (was duplicated 3x)
+  const { offset: safeOffset, limit: safeLimit } = parsePaginationParams_(offset, limit);
   const pageIndices = filteredRowIndices.slice(safeOffset, safeOffset + safeLimit);
   const totalFiltered = filteredRowIndices.length;
 

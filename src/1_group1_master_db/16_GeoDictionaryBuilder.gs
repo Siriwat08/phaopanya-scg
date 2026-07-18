@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.068
+ * VERSION: 6.0.069
  * FILE: 16_GeoDictionaryBuilder.gs
  * LMDS V6.0 — Geo Dictionary Builder (SYS_TH_GEO)
  * ===================================================
@@ -242,28 +242,9 @@ function lookupByPostcode(postcode) {
   return cached[clean] || null;
 }
 
-function lookupProvinceFromAddress(rawAddress) {
-  if (!rawAddress) return '';
-  const addr = String(rawAddress).trim();
-  const provinces = getCachedProvinces_();
-
-  for (const province of provinces) {
-    if (province.length >= 4 && addr.includes(province)) return province;
-  }
-
-  const match = addr.match(/(?:จ\.?|จังหวัด)\s*([ก-๙]{2,})/);
-  if (match && match[1]) {
-    const found = provinces.find((p) => p.includes(match[1]) && p.length >= 4);
-    if (found) return found;
-  }
-
-  const postcodeMatch = addr.match(/\b[0-9]{5}\b/);
-  if (postcodeMatch) {
-    const loc = lookupByPostcode(postcodeMatch[0]);
-    if (loc && loc.province) return loc.province;
-  }
-  return '';
-}
+// [V6.0.069] REMOVED lookupProvinceFromAddress — dead code (0 callers verified via grep)
+//   Was: function lookupProvinceFromAddress(rawAddress) { ... }
+//   If needed: restore from git history of this commit
 
 /**
  * lookupPostcodeByArea — ค้นหาย้อนกลับแบบ Fuzzy
@@ -399,17 +380,10 @@ function scanAddressAgainstDictionary(rawAddress, knownPostcode) {
 // [REMOVED V5.5.044] listAllAreasByPostcode — dead code (mark @deprecated ใน V5.5.043, ไม่มี caller ใน .gs ใด)
 //   หากมี external caller ที่ต้องการ restore → ดู git history ของ commit นี้
 
-function isValidProvince(provinceName) {
-  if (!provinceName || provinceName.length < 4) return false;
-  const provinces = getCachedProvinces_();
-  return provinces.includes(provinceName.trim());
-}
-
-function lookupDistrictsByProvince(provinceName) {
-  if (!provinceName) return [];
-  const cached = getCachedDistricts_();
-  return cached[provinceName] || [];
-}
+// [V6.0.069] REMOVED isValidProvince + lookupDistrictsByProvince — dead code (0 callers verified via grep)
+//   Was: function isValidProvince(provinceName) { ... }
+//   Was: function lookupDistrictsByProvince(provinceName) { ... }
+//   If needed: restore from git history of this commit
 
 // ============================================================
 // SECTION 3: Cache Getters

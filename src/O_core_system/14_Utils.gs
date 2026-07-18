@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.068
+ * VERSION: 6.0.069
  * FILE: 14_Utils.gs
  * LMDS V6.0 — Utility Functions
  * ===================================================
@@ -1436,4 +1436,19 @@ function sanitizeRowForSheet_(row) {
   return row.map(function (val) {
     return sanitizeForSheet_(val);
   });
+}
+
+/**
+ * parsePaginationParams_ — [V6.0.069] Parse + validate pagination params (DRY — was duplicated 3x)
+ *   Used by 22b_WebAppViews.gs (lines 455, 619, 898)
+ * @param {string|number} offset - 0-based offset
+ * @param {string|number} limit - rows per page (default 50, max 200)
+ * @return {{offset: number, limit: number}} sanitized values
+ * @private
+ */
+function parsePaginationParams_(offset, limit) {
+  return {
+    offset: Math.max(0, parseInt(offset, 10) || 0),
+    limit: Math.max(1, Math.min(200, parseInt(limit, 10) || 50))
+  };
 }
