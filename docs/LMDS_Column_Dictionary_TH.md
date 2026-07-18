@@ -1,11 +1,11 @@
 <!-- DOC-TYPE: living -->
 
-# 📖 LMDS V6.0.064 — พจนานุกรมคอลัมน์ (Column Dictionary)
+# 📖 LMDS V6.0.069 — พจนานุกรมคอลัมน์ (Column Dictionary)
 
 > **เอกสารฉบับนี้อธิบายความหมายของทุกคอลัมน์ในทุกตารางของระบบ LMDS**
 > ใช้สำหรับ Admin / IT / Developer ที่ต้องการเข้าใจว่าแต่ละคอลัมน์เก็บอะไร และค่ามาจากไหน
 
-**เวอร์ชันเอกสาร:** V6.0.064 (2026-07-16, DOC-CODE SYNC)
+**เวอร์ชันเอกสาร:** V6.0.069 (2026-07-16, DOC-CODE SYNC)
 **ตารางทั้งหมด:** 19 ตาราง (16 IDX sets; MAPS_CACHE ถูกลบใน V5.5.013 — ใช้ @customFunction formulas แทน; FACT_DELIVERY +2 cols ใน V5.5.014 DRIVER-VERIFIED)
 **รูปแบบ:** ตาราง | คอลัมน์ | ชื่อคอลัมน์ภาษาไทย | ผลลัพท์ (ความหมาย / ที่มา)
 
@@ -322,4 +322,4 @@
 
 ---
 
-_LMDS V6.0.064 — Column Dictionary — Last Updated: 2026-07-16 (DOC-CODE SYNC)_
+_LMDS V6.0.069 — Column Dictionary — Last Updated: 2026-07-16 (DOC-CODE SYNC)_
