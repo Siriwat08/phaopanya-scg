@@ -6,7 +6,7 @@
 
 | รายการ                   | ค่า                                                                         |
 | ------------------------ | --------------------------------------------------------------------------- |
-| **เวอร์ชัน**             | 6.0.064 (Production Ready — 38 .gs files, 19 .html files)                   |
+| **เวอร์ชัน**             | 6.0.069 (Production Ready — 39 .gs files, 19 .html files)                   |
 | **Last Updated**         | 2026-07-16                                                                  |
 | **Platform**             | Google Apps Script + Google Sheets                                          |
 | **Core Engine**          | MatchEngine V6.0 with Hybrid Alias Architecture + RBAC                      |
@@ -123,7 +123,7 @@ LMDS (Logistics Master Data System) V6.0 คือระบบ Master Data + Mat
 | 8. Namespace Pattern     | ✅ PASS | Module prefix + `_` suffix            |
 | 9. No Global State       | ✅ PASS | Centralized chunked cache             |
 | 10. Lock Library         | ✅ PASS | LockService.getScriptLock()           |
-| 11. Separate HTML        | ✅ PASS | 17 HTML files                         |
+| 11. Separate HTML        | ✅ PASS | 19 HTML files                         |
 | 12. Error Handling       | ✅ PASS | 187 try-catch blocks                  |
 | 13. Logging with Context | ✅ PASS | logError with stack trace             |
 | 14. Structured Names     | ✅ PASS | 00_App, 01_Config, etc.               |

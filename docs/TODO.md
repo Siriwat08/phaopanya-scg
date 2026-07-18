@@ -3,7 +3,7 @@
 # 📋 TODO — Pending Recommendations from AI Reviews
 
 > Track ทุกข้อเสนอที่ยังไม่ได้ทำ จาก AI reviewers ทั้งหมด
-> อัปเดต: 2026-07-17 | เวอร์ชั่นปัจจุบัน: V6.0.067
+> อัปเดต: 2026-07-17 | เวอร์ชั่นปัจจุบัน: V6.0.069
 
 ---
 
@@ -17,8 +17,8 @@
 | ✅ Phase D (Process)    | 12         | 12    | เสร็จ (V6.0.060-062)  |
 | ✅ P0 รอบ 2             | 3          | 3     | เสร็จ (V6.0.063)      |
 | ✅ P1 รอบ 2             | 4          | 4     | เสร็จ (V6.0.064-066)  |
-| ✅ P0 รอบ 3             | 4          | 4     | เสร็จ (V6.0.067)      |
-| ✅ P1 รอบ 3             | 4          | 4     | เสร็จ (V6.0.067-068)  |
+| ✅ P0 รอบ 3             | 4          | 4     | เสร็จ (V6.0.069)      |
+| ✅ P1 รอบ 3             | 4          | 4     | เสร็จ (V6.0.069-068)  |
 | 🟡 Group D (Defer)      | 3          | 0     | รอเงื่อนไข            |
 | 🔴 Group E (No-Go)      | 5          | 0     | ห้ามทำ (ไม่เหมาะ GAS) |
 
@@ -46,9 +46,9 @@
 | V6.0.064  | P1 รอบ 2: XSS escape (6 components) + PII masking (phone)             | Reviewer #2+#3 (รอบ 2) |
 | V6.0.065  | P1 รอบ 2: Documentation sync (6 docs)                                 | Reviewer #3 (รอบ 2)    |
 | V6.0.066  | P1 รอบ 2: Formula injection sanitizer                                 | Reviewer #3 (รอบ 2)    |
-| V6.0.067  | P0 รอบ 3: PII email + Cookie B1→PropsService + XSS LiveFeed + Lock    | Reviewer #1+#2 (รอบ 3) |
-| V6.0.067  | P1 รอบ 3: Auth fail-open → deny-by-default                            | Reviewer #2 (รอบ 3)    |
-| V6.0.067  | CodeQL #56: Useless conditional fix                                   | CodeQL                 |
+| V6.0.069  | P0 รอบ 3: PII email + Cookie B1→PropsService + XSS LiveFeed + Lock    | Reviewer #1+#2 (รอบ 3) |
+| V6.0.069  | P1 รอบ 3: Auth fail-open → deny-by-default                            | Reviewer #2 (รอบ 3)    |
+| V6.0.069  | CodeQL #56: Useless conditional fix                                   | CodeQL                 |
 | V6.0.068  | P1 รอบ 3: TODO.md update + BLUEPRINT.md update + wire check_10-18     | Reviewer #1 (รอบ 3)    |
 
 ---

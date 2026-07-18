@@ -1,10 +1,10 @@
 <!-- DOC-TYPE: living -->
 
-# BLUEPRINT: LMDS Architecture V6.0.067 (Production Ready)
+# BLUEPRINT: LMDS Architecture V6.0.069 (Production Ready)
 
 > เอกสารสถาปัตยกรรมระบบ LMDS (Logistics Master Data System) ฉบับเต็ม
-> ร่างสถาปัตยกรรมระดับ Core-System สำหรับ V6.0.067
-> Version: 6.0.067 (Production Ready) | Last Updated: 2026-07-17
+> ร่างสถาปัตยกรรมระดับ Core-System สำหรับ V6.0.069
+> Version: 6.0.069 (Production Ready) | Last Updated: 2026-07-17
 > **18 Audit Cycles Complete** | 116 Issues FIXED | **98% Ready for Production**
 
 ---
@@ -172,8 +172,8 @@ Master tables (M_PERSON, M_PLACE, M_GEO_POINT, M_DESTINATION), Alias tables (M_A
 - [ ] Dead code: 0 functions
 - [ ] Test coverage: All entry points
 - [ ] Documentation: 100% up-to-date
-- [ ] CHANGELOG: [6.0.067] entry added
-- [ ] VERSION headers: All 39 files at 6.0.067
+- [ ] CHANGELOG: [6.0.069] entry added
+- [ ] VERSION headers: All 39 files at 6.0.069
 - [ ] Hardcoded secrets: 0 found
 - [ ] TODO/FIXME: 0 remaining
 - [ ] Console.log: Removed (except debug)
@@ -216,7 +216,7 @@ npm run lint      # Must pass
 npm run format:check  # Must pass
 clasp push --dry-run  # Review changes
 clasp push        # Deploy
-clasp deploy --description "V6.0.067 production"  # WebApp
+clasp deploy --description "V6.0.069 production"  # WebApp
 ```
 
 ### Post-Deployment Verification ✅

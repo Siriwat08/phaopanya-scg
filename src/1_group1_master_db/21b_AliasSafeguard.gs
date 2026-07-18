@@ -84,7 +84,7 @@ function validateAliasStructure_(variantName, canonicalName, entityType) {
   const floor = typeof SAFEGUARD_CONFIG !== 'undefined' ? SAFEGUARD_CONFIG.MIN_SIMILARITY_RATIO : 0.5;
   // [V6.0.069] Changed <= to < — names scoring exactly at floor should pass (borderline is OK)
   if (ratio < floor) {
-    return { pass: false, ratio: ratio, reason: 'BELOW_SIMILARITY_FLOOR (' + ratio.toFixed(2) + ' <= ' + floor + ')' };
+    return { pass: false, ratio: ratio, reason: 'BELOW_SIMILARITY_FLOOR (' + ratio.toFixed(2) + ' < ' + floor + ')' };
   }
 
   return { pass: true, ratio: ratio, reason: 'OK' };
