@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.069
+ * VERSION: 6.0.070
  * FILE: 10_MatchEngine.gs
  * LMDS V6.0 — Core Match & Resolution Engine
  * ===================================================
@@ -176,11 +176,10 @@ function acquireMatchEngineLock_() {
 /**
  * prepareMatchEngineContext_ — [REF-004] SECTION B: Initialize stats + load source rows
  *   รักษา behavior เดิม 100% — resetProcessingState_, loadSourceBatch_, logInfo messages
- * @param {Date} startTime
  * @return {Object|null} context object หรือ null ถ้าไม่มี pending rows
  * @private
  */
-function prepareMatchEngineContext_(startTime) {
+function prepareMatchEngineContext_() {
   logInfo('MatchEngine', 'เริ่ม Match Engine');
 
   // [FIX v5.2.007] ลบ Checkpoint Index — เริ่มจาก 0 เสมอ

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.069
+ * VERSION: 6.0.070
  * FILE: 28_WebAppActions.gs
  * LMDS V6.0 — Web App Actions Server (Mobile Menu)
  * ===================================================
@@ -430,10 +430,8 @@ const WEB_APP_ACTION_REGISTRY = [
 function getWebAppActionRegistry() {
   try {
     // [V6.0.021] กรองตาม permission — admin เห็นทั้งหมด, user ทั่วไปเห็นเฉพาะ safe
-    const isAdmin =
-      typeof isCurrentUserAdmin_ === 'function'
-        ? isCurrentUserAdmin_()
-        : typeof isAuthorizedUser_ === 'function' && isAuthorizedUser_();
+    // [V6.0.070] QW-4: Cleanup dead ref isCurrentUserAdmin_ → use isAuthorizedUser_ directly
+    const isAdmin = typeof isAuthorizedUser_ === 'function' && isAuthorizedUser_();
     if (isAdmin) {
       return WEB_APP_ACTION_REGISTRY;
     }
@@ -479,10 +477,8 @@ function runWebAppAction(actionId, params) {
     // 2. Permission check
     //   safe = ทุกคนใช้ได้, warning/danger = admin เท่านั้น
     if (action.danger !== 'safe') {
-      const isAdmin =
-        typeof isCurrentUserAdmin_ === 'function'
-          ? isCurrentUserAdmin_()
-          : typeof isAuthorizedUser_ === 'function' && isAuthorizedUser_();
+      // [V6.0.070] QW-4: Cleanup dead ref isCurrentUserAdmin_ → use isAuthorizedUser_ directly
+      const isAdmin = typeof isAuthorizedUser_ === 'function' && isAuthorizedUser_();
       if (!isAdmin) {
         return {
           ok: false,

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.069
+ * VERSION: 6.0.070
  * FILE: 27_RbacService.gs
  * LMDS V6.0 — Role-Based Access Control
  * ===================================================
@@ -69,20 +69,21 @@ function getCurrentUserRole_() {
       .toLowerCase();
     if (!email) return null;
 
+    // [V6.0.070] P1-1: Cache PropertiesService — ลด 3 API calls → 1 call
+    const props = PropertiesService.getScriptProperties();
+
     // Script Owner / explicit admin list = admin always
     try {
-      if (PropertiesService.getScriptProperties().getProperty('LMDS_ADMINS')) {
-        const admins = PropertiesService.getScriptProperties()
-          .getProperty('LMDS_ADMINS')
-          .split(',')
-          .map((a) => a.trim().toLowerCase());
+      const adminsStr = props.getProperty('LMDS_ADMINS');
+      if (adminsStr) {
+        const admins = adminsStr.split(',').map((a) => a.trim().toLowerCase());
         if (admins.indexOf(email) !== -1) return RBAC_CONFIG.ROLES.ADMIN;
       }
     } catch (e) {
       /* ignore */
     }
 
-    const assignments = PropertiesService.getScriptProperties().getProperty(RBAC_CONFIG.ROLE_ASSIGNMENTS_KEY) || '';
+    const assignments = props.getProperty(RBAC_CONFIG.ROLE_ASSIGNMENTS_KEY) || '';
     const map = {};
     assignments.split(',').forEach(function (pair) {
       const parts = pair.split(':');

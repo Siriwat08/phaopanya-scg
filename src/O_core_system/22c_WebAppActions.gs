@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.069
+ * VERSION: 6.0.070
  * FILE: 22c_WebAppActions.gs
  * LMDS V6.0 — Web App Actions
  * ===================================================
