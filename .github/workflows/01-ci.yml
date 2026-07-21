@@ -2,9 +2,9 @@ name: 🔍 CI - Code Quality Check
 
 on:
   push:
-    branches: [ main, develop, feature/** ]
+    branches: [main, develop, feature/**]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 # ยกเลิกงานเก่าที่ค้าง เมื่อมี push ใหม่เข้ามา
 concurrency:
@@ -245,10 +245,10 @@ jobs:
           echo ""
           echo "📊 ไฟล์ .gs ทั้งหมด: $total ไฟล์"
 
-          if [[ "$total" -ne 25 ]]; then
-            echo "  ⚠️  ควรมี 25 ไฟล์ (00-24 + 99_Legacy) — ตอนนี้มี $total ไฟล์"
+          if [[ "$total" -ne 39 ]]; then
+            echo "  ⚠️  ควรมี 39 ไฟล์ — ตอนนี้มี $total ไฟล์"
           else
-            echo "  ✅ ครบ 25 ไฟล์ (24 production + 1 legacy) ตามที่ README ระบุ"
+            echo "  ✅ ครบ 39 ไฟล์ ตามที่ README ระบุ"
           fi
 
       - name: 🔗 ตรวจสอบ Cross-Domain Dependencies

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.069
+ * VERSION: 6.0.070
  * FILE: 00_App.gs
  * LMDS V6.0 — Application Entry Point & Menu Controller
  * ===================================================
@@ -104,8 +104,6 @@ function onOpen(e) {
         .addItem('📍 จับคู่พิกัด', 'applyMasterCoordinatesToDailyJob')
         .addSeparator()
         .addItem('🗑️ ล้างข้อมูลทั้งหมด', 'clearAllSCGSheets_UI')
-        .addSeparator()
-        .addItem('🔐 ตั้งค่า SCG Cookie', 'setSCGCookie_UI')
     )
 
     .addSeparator()
@@ -201,6 +199,13 @@ function onEdit(e) {
         }
 
         try {
+          // [V6.0.070] P0-2: Role check before applyReviewDecision (onEdit missing guard)
+          //   applyAllPendingDecisions has requirePermission_ at 12:206 but onEdit path didn't
+          if (typeof hasPermission_ === 'function' && !hasPermission_('action:approve_review')) {
+            logWarn('App_onEdit', '[SEC-002] Unauthorized review edit blocked');
+            safeUiAlert_('❌ คุณไม่มีสิทธิ์อนุมัติ Review — ต้องการ Reviewer หรือ Admin');
+            return;
+          }
           // [FIX v003] ประมวลผลทันทีที่เลือก
           applyReviewDecision(reviewId, decision);
 
@@ -541,37 +546,18 @@ function populateAliasFromSCGRawData() {
 }
 
 function showVersionInfo() {
+  // [V6.0.070] QW-1: Dynamic version info (was hardcoded 22 files v5.5.022)
   const msg =
-    `🚚 ${APP_NAME}\n` +
-    `Version: ${APP_VERSION}\n` +
-    `Schema: v${SCHEMA_VERSION}\n` +
-    'Audit Cycles: 18 (CRITICAL → PERF → SECURITY → REVIEW15 → REFACTOR → SYNC → CACHE-FIX → CACHE-CLEANUP → DOC-SYNC → GOOGLE-MAPS-REFACTOR → DRIVER-VERIFIED → CRITICAL-FIX → PERFORMANCE-FIX → SECURITY-POSTFIX → REVIEW15-CLEAN-CODE-FIX → REFACTOR_CYCLE6 → REFACTOR_CYCLE6_RESIDUAL → DEEP-DIVE-AUDIT → CONSISTENCY-SYNC)\n\n' +
-    '📦 Modules (22 files):\n' +
-    '  00_App.gs                v5.5.022\n' +
-    '  01_Config.gs             v5.5.022\n' +
-    '  02_Schema.gs             v5.5.022\n' +
-    '  03_SetupSheets.gs        v5.5.022\n' +
-    '  04_SourceRepository.gs   v5.5.022\n' +
-    '  05_NormalizeService.gs   v5.5.022\n' +
-    '  06_PersonService.gs      v5.5.022\n' +
-    '  07_PlaceService.gs       v5.5.022\n' +
-    '  08_GeoService.gs         v5.5.022\n' +
-    '  09_DestinationService.gs v5.5.022\n' +
-    '  10_MatchEngine.gs        v5.5.022\n' +
-    '  11_TransactionService.gs v5.5.022\n' +
-    '  12_ReviewService.gs      v5.5.022\n' +
-    '  13_ReportService.gs      v5.5.022\n' +
-    '  14_Utils.gs              v5.5.022\n' +
-    '  15_GoogleMapsAPI.gs      v5.5.022\n' +
-    '  16_GeoDictionaryBuilder.gs     v5.5.022\n' +
-    '  17_SearchService.gs      v5.5.022\n' +
-    '  18_ServiceSCG.gs         v5.5.022\n' +
-    '  19_Hardening.gs          v5.5.022\n' +
-    '  20_ThGeoService.gs       v5.5.022\n' +
-    '  21_AliasService.gs       v5.5.022\n\n' +
-    '⚙️ Core System (Group 0): App, Config, Schema, Setup, Utils, Hardening\n' +
-    '🟩 Group 1 — Master DB: Normalize, Person, Place, Geo, Dest, Match, GeoDict, ThGeo, Alias\n' +
-    '🟦 Group 2 — Daily Ops: SourceRepo, Transaction, Review, Report, Maps, Search, SCG';
+    '🚚 ' +
+    APP_NAME +
+    '\n' +
+    'Version: ' +
+    APP_VERSION +
+    ' | Schema: v' +
+    SCHEMA_VERSION +
+    '\n\n' +
+    '📦 Source: 39 .gs files | 542 functions | 25,421 lines\n' +
+    '📋 ดู CHANGELOG ครบที่ docs/CHANGELOG.md';
 
   // [FIX BUG-04 v5.5.001] เปลี่ยน ui.alert() เป็น safeUiAlert_()
   safeUiAlert_(msg);

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.069
+ * VERSION: 6.0.070
  * FILE: 01_Config.gs
  * LMDS V6.0 — System Configuration & Constants
  * ===================================================
@@ -39,8 +39,8 @@
 // [V6.0.003] Bump from 6.0.002 → 6.0.003 — V6.0 Phase 3 System Learning
 //   (Self-Healing Alias verified_by/review_id/verified_at + SYS_NEGATIVE_SAMPLES
 //    negative learning feedback loop)
-const APP_VERSION = '6.0.069';
-const SCHEMA_VERSION = '6.0.069';
+const APP_VERSION = '6.0.070';
+const SCHEMA_VERSION = '6.0.070';
 const APP_NAME = 'LMDS V6.0';
 
 // [NEW v5.2.001] Global RAM Caches for batch runs
@@ -581,12 +581,15 @@ const SCG_CONFIG = Object.freeze({
   SHEET_DATA: SHEET.DAILY_JOB,
   SHEET_INPUT: SHEET.INPUT,
   SHEET_EMPLOYEE: SHEET.EMPLOYEE,
-  // [ADD v002] Fallback จาก PropertiesService
+  // [V6.0.070] P1-2: API_URL fail-fast — ไม่มี hardcoded fallback (security)
   get API_URL() {
-    return (
-      PropertiesService.getScriptProperties().getProperty('SCG_API_URL') ||
-      'https://fsm.scgjwd.com/Monitor/SearchDelivery'
-    );
+    const url = PropertiesService.getScriptProperties().getProperty('SCG_API_URL');
+    if (!url) {
+      throw new Error(
+        '[SEC-001] SCG_API_URL ยังไม่ได้ตั้งค่าใน Script Properties — รัน setupEnvironment() หรือตั้งค่าผ่านเมนู'
+      );
+    }
+    return url;
   },
   INPUT_START_ROW: 4, // Shipment No เริ่มแถว 4
   COOKIE_CELL: 'B1', // Cookie อยู่ที่ B1 — [SEC-001] DEPRECATED: ใช้ getSCGCookie_() แทน

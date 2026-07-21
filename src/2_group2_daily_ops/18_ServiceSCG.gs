@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.069
+ * VERSION: 6.0.070
  * FILE: 18_ServiceSCG.gs
  * LMDS V6.0 — SCG API Service (Group 2 Commander)
  * ===================================================
@@ -62,13 +62,19 @@ function sanitizeCookie_(raw) {
   }
 
   // [SEC-003] ป้องกัน CRLF Injection — ลบ CR, LF, และ Control Characters (0x00-0x1F, 0x7F)
-  // ไม่ throw — ใช้ replace แทน เพื่อรองรับ cookie ที่อาจมี whitespace แปลกๆ จากการ copy
   if (/[\r\n\x00-\x1f\x7f]/.test(clean)) {
     clean = clean.replace(/[\r\n\x00-\x1f\x7f]/g, '');
     logWarn('ServiceSCG', '[sanitizeCookie_] ตรวจพบและลบ Control Characters ออกจาก Cookie');
   }
 
-  // ตรวจความยาวต่ำเกินไป (Cookie ที่ถูกต้องมักยาวกว่า 10 ตัวอักษร)
+  // [V6.0.070] P1-4: RFC 6265 charset validation — อนุญาตเฉพาะ printable ASCII + Thai Unicode
+  const NON_RFC6265 = /[^\x21-\x7E\u0E00-\u0E7F=;,\s]/g;
+  if (NON_RFC6265.test(clean)) {
+    clean = clean.replace(NON_RFC6265, '');
+    logWarn('ServiceSCG', '[sanitizeCookie_][SEC-009] ตัด non-RFC-6265 characters ออกจาก Cookie');
+  }
+
+  // ตรวจความยาวต่ำเกินไป
   if (clean.length < 10) {
     throw new Error(
       'Cookie สั้นเกินไป (' + clean.length + ' ตัวอักษร)\n' + 'Cookie ที่ถูกต้องมักมีความยาวอย่างน้อย 10 ตัวอักษร'
