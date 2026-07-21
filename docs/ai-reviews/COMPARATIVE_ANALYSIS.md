@@ -4,8 +4,8 @@
 
 > **สรุปการวิเคราะห์เปรียบเทียบ** AI reviewers ที่ตรวจรีวิว LMDS V6.0 codebase
 >
-> **วันที่สร้าง:** 2026-07-15 | **อัปเดตล่าสุด:** 2026-07-16 (เพิ่มรอบ 2 — Reviewers #1-3 ใหม่)
-> **เวอร์ชันที่ตรวจ:** รอบ 1: V6.0.046–V6.0.051 | รอบ 2: V6.0.062
+> **วันที่สร้าง:** 2026-07-15 | **อัปเดตล่าสุด:** 2026-07-21 (เพิ่มรอบ 4 — 2 รายงาน audit ใหม่)
+> **เวอร์ชันที่ตรวจ:** รอบ 1: V6.0.046–V6.0.051 | รอบ 2: V6.0.062 | รอบ 3: V6.0.066 | รอบ 4: V6.0.070
 
 ---
 
@@ -317,3 +317,62 @@
 2. **XSS escape ต้อง grep หาครบทุกจุด** — เราทำ 6 จุดแต่พลาดจุดที่ 7 (LiveFeed:72)
 3. **Helper ต้องใช้ทุกที่** — มี `releaseScriptLock_()` แต่ไม่ได้ใช้ที่ `00_App.gs:303`
 4. **Cookie fix ถูก revert** — V6.0.036 เคยแก้แต่ถูก revert — check_06 ต้องครอบ cookie path
+
+---
+
+## 11. รอบ 4 — สรุปการตรวจสอบ V6.0.070 (2026-07-21)
+
+### ภาพรวม
+
+| รายงาน                          | ขอบเขต                                  | จำนวน claims | ผล verification                      |
+| ------------------------------- | --------------------------------------- | ------------ | ------------------------------------ |
+| **รายงานที่ 1 — 5-Phase Audit** | Tech debt + Code review + SEC + Style + Refactor | ~90          | 48% จริง / 29% ไม่แม่นยำ / 20% หลอน |
+| **รายงานที่ 2 — Static Audit**  | 9 issues (file:line specific)           | 9            | 6 จริง / 2 แก้บางส่วน / 1 หลอน      |
+
+> **หมายเหตุสำคัญ:** การตรวจสอบทำตาม `AI-REVIEW-PROTOCOL.md` 5 กฎ — ตรวจสอบไฟล์จริงใน V6.0.070 ก่อนเชื่อ claim ใดๆ หลายข้อที่ AI "พบ" ถูกแก้ไปแล้วใน PR #186 (V6.0.070)
+
+### รายงานที่ 1 — 5-Phase Audit (สรุปย่อ)
+
+| Phase        | ขอบเขต                           | ผล verification                                                                              |
+| ------------ | -------------------------------- | -------------------------------------------------------------------------------------------- |
+| Phase 1      | 35 technical debt items          | P0:1 (PipelineManager lock — จริง) / P1:7 (3 จริง, 2 แก้แล้ว, 2 หลอน) / P2:27 (ส่วนใหญ่เป็น cosmetic) |
+| Phase 2      | 18 code review suggestions       | 8 จริง / 5 แก้แล้ว / 5 หลอน                                                                  |
+| Phase 3      | SEC-001→012 audit + 12 new       | 8 PASS ✅ / 4 WARN (อธิบายได้) / 12 new: 4 จริง, 8 หลอน                                       |
+| Phase 4      | Coding style 82/100 (B grade)    | ส่วนใหญ่เป็น subjective — ใช้ AI-REVIEW-PROTOCOL กฎ 4 (context-aware) ปฏิเสธ                 |
+| Phase 5      | 28 refactor items across 4 sprints | 14 จริง (ส่วนใหญ่อยู่ใน Group D แล้ว) / 14 หลอนหรือซ้ำกับที่มี                                |
+
+### รายงานที่ 2 — Static Code Audit (9 issues — ตรวจทุกข้อกับโค้ด V6.0.070)
+
+| Issue    | คำกล่าวหา                                              | ไฟล์:บรรทัด (อ้าง)         | สถานะใน V6.0.070        | การพิสูจน์                                                            |
+| -------- | ----------------------------------------------------- | -------------------------- | ----------------------- | -------------------------------------------------------------------- |
+| ISSUE-001 | PipelineManager ใช้ bare `lock.releaseLock()`         | `24:759`                   | ❌ **จริง** — ยังไม่ได้แก้ | grep ยืนยัน line 759 ยังเป็น `lock.releaseLock();` ใน finally block |
+| ISSUE-002 | searchLocations log rawQuery เป็น PII                 | `22c:697`                  | ❌ **จริง** — ยังไม่ได้แก้ | logInfo('WebApp', 'searchLocations("' + rawQuery + '")...') ยังอยู่ |
+| ISSUE-003 | submitReviewDecision log email ดิบ                    | `22c:257`                  | ❌ **จริง** — ยังไม่ได้แก้ | logInfo(... 'โดย ' + getCurrentDashboardUser_().email) ยังอยู่      |
+| ISSUE-004 | isCurrentUserAdmin_ ไม่มีใน repo                      | (อ้างหลายไฟล์)             | ✅ **แก้บางส่วนแล้ว**    | V6.0.070 PR #186 ลบ dead reference แล้ว แต่ยังมีบางจุดเก่า           |
+| ISSUE-005 | getDriverHistory_ ไม่ cache                           | (อ้าง)                     | ⚠️ **จริง — แต่ low priority** | ใช้ loadAllPlaces_ pattern ไม่ได้ใช้ cache                          |
+| ISSUE-006 | Audit trail ใช้ N×appendRow                           | (อ้าง)                     | ⚠️ **จริง — แต่ low priority** | ใช้ batch setValues ในจุดหลัก แต่ edge case ยัง appendRow           |
+| ISSUE-007 | recordAuditTrail vs logAuditTrail doc mismatch       | (อ้าง docs)                | ✅ **จริง — แต่เล็กน้อย** | doc อ้างผิด แต่ function ใช้งานได้ปกติ                                |
+| ISSUE-008 | getSheetByNameSafe_ ถูกอ้าง แต่ไม่มี definition       | (อ้าง 9 ไฟล์)              | ❌ **หลอน** — มีจริง       | grep ยืนยันว่ามี definition ใน 03_SetupSheets.gs                     |
+| ISSUE-009 | GOOGLEMAPS_REVERSEGEOCODE/DIRECTIONS เป็น dead code   | (อ้าง 15_GoogleMapsAPI.gs) | ⚠️ **จริง — defer**      | ใช้ในอนาคตเมื่อเปิดใช้ Google Maps API                                |
+
+### P2-R4 — งานที่ต้องทำจากรอบ 4
+
+| #        | งาน                                                            | Priority | สถานะ        |
+| -------- | ------------------------------------------------------------- | -------- | ------------ |
+| P2-R4-1  | **PipelineManager: เปลี่ยน `lock.releaseLock()` → `releaseScriptLock_(lock)`** | P1       | 🔜 V6.0.071  |
+| P2-R4-2  | **searchLocations: mask rawQuery ใน logInfo**                  | P1       | 🔜 V6.0.071  |
+| P2-R4-3  | **submitReviewDecision: mask email ด้วย `maskEmailSafe_()`**   | P1       | 🔜 V6.0.071  |
+| P2-R4-4  | M_PLACE.normalized_name ใช้ `normalizeForCompare()` (เหมือน M_PERSON) | P2       | 🔜 รอบถัดไป  |
+| P2-R4-5  | M_PLACE.normalized_reverse_geocode ใช้ `normalizeForCompare()` | P2       | 🔜 รอบถัดไป  |
+| P2-R4-6  | Menu "🔧 ระบบ & ตั้งค่า" split เป็น sub-menus (30+ รายการ)     | P2       | 🔜 รอบถัดไป  |
+| P2-R4-7  | ISSUE-005: getDriverHistory_ cache                            | P3       | 🔜 Group D   |
+| P2-R4-8  | ISSUE-006: Audit trail N×appendRow                            | P3       | 🔜 Group D   |
+| P2-R4-9  | ISSUE-007: recordAuditTrail doc fix                          | P3       | 🔜 Cosmetic  |
+| P2-R4-10 | ISSUE-009: GOOGLEMAPS_REVERSEGEOCODE dead code               | P3       | 🔜 Group D   |
+
+### สิ่งที่เราเรียนรู้เพิ่ม (รอบ 4)
+
+1. **AI ยังหลอนเรื่อง function existence** — ISSUE-008 อ้างว่าไม่มี `getSheetByNameSafe_` แต่ grep ยืนยันมีจริงใน 03_SetupSheets.gs
+2. **AI ไม่เช็ค version ล่าสุด** — หลายข้อใน Phase 1-2 ถูกแก้ไปแล้วใน V6.0.063-070 แต่ AI ตรวจบน V6.0.066
+3. **Static Audit แม่นยำกว่า 5-Phase Audit** — Issue 9 ข้อมี 6 จริง (67%) เทียบกับ 5-phase 48%
+4. **Helper ใช้ไม่ครบทุกที่** — `releaseScriptLock_()` มีตั้งแต่ V6.0.067 แต่ PipelineManager ยังใช้ bare `lock.releaseLock()` — ต้อง grep ทุก `.releaseLock()` เพื่อหาจุดที่พลาด
