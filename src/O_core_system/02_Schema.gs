@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.070
+ * VERSION: 6.0.071
  * FILE: 02_Schema.gs
  * LMDS V6.0 — Sheet Schema Definitions
  * ===================================================

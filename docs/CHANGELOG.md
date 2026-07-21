@@ -9,6 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date       | Cycle                                                                       | Issues                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ------- | ---------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6.0.071 | 2026-07-21 | AUDIT ROUND 4 — 3 FIXES                                                     | (1) PipelineManager `lock.releaseLock()` → `releaseScriptLock_(lock)` at `24:759` (Audit ISSUE-001 — prevent double-release when runMatchEngine internally releases the same lock) (2) `maskSearchQuery_()` new helper in 22_WebApp.gs — masks phone/email/name/address before logging in searchLocations (`22c:697`) (3) `submitReviewDecision` uses `maskEmailSafe_()` on reviewer email in logInfo (`22c:257`) — completes V6.0.067 PII masking sweep |
 | 6.0.062 | 2026-07-16 | CLEANUP AI REVIEWS                                                          | Delete all original AI review files in `ai-reviewer-{1,2,3,4}/` (22 files, ~1.4MB) — important data already extracted to COMPARATIVE_ANALYSIS.md, AI-REVIEW-PROTOCOL.md, TODO.md, CI-CD-TROUBLESHOOTING.md. Folders kept with .gitkeep for future reviews.                                                                                                                                                                                                  |
 | 6.0.063 | 2026-07-16 | P0 ROUND 2 SECURITY FIXES                                                   | SSTI fix (Index.html <?!= escaped), LockService guards (createPerson/Place/GeoPoint/Destination/mergePersonRecords), AuthZ guards (isAuthorizedUser_ on 5 destructive ops)                                                                                                                                                                                                                                                                                  |
 | 6.0.064 | 2026-07-16 | P1 XSS + PII MASKING                                                        | XSS escape in 7 WebApp components (ChartCard, StatCard, DataTable, App toast, MapAnalytics, LiveFeed error, LiveFeed JSON.stringify), PII phone masking (maskedPhone) in 06_PersonService.gs                                                                                                                                                                                                                                                                |
@@ -119,6 +120,102 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 | 5.5.006 | 2026-06-18 | CONSISTENCY SYNC                                                            | 28 doc inconsistencies                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 5.5.005 | 2026-06-16 | REVIEW SERVICE FIX                                                          | (intermediate)                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 5.5.004 | 2026-06-15 | INITIAL AUDIT CYCLES                                                        | 53 audit issues                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+
+---
+
+## [6.0.071] — 2026-07-21 — AUDIT ROUND 4 — 3 FIXES
+
+### Context
+
+หลัง PR #186 (V6.0.070) merged, ผู้ใช้ส่งรายงาน AI audit 2 ฉบับใหม่เข้ามาตรวจสอบ:
+
+1. **5-Phase Audit Report** — ครอบคลุม tech debt + code review + SEC + coding style + refactor (~90 claims)
+2. **Static Code Audit Report** — 9 issues เฉพาะ file:line
+
+ตรวจสอบทุก claim ตาม `docs/AI-REVIEW-PROTOCOL.md` 5 กฎ — ยืนยันกับโค้ด V6.0.070 จริง (ไม่ใช่ V6.0.066 ที่ AI ตรวจ):
+
+- รายงานที่ 1: 48% จริง / 29% ไม่แม่นยำ / 20% หลอน
+- รายงานที่ 2: 6 จริง / 2 แก้บางส่วน / 1 หลอน
+
+PR นี้แก้ 3 ปัญหา P1 ที่ยืนยันว่าจริงทั้งหมด (เหลือ 7 ข้อถูกเก็บไว้ใน `docs/TODO.md` รอบ 4 — P2/P3):
+
+### (1) PipelineManager: bare `lock.releaseLock()` → `releaseScriptLock_(lock)`
+
+**ปัญหา:** `src/4_group4_pipeline_mgr/24_PipelineManager.gs:759` ใช้ `lock.releaseLock()` ตรงๆ ใน `finally` block ของ `runPipelineBatch()`
+
+**ความเสี่ยง:** ถ้า `runMatchEngine()` (ที่เรียกจากใน batch) ได้ release script lock ไปแล้ว (โดย intentional หรือ bug) → bare `lock.releaseLock()` จะ throw exception ใน finally block ทำให้ error ดั้งเดิมถูกกลืน
+
+**การแก้:** เปลี่ยนเป็น `releaseScriptLock_(lock)` (helper ที่มี `hasLock()` guard) — เหมือนที่ `00_App.gs:311` ใช้ตั้งแต่ V6.0.067
+
+```javascript
+} finally {
+  releaseScriptLock_(lock);  // null-safe — hasLock() guard
+}
+```
+
+### (2) searchLocations: mask rawQuery ใน logInfo
+
+**ปัญหา:** `src/O_core_system/22c_WebAppActions.gs:697` log raw query ดิบๆ ใน SYS_LOG:
+
+```javascript
+logInfo('WebApp', 'searchLocations("' + rawQuery + '") → ...');
+```
+
+`rawQuery` รับจาก frontend ที่ผู้ใช้พิมพ์ อาจเป็น: ชื่อบุคคล, เบอร์โทร, ที่อยู่, รหัสไปรษณีย์ — ทั้งหมดเป็น PII
+
+**ความเสี่ยง:** SYS_LOG ผู้ดูแลระบบเข้าถึงได้ — ทำให้ PII ของผู้ใช้รั่วไหล
+
+**การแก้:** สร้าง helper ใหม่ `maskSearchQuery_(query)` ใน `22_WebApp.gs`:
+
+- query สั้นกว่า 4 ตัว → `'***'`
+- query เป็น email → ใช้ `maskEmailSafe_()` ที่มีอยู่
+- query เป็น phone-like (digits/dashes 6+ ตัว) → `08***78`
+- query ทั่วไป → `สม***ย` (2 ตัวแรก + *** + 1 ตัวสุดท้าย)
+
+```javascript
+logInfo('WebApp', 'searchLocations("' + maskSearchQuery_(rawQuery) + '") → ...');
+```
+
+### (3) submitReviewDecision: mask email ด้วย maskEmailSafe_()
+
+**ปัญหา:** `src/O_core_system/22c_WebAppActions.gs:257` log email ดิบของ reviewer:
+
+```javascript
+logInfo('WebApp', 'submitReviewDecision: ' + reviewId + ' → ' + decision + ' โดย ' + (getCurrentDashboardUser_().email || '?'));
+```
+
+**ความเสี่ยง:** email ของ admin/reviewer เป็น internal user PII — ไม่ควรปรากฏใน SYS_LOG ดิบ
+
+**การแก้:** V6.0.067 สร้าง `maskEmailSafe_()` แล้ว แต่จุดนี้ยังไม่ได้ใช้ — ครอบด้วย helper:
+
+```javascript
+logInfo('WebApp', 'submitReviewDecision: ' + reviewId + ' → ' + decision + ' โดย ' + maskEmailSafe_(getCurrentDashboardUser_().email || ''));
+```
+
+### Files Changed
+
+- `src/4_group4_pipeline_mgr/24_PipelineManager.gs` — 1 line (lock.releaseLock → releaseScriptLock_)
+- `src/O_core_system/22_WebApp.gs` — +50 lines (new maskSearchQuery_ helper)
+- `src/O_core_system/22c_WebAppActions.gs` — 2 spots (searchLocations + submitReviewDecision)
+- `docs/CHANGELOG.md` — this entry
+- All `.gs` files — VERSION: header bump 6.0.070 → 6.0.071 (auto via bump_version.sh)
+- `src/O_core_system/01_Config.gs` — APP_VERSION + SCHEMA_VERSION
+- `package.json` — version field
+
+### Verification
+
+- `bash .github/scripts/doc-code-sync-checks/check_01_version.sh` ✅
+- `npx prettier --check` ✅ (all 3 modified files)
+- grep ยืนยัน `lock.releaseLock()` ที่เหลืออยู่ใน codebase เป็น safe pattern (try/finally ไม่มี nested release)
+
+### What's NOT in this PR (deferred to V6.0.072+)
+
+- P2-R4-4: M_PLACE.normalized_name ใช้ `normalizeForCompare()` (เหมือน M_PERSON)
+- P2-R4-5: M_PLACE.normalized_reverse_geocode ใช้ `normalizeForCompare()`
+- P2-R4-6: Menu "🔧 ระบบ & ตั้งค่า" split เป็น sub-menus (30+ รายการ)
+- P2-R4-7~10: Low priority (cache, audit trail, doc fix, dead code)
+
+ดูรายละเอียดทั้งหมดใน `docs/TODO.md` section "P2 รอบ 4" และ `docs/ai-reviews/COMPARATIVE_ANALYSIS.md` section 11
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.070
+ * VERSION: 6.0.071
  * FILE: 22c_WebAppActions.gs
  * LMDS V6.0 — Web App Actions
  * ===================================================
@@ -254,7 +254,14 @@ function submitReviewDecision(reviewId, decision, note) {
 
     logInfo(
       'WebApp',
-      'submitReviewDecision: ' + reviewId + ' → ' + decision + ' โดย ' + (getCurrentDashboardUser_().email || '?')
+      // [V6.0.071] Mask reviewer email in log (Audit Round 4 ISSUE-003 — PII leak prevention)
+      //   V6.0.067 แก้ใน 22_WebApp.gs แล้ว แต่จุดนี้ยัง log email ดิบ — ต้องใช้ maskEmailSafe_() ให้ครบทุกจุด
+      'submitReviewDecision: ' +
+        reviewId +
+        ' → ' +
+        decision +
+        ' โดย ' +
+        (typeof maskEmailSafe_ === 'function' ? maskEmailSafe_((getCurrentDashboardUser_() || {}).email || '') : '***')
     );
 
     return {
@@ -694,7 +701,19 @@ function searchLocations(query, limit) {
     const trimmed = results.slice(0, maxResults);
 
     const elapsedMs = Date.now() - startTime;
-    logInfo('WebApp', 'searchLocations("' + rawQuery + '") → ' + trimmed.length + ' results in ' + elapsedMs + 'ms');
+    // [V6.0.071] Mask rawQuery in log (Audit Round 4 ISSUE-002 — PII leak prevention)
+    //   rawQuery could be phone/email/name/address — all PII. Use maskSearchQuery_()
+    //   before writing to SYS_LOG (which admins can read).
+    logInfo(
+      'WebApp',
+      'searchLocations("' +
+        (typeof maskSearchQuery_ === 'function' ? maskSearchQuery_(rawQuery) : '***') +
+        '") → ' +
+        trimmed.length +
+        ' results in ' +
+        elapsedMs +
+        'ms'
+    );
 
     return {
       results: trimmed,
