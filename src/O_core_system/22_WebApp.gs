@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.070
+ * VERSION: 6.0.071
  * FILE: 22_WebApp.gs
  * LMDS V6.0 — Web App Server (Dashboard)
  * ===================================================
@@ -255,6 +255,58 @@ function maskEmailSafe_(email) {
     const parts = email.split('@');
     if (parts.length !== 2) return '***';
     return parts[0][0] + '***@' + parts[1];
+  } catch (e) {
+    return '***';
+  }
+}
+
+/**
+ * maskSearchQuery_ — [V6.0.071] Mask search query ก่อน log เพื่อป้องกัน PII leak
+ *   (Audit Round 4 ISSUE-002 — Reviewer Static Audit)
+ *
+ *   searchLocations รับ query ที่เป็นได้ทั้ง: ชื่อบุคคล, ชื่อร้าน, เบอร์โทร, ที่อยู่, รหัสไปรษณีย์
+ *   การ log rawQuery ดิบๆ ทำให้ PII ส่วนตัวของผู้ใช้ (เบอร์โทร/ชื่อ/ที่อยู่) ไปอยู่ใน SYS_LOG
+ *   ซึ่งผู้ดูแลระบบอาจเข้าถึงได้ — ต้อง mask ก่อน log เสมอ
+ *
+ *   กลยุทธ์การ mask:
+ *     - ถ้า query สั้นมาก (< 4 ตัว) → '***' (อย่าเผย pattern เลย)
+ *     - ถ้า query เป็น email → ใช้ maskEmailSafe_
+ *     - ถ้า query เป็น phone-like (digits/dashes/spaces 6+ ตัว) → 2 หลักแรก + *** + 2 หลักสุดท้าย
+ *     - ถ้า query เป็นข้อความทั่วไป → 2 ตัวแรก + *** + 1 ตัวสุดท้าย
+ *
+ *   ตัวอย่าง:
+ *     - "สมชาย" → "สม***ย"
+ *     - "081-234-5678" → "08***78"
+ *     - "บริษัท ABC จำกัด" → "บร***ด"
+ *     - "10150" → "***"
+ *     - "user@example.com" → "u***@example.com"
+ *
+ * @param {string} query - raw search query (could be PII)
+ * @return {string} masked query safe for logging
+ * @private
+ */
+function maskSearchQuery_(query) {
+  try {
+    if (query === '' || query === null || query === undefined) return '';
+    const str = String(query).trim();
+    if (str.length < 4) return '***';
+
+    // Email pattern → use existing maskEmailSafe_
+    if (str.indexOf('@') !== -1) {
+      return maskEmailSafe_(str);
+    }
+
+    // Phone-like (digits + dashes/spaces/parens/plus), length >= 6
+    if (/^[\d\s\-()+]{6,}$/.test(str)) {
+      const digitsOnly = str.replace(/\D/g, '');
+      if (digitsOnly.length >= 4) {
+        return digitsOnly.substring(0, 2) + '***' + digitsOnly.substring(digitsOnly.length - 2);
+      }
+      return '***';
+    }
+
+    // Generic text → first 2 chars + *** + last 1 char
+    return str.substring(0, 2) + '***' + str.substring(str.length - 1);
   } catch (e) {
     return '***';
   }

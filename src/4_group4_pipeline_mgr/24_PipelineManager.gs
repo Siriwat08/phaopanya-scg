@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.070
+ * VERSION: 6.0.071
  * FILE: 24_PipelineManager.gs
  * LMDS V6.0 — Pipeline Manager (Standalone Module)
  * ===================================================
@@ -756,7 +756,11 @@ function runPipelineBatch() {
     logPipeline_('info', '=== Pipeline Batch END (CONTINUE) — ' + formatDuration_(runtimeMs) + ' ===');
     return { action: 'CONTINUE', reason: 'MORE_WORK' };
   } finally {
-    lock.releaseLock();
+    // [V6.0.071] Use releaseScriptLock_() instead of bare lock.releaseLock()
+    //   (Audit Round 4 ISSUE-001 — Reviewer Static Audit)
+    //   ป้องกัน double-release: ถ้า runMatchEngine() release ไปแล้ว → bare releaseLock() จะ throw
+    //   releaseScriptLock_() มี hasLock() guard → null-safe (เหมือนที่ 00_App.gs ใช้)
+    releaseScriptLock_(lock);
   }
 }
 
