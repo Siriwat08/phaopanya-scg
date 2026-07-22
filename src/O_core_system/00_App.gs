@@ -108,40 +108,58 @@ function onOpen(e) {
 
     .addSeparator()
 
+    // [V6.0.072] P2-R4-6: Split "🔧 ระบบ & ตั้งค่า" (30+ items, bottom items not visible on screen)
+    //   into 4 sub-menus: ⚙️ ตั้งค่าระบบ / 🔍 ตรวจสอบ & วินิจฉัย / 🧹 ล้าง & Cleanup / 📸 Snapshot & ข้อมูล
+    //   Each sub-menu has ≤12 items — fits on standard monitor without scrolling.
+
     .addSubMenu(
       ui
-        .createMenu('🔧 ระบบ & ตั้งค่า')
+        .createMenu('⚙️ ตั้งค่าระบบ')
         .addItem('⚙️ ตั้งค่า API Key', 'setupEnvironment')
         .addItem('🔐 ตั้งค่า SCG Cookie', 'setSCGCookie_UI')
         .addItem('👥 ตั้งค่ารายชื่อ Admin', 'setupAdminList_UI')
+        .addItem('👥 [V6] ตั้งค่า Roles (RBAC)', 'setupRoleAssignments_UI')
+        .addSeparator()
         .addItem('🏗️ สร้างชีตทั้งหมด', 'setupAllSheets')
+        .addItem('🛡️ ป้องกันข้อมูล Sensitive', 'applySheetProtection_UI')
+        .addSeparator()
         .addItem('🌍 อัปเดตฐานข้อมูลภูมิศาสตร์ (SYS_TH_GEO)', 'buildGeoDictionary')
         .addItem('🛠️ เติมข้อมูลภูมิศาสตร์ (16 คอลัมน์)', 'populateGeoMetadata')
+        .addSeparator()
         .addItem('🔗 สร้าง Alias อัตโนมัติจากประวัติ (FACT)', 'generatePersonAliasesFromHistory')
         .addItem('🔄 Migration: Hybrid Alias System', 'MIGRATION_HybridAliasSystem')
         .addItem('🔗 ตรวจสอบ Master UUID', 'assignMasterUuidIfMissing')
         .addItem('📥 ดึงชื่อจาก SCG ดิบ → M_ALIAS', 'populateAliasFromSCGRawData')
-        .addSeparator()
-        .addItem('🛡️ ป้องกันข้อมูล Sensitive', 'applySheetProtection_UI')
-        .addSeparator()
+    )
+
+    .addSubMenu(
+      ui
+        .createMenu('🔍 ตรวจสอบ & วินิจฉัย')
+        .addItem('✅ ตรวจสอบ System Integrity', 'checkSystemIntegrity')
         .addItem('🛡️ [PH2] Preflight Audit', 'runPreflightAudit')
         .addItem('🔍 [V6] Pipeline Preflight (Strict)', 'runPipelinePreflightStrict_UI')
-        .addItem('🧹 [PH2] Detect Duplicates', 'detectDoubleProcessing')
-        .addItem('✅ ตรวจสอบ System Integrity', 'checkSystemIntegrity')
         .addItem('🔍 วินิจฉัย Pipeline (Diagnostic)', 'diagnoseSystemState')
         .addSeparator()
-        .addItem('🔄 รีเซ็ตสถานะ SYNC (เพื่อรันใหม่)', 'resetSourceSyncStatus')
-        .addItem('🧹 ล้างความจำระบบ (Clear Cache)', 'invalidateAllGlobalCaches')
-        .addSeparator()
+        .addItem('🧹 [PH2] Detect Duplicates', 'detectDoubleProcessing')
         .addItem('🔍 [V6] Dedup Audit (Person)', 'runDedupAuditPerson_UI')
         .addItem('🔍 [V6] Dedup Audit (Place)', 'runDedupAuditPlace_UI')
-        .addSeparator()
-        .addItem('👥 [V6] ตั้งค่า Roles (RBAC)', 'setupRoleAssignments_UI')
+    )
+
+    .addSubMenu(
+      ui
+        .createMenu('🧹 ล้าง & Cleanup')
+        .addItem('🔄 รีเซ็ตสถานะ SYNC (เพื่อรันใหม่)', 'resetSourceSyncStatus')
+        .addItem('🧹 ล้างความจำระบบ (Clear Cache)', 'invalidateAllGlobalCaches')
         .addSeparator()
         .addItem('🧹 [V6] ลบ Trigger ค้าง (Cleanup)', 'cleanupStaleTriggers_UI')
         .addItem('🧹 [V6] Cleanup Auto-Resume Triggers', 'cleanupAutoResumeTriggers_UI')
         .addSeparator()
         .addItem('📜 [V6] Prune Audit Trail (90 วัน)', 'cleanupAuditTrail_UI')
+    )
+
+    .addSubMenu(
+      ui
+        .createMenu('📸 Snapshot & ข้อมูล')
         .addItem('📖 ดู Version Info', 'showVersionInfo')
         .addSeparator()
         .addItem('📸 [V6.0.028] Snapshot — Save Baseline', 'snapshotSaveBaseline_UI')

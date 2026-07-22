@@ -765,6 +765,15 @@ function createPlace(normResult, province, district, subDistrict, postcode, reve
       //     เพราะ canonical = cleanPlace เสมอ (ไม่มี fullAddress มาเป็น district-level แล้ว)
       const canonicalName = normResult.cleanPlace || '';
 
+      // [V6.0.072] P2-R4-4: M_PLACE.normalized_name ใช้ normalizeForCompare() เหมือน M_PERSON
+      //   เดิม: normResult.cleanPlace (เหมือน canonical_name ทุกตัว — ทำให้ normalized_name ไม่มีประโยชน์)
+      //   ใหม่: normalizeForCompare(normResult.cleanPlace) — lowercase + ลบ space/punctuation
+      //   ทำให้ normalized_name กลายเป็น comparison key ที่ใช้ matching ได้จริง
+      //   Backward compat: matching engine ใช้ normalizeForCompare(place.normalized) อยู่แล้ว
+      //   → idempotent (normalize ซ้อน normalize ได้ผลเดียวกัน) → ไม่กระทบ rows เก่า
+      const normalizedName =
+        typeof normalizeForCompare === 'function' ? normalizeForCompare(normResult.cleanPlace) : normResult.cleanPlace;
+
       // [V6.0.014] Reverse geocode data — store raw [24] + normalized [24]
       //   ใช้สำหรับ matching ในอนาคต (เทียบ [24] กับ M_PLACE.canonical_reverse_geocode)
       //   ถ้า reverseGeocodeAddress เป็น undefined (backward compat) → ใช้ '' ทั้งคู่
@@ -772,8 +781,13 @@ function createPlace(normResult, province, district, subDistrict, postcode, reve
       let normalizedReverseGeocode = '';
       if (rawReverseGeocode) {
         try {
+          // [V6.0.072] P2-R4-5: normalized_reverse_geocode ใช้ normalizeForCompare()
+          //   เดิม: normalizePlaceName(raw).cleanPlace (เก็บ cleanPlace แบบไม่ lowercase)
+          //   ใหม่: normalizeForCompare(cleanPlace) — lowercase + ลบ space/punctuation
+          //   ทำให้สามารถเทียบกับ query ที่ normalizeForCompare แล้วได้โดยตรง
           const rgNorm = typeof normalizePlaceName === 'function' ? normalizePlaceName(rawReverseGeocode) : null;
-          normalizedReverseGeocode = (rgNorm && rgNorm.cleanPlace) || rawReverseGeocode;
+          const rgClean = (rgNorm && rgNorm.cleanPlace) || rawReverseGeocode;
+          normalizedReverseGeocode = typeof normalizeForCompare === 'function' ? normalizeForCompare(rgClean) : rgClean;
         } catch (normErr) {
           // [FIX R13-01 REVIEW15] Rule 13: defensive — fall back to raw if normalizer fails
           normalizedReverseGeocode = rawReverseGeocode;
@@ -783,7 +797,7 @@ function createPlace(normResult, province, district, subDistrict, postcode, reve
       const newRow = [
         newId,
         canonicalName, // [1] canonical — cleanPlace from [18] (REVERT V6.0.013)
-        normResult.cleanPlace, // [2] Normalized — cleanPlace from [18]
+        normalizedName, // [2] Normalized — normalizeForCompare(cleanPlace) [V6.0.072 P2-R4-4]
         normResult.placeType || 'other',
         subDistrict || '',
         district || '',
