@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.071
+ * VERSION: 6.0.072
  * FILE: 12b_ReviewReprocessor.gs
  * LMDS V6.0 — Q_REVIEW Post-Processor
  * ===================================================
@@ -87,7 +87,11 @@ function reprocessReviewQueue() {
     safeUiAlert_('❌ เกิดข้อผิดพลาด: ' + err.message);
   } finally {
     // ─── STEP 1: ปล่อย Lock เสมอ แม้เกิด error ───
-    lock.releaseLock();
+    // [V6.0.072] P2-R5-3: Use releaseScriptLock_() instead of bare lock.releaseLock()
+    //   (Audit Round 5 — Static Audit M-2)
+    //   เหมือนที่แก้ใน PipelineManager V6.0.071 — null-safe + hasLock() guard
+    //   ป้องกัน double-release throw ถ้าเกิด lock ถูก release ไปแล้วใน code path อื่น
+    releaseScriptLock_(lock);
     // ─── STEP 4: Flush log buffer ก่อน execution จบ ───
     //   ป้องกัน log entries ที่สะสมใน _LOG_BUFFER หายเมื่อ Timeout (P2 #11 V5.5.008)
     if (typeof flushLogBuffer_ === 'function') flushLogBuffer_();

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.071
+ * VERSION: 6.0.072
  * FILE: 13_ReportService.gs
  * LMDS V6.0 — Data Quality Report Service
  * ===================================================

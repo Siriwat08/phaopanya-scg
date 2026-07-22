@@ -6,13 +6,13 @@
 
 | รายการ                   | ค่า                                                                         |
 | ------------------------ | --------------------------------------------------------------------------- |
-| **เวอร์ชัน**             | 6.0.069 (Production Ready — 39 .gs files, 19 .html files)                   |
-| **Last Updated**         | 2026-07-16                                                                  |
+| **เวอร์ชัน**             | 6.0.072 (Production Ready — 39 .gs files, 19 .html files)                   |
+| **Last Updated**         | 2026-07-22                                                                  |
 | **Platform**             | Google Apps Script + Google Sheets                                          |
 | **Core Engine**          | MatchEngine V6.0 with Hybrid Alias Architecture + RBAC                      |
 | **Total Files**          | 39 `.gs` files (38 production + 1 legacy `99_Legacy.gs`) + 19 `.html` files |
-| **Total Lines**          | ~24749 (.gs only, non-blank)                                                |
-| **Total Functions**      | 533                                                                         |
+| **Total Lines**          | ~28135 (.gs only, non-blank)                                                |
+| **Total Functions**      | 543                                                                         |
 | **Total Sheets**         | 19                                                                          |
 | **Total IDX Sets**       | 16                                                                          |
 | **SCHEMA Definitions**   | 19 (ลบ MAPS_CACHE ใน V5.5.013)                                              |
@@ -26,7 +26,7 @@
 
 LMDS (Logistics Master Data System) V6.0 คือระบบ Master Data + Matching Engine สำหรับงานขนส่งที่ได้รับการปรับปรุงครบวงจร:
 
-### สถานะ V6.0.048
+### สถานะ V6.0.072
 
 - ✅ **Phase 1-3 (Data + Matching + Learning)**: 100% Complete
 - ✅ **Phase 4 (WebApp)**: ~80% Complete (Dashboard + Q_REVIEW + FACT + Search + Maps)
@@ -259,8 +259,8 @@ clasp push
 
 ✅ **Documentation**
 
-- [ ] README updated to V6.0.048
-- [ ] CHANGELOG.md has [6.0.048] entry
+- [ ] README updated to V6.0.072
+- [ ] CHANGELOG.md has [6.0.072] entry
 - [ ] BLUEPRINT.md version sync
 
 ✅ **Configuration**
@@ -289,7 +289,7 @@ claspa push --dry-run
 clasp push
 
 # 4. Deploy WebApp
-clasp deploy --description "V6.0.048 production"
+clasp deploy --description "V6.0.072 production"
 
 # 5. Verify in Google Sheet
 # - Menu: 🟧 ระบบ & ตั้งค่า → ✅ ตรวจสอบ System Integrity
