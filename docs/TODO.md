@@ -3,54 +3,60 @@
 # 📋 TODO — Pending Recommendations from AI Reviews
 
 > Track ทุกข้อเสนอที่ยังไม่ได้ทำ จาก AI reviewers ทั้งหมด
-> อัปเดต: 2026-07-21 | เวอร์ชั่นปัจจุบัน: V6.0.070 (PR #186 merged)
+> อัปเดต: 2026-07-22 | เวอร์ชั่น repo ปัจจุบัน: V6.0.071 (PR #189 merged)
+> ⚠️ WebApp ที่ deploy จริงยังเป็น V6.0.069 — ต้อง deploy V6.0.071 ขึ้น production
 
 ---
 
 ## สถานะ Group ทั้งหมด
 
-| Group                   | งานทั้งหมด | เสร็จ | สถานะ                 |
-| ----------------------- | ---------- | ----- | --------------------- |
-| ✅ Group A (Quick Wins) | 4          | 4     | เสร็จ (V6.0.052-053)  |
-| ✅ Group B (Security)   | 4          | 4     | เสร็จ (V6.0.054-056)  |
-| ✅ Group C (Code Fixes) | 5          | 5     | เสร็จ (V6.0.057-059)  |
-| ✅ Phase D (Process)    | 12         | 12    | เสร็จ (V6.0.060-062)  |
-| ✅ P0 รอบ 2             | 3          | 3     | เสร็จ (V6.0.063)      |
-| ✅ P1 รอบ 2             | 4          | 4     | เสร็จ (V6.0.064-066)  |
-| ✅ P0 รอบ 3             | 4          | 4     | เสร็จ (V6.0.070)      |
-| ✅ P1 รอบ 3             | 4          | 4     | เสร็จ (V6.0.070-068)  |
-| 🟡 Group D (Defer)      | 3          | 0     | รอเงื่อนไข            |
-| 🔴 Group E (No-Go)      | 5          | 0     | ห้ามทำ (ไม่เหมาะ GAS) |
-| 🟡 P2 รอบ 4             | 10         | 0     | ทยอยแก้ (V6.0.071+)   |
+| Group                   | งานทั้งหมด | เสร็จ | สถานะ                       |
+| ----------------------- | ---------- | ----- | --------------------------- |
+| ✅ Group A (Quick Wins) | 4          | 4     | เสร็จ (V6.0.052-053)        |
+| ✅ Group B (Security)   | 4          | 4     | เสร็จ (V6.0.054-056)        |
+| ✅ Group C (Code Fixes) | 5          | 5     | เสร็จ (V6.0.057-059)        |
+| ✅ Phase D (Process)    | 12         | 12    | เสร็จ (V6.0.060-062)        |
+| ✅ P0 รอบ 2             | 3          | 3     | เสร็จ (V6.0.063)            |
+| ✅ P1 รอบ 2             | 4          | 4     | เสร็จ (V6.0.064-066)        |
+| ✅ P0 รอบ 3             | 4          | 4     | เสร็จ (V6.0.070)            |
+| ✅ P1 รอบ 3             | 4          | 4     | เสร็จ (V6.0.070-068)        |
+| 🟡 Group D (Defer)      | 3          | 0     | รอเงื่อนไข                  |
+| 🔴 Group E (No-Go)      | 5          | 0     | ห้ามทำ (ไม่เหมาะ GAS)       |
+| 🟡 P2 รอบ 4             | 10         | 3     | 3 เสร็จ (V6.0.071) + 7 ค้าง |
+| 🟡 P2 รอบ 5             | 6          | 0     | ทยอยแก้ (V6.0.072+)         |
+| 🟡 Doc Debt (V6.0.072)  | 7          | 0     | docs ค้าง 6.0.069 → 6.0.071 |
 
 ---
 
 ## ✅ งานที่เสร็จแล้วทั้งหมด (V6.0.049-068)
 
-| เวอร์ชั่น | งาน                                                                   | ที่มา                  |
-| --------- | --------------------------------------------------------------------- | ---------------------- |
-| V6.0.049  | Dead code cleanup                                                     | Reviewer 1             |
-| V6.0.050  | Split 10_MatchEngine.gs → 10f/10g/10h                                 | Reviewer 1 + 2         |
-| V6.0.051  | Move scoring functions to 10b                                         | Reviewer 1             |
-| V6.0.052  | resetAliasEnrichmentContext_ wrapper + bump_version.sh                | Reviewer 1 + Lesson    |
-| V6.0.053  | Persist SYS_NOTES on all code paths                                   | Reviewer 2             |
-| V6.0.054  | SECURITY.md + XFrameOptions docs                                      | Reviewer 3             |
-| V6.0.055  | validateInput_() helper                                               | Reviewer 2 (adjusted)  |
-| V6.0.056  | OAuth scopes audit                                                    | Reviewer 3             |
-| V6.0.057  | Google Maps helper + runNormalize label + ESLint 200 + Telegram retry | Reviewer 2+4           |
-| V6.0.058  | 5-Layer Alias Safeguard (Layer 1+5)                                   | Reviewer 1 (adjusted)  |
-| V6.0.059  | TODO.md + CI-CD-TROUBLESHOOTING.md + PR template + check_18           | Process improvement    |
-| V6.0.060  | 8 new CI checks (check_10-17)                                         | Process improvement    |
-| V6.0.061  | AI Review Protocol + self_audit.sh                                    | Process improvement    |
-| V6.0.062  | Cleanup AI review files                                               | Cleanup                |
-| V6.0.063  | P0 รอบ 2: SSTI + LockService + AuthZ guards                           | Reviewer #3 (รอบ 2)    |
-| V6.0.064  | P1 รอบ 2: XSS escape (6 components) + PII masking (phone)             | Reviewer #2+#3 (รอบ 2) |
-| V6.0.065  | P1 รอบ 2: Documentation sync (6 docs)                                 | Reviewer #3 (รอบ 2)    |
-| V6.0.066  | P1 รอบ 2: Formula injection sanitizer                                 | Reviewer #3 (รอบ 2)    |
-| V6.0.070  | P0 รอบ 3: PII email + Cookie B1→PropsService + XSS LiveFeed + Lock    | Reviewer #1+#2 (รอบ 3) |
-| V6.0.070  | P1 รอบ 3: Auth fail-open → deny-by-default                            | Reviewer #2 (รอบ 3)    |
-| V6.0.070  | CodeQL #56: Useless conditional fix                                   | CodeQL                 |
-| V6.0.068  | P1 รอบ 3: TODO.md update + BLUEPRINT.md update + wire check_10-18     | Reviewer #1 (รอบ 3)    |
+| เวอร์ชั่น | งาน                                                                        | ที่มา                   |
+| --------- | -------------------------------------------------------------------------- | ----------------------- |
+| V6.0.049  | Dead code cleanup                                                          | Reviewer 1              |
+| V6.0.050  | Split 10_MatchEngine.gs → 10f/10g/10h                                      | Reviewer 1 + 2          |
+| V6.0.051  | Move scoring functions to 10b                                              | Reviewer 1              |
+| V6.0.052  | resetAliasEnrichmentContext_ wrapper + bump_version.sh                     | Reviewer 1 + Lesson     |
+| V6.0.053  | Persist SYS_NOTES on all code paths                                        | Reviewer 2              |
+| V6.0.054  | SECURITY.md + XFrameOptions docs                                           | Reviewer 3              |
+| V6.0.055  | validateInput_() helper                                                    | Reviewer 2 (adjusted)   |
+| V6.0.056  | OAuth scopes audit                                                         | Reviewer 3              |
+| V6.0.057  | Google Maps helper + runNormalize label + ESLint 200 + Telegram retry      | Reviewer 2+4            |
+| V6.0.058  | 5-Layer Alias Safeguard (Layer 1+5)                                        | Reviewer 1 (adjusted)   |
+| V6.0.059  | TODO.md + CI-CD-TROUBLESHOOTING.md + PR template + check_18                | Process improvement     |
+| V6.0.060  | 8 new CI checks (check_10-17)                                              | Process improvement     |
+| V6.0.061  | AI Review Protocol + self_audit.sh                                         | Process improvement     |
+| V6.0.062  | Cleanup AI review files                                                    | Cleanup                 |
+| V6.0.063  | P0 รอบ 2: SSTI + LockService + AuthZ guards                                | Reviewer #3 (รอบ 2)     |
+| V6.0.064  | P1 รอบ 2: XSS escape (6 components) + PII masking (phone)                  | Reviewer #2+#3 (รอบ 2)  |
+| V6.0.065  | P1 รอบ 2: Documentation sync (6 docs)                                      | Reviewer #3 (รอบ 2)     |
+| V6.0.066  | P1 รอบ 2: Formula injection sanitizer                                      | Reviewer #3 (รอบ 2)     |
+| V6.0.070  | P0 รอบ 3: PII email + Cookie B1→PropsService + XSS LiveFeed + Lock         | Reviewer #1+#2 (รอบ 3)  |
+| V6.0.070  | P1 รอบ 3: Auth fail-open → deny-by-default                                 | Reviewer #2 (รอบ 3)     |
+| V6.0.070  | CodeQL #56: Useless conditional fix                                        | CodeQL                  |
+| V6.0.068  | P1 รอบ 3: TODO.md update + BLUEPRINT.md update + wire check_10-18          | Reviewer #1 (รอบ 3)     |
+| V6.0.071  | P2-R4-1: PipelineManager `lock.releaseLock()` → `releaseScriptLock_(lock)` | Audit Round 4 ISSUE-001 |
+| V6.0.071  | P2-R4-2: `maskSearchQuery_()` helper + apply in `searchLocations` logInfo  | Audit Round 4 ISSUE-002 |
+| V6.0.071  | P2-R4-3: `submitReviewDecision` mask email ด้วย `maskEmailSafe_()`         | Audit Round 4 ISSUE-003 |
 
 ---
 
@@ -90,43 +96,89 @@
 
 ---
 
-## 🟡 P2 รอบ 4 — ทยอยแก้ (V6.0.071+)
+## 🟡 P2 รอบ 4 — ทยอยแก้ (V6.0.071+) — 3 done / 7 pending
 
 > **แหล่ง:** รายงาน AI audit 2 ฉบับ (5-Phase Audit + Static Code Audit) ตรวจทุก claim กับโค้ด V6.0.070 จริง
 > ตาม `docs/AI-REVIEW-PROTOCOL.md` 5 กฎ — ดูผล verification เต็มที่ `docs/ai-reviews/COMPARATIVE_ANALYSIS.md` section 11
 
-### 🔴 P1 — ทำทันทีใน V6.0.071 (PR เดียว)
+### ✅ P1 — ทำเสร็จใน V6.0.071 (PR #189) — 3 รายการ
 
-| #       | งาน                                                                | ไฟล์:บรรทัด               | สถานะ        |
-| ------- | ------------------------------------------------------------------ | ------------------------- | ------------ |
-| P2-R4-1 | **PipelineManager: เปลี่ยน `lock.releaseLock()` → `releaseScriptLock_(lock)`** | `24_PipelineManager.gs:759` | 🔜 V6.0.071  |
-| P2-R4-2 | **searchLocations: mask rawQuery ใน logInfo** (ป้องกัน PII leak)   | `22c_WebAppActions.gs:697` | 🔜 V6.0.071  |
-| P2-R4-3 | **submitReviewDecision: mask email ด้วย `maskEmailSafe_()`**        | `22c_WebAppActions.gs:257` | 🔜 V6.0.071  |
+| #       | งาน                                                                            | ไฟล์:บรรทัด                 | สถานะ              |
+| ------- | ------------------------------------------------------------------------------ | --------------------------- | ------------------ |
+| P2-R4-1 | **PipelineManager: เปลี่ยน `lock.releaseLock()` → `releaseScriptLock_(lock)`** | `24_PipelineManager.gs:759` | ✅ Done (V6.0.071) |
+| P2-R4-2 | **searchLocations: mask rawQuery ใน logInfo** (ป้องกัน PII leak)               | `22c_WebAppActions.gs:697`  | ✅ Done (V6.0.071) |
+| P2-R4-3 | **submitReviewDecision: mask email ด้วย `maskEmailSafe_()`**                   | `22c_WebAppActions.gs:257`  | ✅ Done (V6.0.071) |
 
-### 🟡 P2 — ทยอยแก้ในรอบถัดไป
+### 🟡 P2 — ทยอยแก้ใน V6.0.072+ — 3 รายการค้าง
 
-| #       | งาน                                                                | ไฟล์                       | สถานะ        |
-| ------- | ------------------------------------------------------------------ | -------------------------- | ------------ |
-| P2-R4-4 | **M_PLACE.normalized_name ใช้ `normalizeForCompare()`** (เหมือน M_PERSON) | `07_PlaceService.gs:786`   | 🔜 V6.0.072  |
-| P2-R4-5 | **M_PLACE.normalized_reverse_geocode ใช้ `normalizeForCompare()`** | `07_PlaceService.gs:776`   | 🔜 V6.0.072  |
-| P2-R4-6 | **Menu "🔧 ระบบ & ตั้งค่า" split เป็น sub-menus** (30+ รายการ มองไม่เห็นล่าง) | `00_App.gs:111-150`        | 🔜 V6.0.072  |
+| #       | งาน                                                                           | ไฟล์                     | สถานะ       |
+| ------- | ----------------------------------------------------------------------------- | ------------------------ | ----------- |
+| P2-R4-4 | **M_PLACE.normalized_name ใช้ `normalizeForCompare()`** (เหมือน M_PERSON)     | `07_PlaceService.gs:786` | 🔜 V6.0.072 |
+| P2-R4-5 | **M_PLACE.normalized_reverse_geocode ใช้ `normalizeForCompare()`**            | `07_PlaceService.gs:776` | 🔜 V6.0.072 |
+| P2-R4-6 | **Menu "🔧 ระบบ & ตั้งค่า" split เป็น sub-menus** (30+ รายการ มองไม่เห็นล่าง) | `00_App.gs:111-150`      | 🔜 V6.0.072 |
 
-### 🟢 P3 — Defer ไป Group D
+### 🟢 P3 — Defer ไป Group D — 4 รายการค้าง
 
-| #       | งาน                                          | ที่มา (Issue)              | สถานะ        |
-| ------- | -------------------------------------------- | -------------------------- | ------------ |
-| P2-R4-7 | getDriverHistory_ cache                       | ISSUE-005                  | 🔜 Group D   |
-| P2-R4-8 | Audit trail N×appendRow → batch               | ISSUE-006                  | 🔜 Group D   |
-| P2-R4-9 | recordAuditTrail doc fix                     | ISSUE-007                  | 🔜 Cosmetic  |
-| P2-R4-10 | GOOGLEMAPS_REVERSEGEOCODE dead code         | ISSUE-009                  | 🔜 Group D   |
+| #        | งาน                                 | ที่มา (Issue) | สถานะ       |
+| -------- | ----------------------------------- | ------------- | ----------- |
+| P2-R4-7  | getDriverHistory_ cache             | ISSUE-005     | 🔜 Group D  |
+| P2-R4-8  | Audit trail N×appendRow → batch     | ISSUE-006     | 🔜 Group D  |
+| P2-R4-9  | recordAuditTrail doc fix            | ISSUE-007     | 🔜 Cosmetic |
+| P2-R4-10 | GOOGLEMAPS_REVERSEGEOCODE dead code | ISSUE-009     | 🔜 Group D  |
 
 ---
 
-## 📋 หมายเหตุสำคัญ (V6.0.070 รอบ 4)
+## 🟡 P2 รอบ 5 — ทยอยแก้ (V6.0.072+)
+
+> **แหล่ง:** รายงาน AI audit 3 ฉบับใหม่ (Principal Auditor 5-Phase + Static Code Audit + AUD-4 Documentation Audit)
+> ตรวจทุก claim กับโค้ด V6.0.071 จริง ตาม `docs/AI-REVIEW-PROTOCOL.md` 5 กฎ
+> ดูผล verification เต็มที่ `docs/ai-reviews/COMPARATIVE_ANALYSIS.md` section 12
+
+### 🔴 P0 — Security (จาก Principal Auditor + Static Audit)
+
+| #       | งาน                                                                                                                          | ไฟล์:บรรทัด   | สถานะ       | ความเสี่ยง                   |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------- | ----------- | ---------------------------- |
+| P2-R5-1 | **AuthZ fail-open**: `typeof isAuthorizedUser_` pattern 24 จุด → migrate เป็น `requirePermission_('action:...')` fail-closed | 24 ไฟล์ (.gs) | 🔜 V6.0.072 | ปานกลาง — ต้อง test ทุก role |
+
+### 🟠 P1 — Quick wins (จาก Static Code Audit + AUD-4)
+
+| #       | งาน                                                                                                                         | ไฟล์:บรรทัด                   | สถานะ       | ความเสี่ยง    |
+| ------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ----------- | ------------- |
+| P2-R5-2 | **JSON.parse guard**: `getMatchEngineLiveStatus` ไม่มี try-catch รอบ `JSON.parse(props.getProperty('MATCH_ENGINE_RECENT'))` | `22c_WebAppActions.gs:916`    | 🔜 V6.0.072 | ต่ำ — 10 นาที |
+| P2-R5-3 | **12b lock bare**: `12b_ReviewReprocessor.gs:90` ใช้ `lock.releaseLock()` bare → migrate เป็น `releaseScriptLock_(lock)`    | `12b_ReviewReprocessor.gs:90` | 🔜 V6.0.072 | ต่ำ — 5 นาที  |
+
+### 🟡 P2 — Documentation sync (จาก AUD-4 + การลืม sync หลัง V6.0.070/071)
+
+| #       | งาน                                                                                                                        | ไฟล์                  | สถานะ       |
+| ------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------- | ----------- |
+| P2-R5-4 | **README.md version 6.0.069 → 6.0.071** + ลบ stale "V6.0.048" references                                                   | `README.md`           | 🔜 V6.0.072 |
+| P2-R5-5 | **BLUEPRINT.md version 6.0.069 → 6.0.071** (title + metadata + footer)                                                     | `BLUEPRINT.md`        | 🔜 V6.0.072 |
+| P2-R5-6 | **5 ไฟล์ docs อื่นๆ** sync version → 6.0.071: IT_Guide, System_Guide, Column_Dictionary, SOP_Admin, lmds_admin_manual.html | `docs/*.md` + `.html` | 🔜 V6.0.072 |
+
+---
+
+## 🟡 Doc Debt — V6.0.072 (sync 6.0.069 → 6.0.071)
+
+> **สาเหตุ:** V6.0.069 PR #180 sync docs ครั้งสุดท้าย แต่ V6.0.070/071 ไม่ได้ sync ตาม — ทั้ง 7 ไฟล์ค้าง 6.0.069 หรือเก่ากว่า
+
+| #   | ไฟล์                                        | ปัญหา                                                 | สถานะ |
+| --- | ------------------------------------------- | ----------------------------------------------------- | ----- |
+| 1   | `README.md:9`                               | บอก "6.0.069 (Production Ready)" แต่ code คือ 6.0.071 | ❌    |
+| 2   | `BLUEPRINT.md:3,6,7`                        | title + metadata + footer ค้าง 6.0.069                | ❌    |
+| 3   | `docs/01_SOP_Admin_LMDS.md:482,484`         | อ้างอิง 6.0.044 (เก่ามาก)                             | ❌    |
+| 4   | `docs/02_IT_Guide_LMDS.md:250,968,972`      | ค้าง 6.0.069                                          | ❌    |
+| 5   | `docs/LMDS_System_Guide.md:6,583,690`       | ค้าง 6.0.069                                          | ❌    |
+| 6   | `docs/LMDS_Column_Dictionary_TH.md:3,8,325` | ค้าง 6.0.069                                          | ❌    |
+| 7   | `docs/lmds_admin_manual.html`               | title "LMDS V5.5" (เก่าที่สุด)                        | ❌    |
+
+---
+
+## 📋 หมายเหตุสำคัญ (V6.0.071 รอบ 4 + รอบ 5)
 
 ### การพิสูจน์ AI audit (9 issues)
 
 ตาม `AI-REVIEW-PROTOCOL.md` กฎ 1 (File existence) และกฎ 2 (Line number):
+
 - **6 จริง** — ISSUE-001, 002, 003, 005, 006, 007
 - **2 แก้บางส่วน** — ISSUE-004 (isCurrentUserAdmin_ — V6.0.070 ลบไปแล้วบางจุด)
 - **1 หลอน** — ISSUE-008 (getSheetByNameSafe_ — grep ยืนยันมีจริงใน 03_SetupSheets.gs)
@@ -137,6 +189,20 @@
 - Dashboard 22,174ms — ช้าแต่ยังใช้ได้ (14k+ rows)
 - 3 ชีตว่าง (RPT_DATA_QUALITY, TEST_MATCH_RESULTS, SYS_NEGATIVE_SAMPLES) — ปกติ ยังไม่ได้ trigger รายงาน
 - PIPELINE_RUN_LOG 337 รอบ, 19/7→20/7 timestamp — auto-resume ปกติ
-- **สำคัญ:** WebApp ยังเป็น V6.0.069 → ต้อง deploy V6.0.070 ขึ้น production
+- **สำคัญ:** WebApp ยังเป็น V6.0.069 → ต้อง deploy V6.0.071 ขึ้น production (รวม V6.0.070 และ V6.0.071)
 - Menu "🔧 ระบบ & ตั้งค่า" มี 30+ รายการ มองไม่เห็นปุ่มล่าง → ต้อง split sub-menus (P2-R4-6)
 - M_PLACE.canonical_name และ normalized_name เก็บค่าเดียวกัน → normalized_name ต้องใช้ `normalizeForCompare()` เหมือน M_PERSON (P2-R4-4)
+
+### บทเรียนจาก V6.0.071 (ลืมบ่อย — ต้องระวัง)
+
+1. **ลืม sync docs หลัง V6.0.070/071 merge** — V6.0.069 PR #180 sync docs ครั้งสุดท้าย แต่ V6.0.070/071 ไม่ได้ sync ตาม → เกิด Doc Debt 7 ไฟล์ (ดู section "Doc Debt" ด้านบน)
+2. **ลืมเพิ่ม issue ใหม่เข้า TODO.md** — พบ N-1/N-2/N-3 ตอน verification รอบ 4 แต่ไม่ได้ลงทะเบียน จนกระทั่งผู้ใช้ทัก → ต้องเพิ่มในรอบ 5
+3. **บทเรียน:** หลัง merge ทุก PR — ต้อง (ก) sync docs ที่อ้าง version ทั้งหมด (ข) ลงทะเบียน issue ใหม่ที่เจอระหว่าง verification เข้า TODO.md ทันที
+
+### สถานะการทดสอบ V6.0.071
+
+- ⏳ ผู้ใช้ยังไม่ได้ทดสอบ V6.0.071 หลัง deploy (ต้องทำก่อนเริ่ม V6.0.072)
+- จุดทดสอบที่จำเป็น:
+  1. Pipeline run — ดู SYS_LOG ไม่มี lock error
+  2. Search ใน WebApp — ดู log ว่า query ถูก mask (`08***78`)
+  3. Approve review — ดู log ว่า email ถูก mask (`s***@example.com`)
