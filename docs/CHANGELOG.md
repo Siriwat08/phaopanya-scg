@@ -124,6 +124,88 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [6.0.072] — 2026-07-22 — AUDIT ROUND 5 — M_PLACE + MENU SPLIT (PR C)
+
+### Context
+
+**PR C of V6.0.072** (3-PR split: A=quick wins ✅ #191, B=AuthZ ✅ #192, C=this PR)
+
+Closes the remaining P2-R4 items from round 4 audit (user observations):
+- P2-R4-4/5: M_PLACE.normalized_name ใช้ normalizeForCompare() (เหมือน M_PERSON)
+- P2-R4-6: Menu "🔧 ระบบ & ตั้งค่า" 30+ รายการ split เป็น sub-menus
+
+### (1) P2-R4-4: M_PLACE.normalized_name ใช้ normalizeForCompare()
+
+**ปัญหา:** `07_PlaceService.gs:createPlace()` เก็บ `normResult.cleanPlace` ทั้งใน `canonical_name` [1] และ `normalized_name` [2] — ทำให้ normalized_name เหมือน canonical_name ทุกตัว ไม่มีประโยชน์เลย
+
+เปรียบเทียบกับ M_PERSON (`06_PersonService.gs:createPerson()`):
+```javascript
+// M_PERSON (ถูกต้อง):
+normResult.cleanName,                    // [1] canonical_name
+normalizeForCompare(normResult.cleanName) // [2] normalized_name (lowercase + ลบ space/punctuation)
+```
+
+**การแก้:** M_PLACE ใช้รูปแบบเดียวกัน:
+```javascript
+// M_PLACE (ใหม่):
+canonicalName,                           // [1] canonical_name — cleanPlace
+normalizeForCompare(normResult.cleanPlace) // [2] normalized_name — comparison key
+```
+
+**Backward compatibility:** `normalizeForCompare()` เป็น idempotent (normalize ซ้อน normalize ได้ผลเดียวกัน) — matching engine ใช้ `normalizeForCompare(place.normalized)` อยู่แล้ว ฉะนั้น:
+- Rows เก่า (cleanPlace ใน normalized_name) → `normalizeForCompare(cleanPlace)` ตอน matching = ผลเดียวกัน
+- Rows ใหม่ (normalizeForCompare(cleanPlace) ใน normalized_name) → `normalizeForCompare(normalizeForCompare(cleanPlace))` = ผลเดียวกัน
+
+### (2) P2-R4-5: M_PLACE.normalized_reverse_geocode ใช้ normalizeForCompare()
+
+**ปัญหา:** `normalized_reverse_geocode` [17] เก็บ `normalizePlaceName(raw).cleanPlace` — เป็น cleanPlace แบบไม่ lowercase ไม่ใช่ comparison key
+
+**การแก้:** ใช้ `normalizeForCompare()` บน cleanPlace:
+```javascript
+const rgClean = (rgNorm && rgNorm.cleanPlace) || rawReverseGeocode;
+normalizedReverseGeocode = normalizeForCompare(rgClean); // lowercase + ลบ space/punctuation
+```
+
+### (3) P2-R4-6: Menu "🔧 ระบบ & ตั้งค่า" split เป็น 4 sub-menus
+
+**ปัญหา:** เมนู "🔧 ระบบ & ตั้งค่า" มี 30+ รายการใน sub-menu เดียว — บน monitor ขนาดกลาง รายการล่างๆ มองไม่เห็น (user observation)
+
+**การแก้:** Split เป็น 4 sub-menus ตามหมวด:
+
+| Sub-menu | จำนวน | รายการ |
+|---|---|---|
+| ⚙️ ตั้งค่าระบบ | 12 | API Key, Cookie, Admin, RBAC, Sheets, Protection, Geo, Alias, Migration, UUID, SCG |
+| 🔍 ตรวจสอบ & วินิจฉัย | 7 | Integrity, Preflight, Diagnostic, Duplicates, Dedup Audit |
+| 🧹 ล้าง & Cleanup | 5 | SYNC reset, Cache clear, Trigger cleanup, Audit prune |
+| 📸 Snapshot & ข้อมูล | 4 | Version Info, Snapshot Save/Compare/Clear |
+
+แต่ละ sub-menu มี ≤12 รายการ — พอดีกับหน้าจอมาตรฐานโดยไม่ต้อง scroll
+
+### Files Changed (PR C — 3 files)
+
+- `src/1_group1_master_db/07_PlaceService.gs` — P2-R4-4/5 (normalized_name + normalized_reverse_geocode)
+- `src/O_core_system/00_App.gs` — P2-R4-6 (menu split into 4 sub-menus)
+- `docs/CHANGELOG.md` — this entry
+
+### Verification
+
+- ✅ `node -e "new Function(code)"` — both .gs files pass syntax check
+- ✅ `npx prettier --check` — both files pass
+- ✅ `bash .github/scripts/doc-code-sync-checks/check_01_version.sh` — All versions consistent: 6.0.072
+- ✅ Menu items count verified: 12 + 7 + 5 + 4 = 28 items (was 30+ in single sub-menu)
+
+### V6.0.072 Complete — All 3 PRs merged
+
+| PR | Scope | Status |
+|---|---|---|
+| #191 (PR A) | Quick wins + doc sync (2 code fixes + 7 docs) | ✅ Merged |
+| #192 (PR B) | AuthZ fail-closed (24 sites, P0 security) | ✅ Merged |
+| #193 (PR C) | M_PLACE normalized + menu split (this PR) | ✅ Merged |
+
+**Total V6.0.072 changes:** 5 code fixes + 7 doc syncs + 24 AuthZ migrations + 2 M_PLACE fixes + 1 menu split = **39 changes across 20+ files**
+
+---
+
 ## [6.0.072] — 2026-07-22 — AUDIT ROUND 5 — AUTHZ FAIL-CLOSED (PR B)
 
 ### Context
