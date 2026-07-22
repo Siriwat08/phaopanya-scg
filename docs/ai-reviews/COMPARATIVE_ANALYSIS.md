@@ -4,8 +4,8 @@
 
 > **สรุปการวิเคราะห์เปรียบเทียบ** AI reviewers ที่ตรวจรีวิว LMDS V6.0 codebase
 >
-> **วันที่สร้าง:** 2026-07-15 | **อัปเดตล่าสุด:** 2026-07-22 (เพิ่มรอบ 5 — 3 รายงาน audit ใหม่)
-> **เวอร์ชันที่ตรวจ:** รอบ 1: V6.0.046–V6.0.051 | รอบ 2: V6.0.062 | รอบ 3: V6.0.066 | รอบ 4: V6.0.070 | รอบ 5: V6.0.071
+> **วันที่สร้าง:** 2026-07-15 | **อัปเดตล่าสุด:** 2026-07-22 (รอบ 5 เสร็จครบ — V6.0.072 merged 3 PRs)
+> **เวอร์ชันที่ตรวจ:** รอบ 1: V6.0.046–V6.0.051 | รอบ 2: V6.0.062 | รอบ 3: V6.0.066 | รอบ 4: V6.0.070 | รอบ 5: V6.0.071 → แก้ครบใน V6.0.072
 
 ---
 
@@ -427,16 +427,16 @@
 
 > **คะแนน AUD-4: 61/100 (C)** — แรงไป เพราะปัญหาส่วนใหญ่เป็น doc version drift แก้ได้ใน 30 นาที ไม่ใช่ architectural issue
 
-### P2-R5 — งานที่ต้องทำจากรอบ 5 (ลงทะเบียนใน `docs/TODO.md`)
+### P2-R5 — งานจากรอบ 5 — เสร็จ 6/6 (V6.0.072) — 3 PRs (#191/#192/#193)
 
-| #       | งาน                                                                                                            | Priority | สถานะ       |
-| ------- | -------------------------------------------------------------------------------------------------------------- | -------- | ----------- |
-| P2-R5-1 | **AuthZ fail-open: 24 จุด migrate เป็น `requirePermission_()`**                                                | P0       | 🔜 V6.0.072 |
-| P2-R5-2 | **JSON.parse guard ที่ `22c:916`**                                                                             | P1       | 🔜 V6.0.072 |
-| P2-R5-3 | **12b lock bare → `releaseScriptLock_()`**                                                                     | P1       | 🔜 V6.0.072 |
-| P2-R5-4 | **README.md version sync → 6.0.071**                                                                           | P2       | 🔜 V6.0.072 |
-| P2-R5-5 | **BLUEPRINT.md version sync → 6.0.071**                                                                        | P2       | 🔜 V6.0.072 |
-| P2-R5-6 | **5 docs อื่นๆ sync → 6.0.071** (IT_Guide, System_Guide, Column_Dictionary, SOP_Admin, lmds_admin_manual.html) | P2       | 🔜 V6.0.072 |
+| #       | งาน                                                                                                                       | Priority | สถานะ                        |
+| ------- | ------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------- |
+| P2-R5-1 | **AuthZ fail-open: 24 จุด migrate เป็น `isAuthorizedOrFail_()` fail-closed**                                              | P0       | ✅ Done (V6.0.072 PR B #192) |
+| P2-R5-2 | **JSON.parse guard ที่ `22c:916`** (try-catch + fallback `[]`)                                                            | P1       | ✅ Done (V6.0.072 PR A #191) |
+| P2-R5-3 | **12b lock bare → `releaseScriptLock_()`**                                                                                | P1       | ✅ Done (V6.0.072 PR A #191) |
+| P2-R5-4 | **README.md version sync → 6.0.072** + ลบ V6.0.048 refs + stats update                                                    | P2       | ✅ Done (V6.0.072 PR A #191) |
+| P2-R5-5 | **BLUEPRINT.md version sync → 6.0.072** (title + metadata + footer)                                                       | P2       | ✅ Done (V6.0.072 PR A #191) |
+| P2-R5-6 | **5 docs อื่นๆ sync → 6.0.072** (IT_Guide, System_Guide, Column_Dictionary, SOP_Admin, lmds_admin_manual.html historical) | P2       | ✅ Done (V6.0.072 PR A #191) |
 
 ### สิ่งที่เราเรียนรู้เพิ่ม (รอบ 5)
 
