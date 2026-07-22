@@ -226,7 +226,7 @@ function generatePersonAliasesFromHistory() {
  */
 function acquireAliasHistoryLock_() {
   // [SEC-002] Authorization Guard
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์รัน Hardening\nกรุณาติดต่อ Admin');
     return null;
   }
@@ -625,7 +625,7 @@ function applySheetProtection_UI() {
   // Preserve Behavior 100% — same sheets protected, same editors, same messages
 
   // [SEC-002] Authorization Guard — เฉพาะ Admin เท่านั้น
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์ตั้งค่าการป้องกันชีต\nกรุณาติดต่อ Admin');
     return;
   }

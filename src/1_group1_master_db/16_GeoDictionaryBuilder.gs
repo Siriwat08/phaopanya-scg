@@ -74,7 +74,7 @@ let _GLOBAL_GEO_DICT_PROVINCE_INDEX = null;
 
 function buildGeoDictionary() {
   // [SEC-012 FIX] Authorization Guard — rebuild cache ทั้งหมดต้องเป็น Admin เท่านั้น
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์รัน Build Geo Dictionary\nกรุณาติดต่อ Admin');
     return;
   }

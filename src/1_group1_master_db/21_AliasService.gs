@@ -719,7 +719,7 @@ function fastLookupByShipToName(shipToName, preNormResult, rawAddress, enableSub
  */
 function assignMasterUuidIfMissing() {
   // [SEC-003 FIX] Authorization Guard
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์ Assign Master UUID\nกรุณาติดต่อ Admin');
     return 0;
   }
@@ -929,7 +929,7 @@ function MIGRATION_HybridAliasSystem() {
  */
 function confirmMigrationDialog_() {
   // [SEC-002] Authorization Guard
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์รัน Migration\nกรุณาติดต่อ Admin');
     return false;
   }

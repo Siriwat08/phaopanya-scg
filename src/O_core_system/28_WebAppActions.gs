@@ -431,7 +431,7 @@ function getWebAppActionRegistry() {
   try {
     // [V6.0.021] กรองตาม permission — admin เห็นทั้งหมด, user ทั่วไปเห็นเฉพาะ safe
     // [V6.0.070] QW-4: Cleanup dead ref isCurrentUserAdmin_ → use isAuthorizedUser_ directly
-    const isAdmin = typeof isAuthorizedUser_ === 'function' && isAuthorizedUser_();
+    const isAdmin = isAuthorizedOrFail_();
     if (isAdmin) {
       return WEB_APP_ACTION_REGISTRY;
     }
@@ -478,7 +478,7 @@ function runWebAppAction(actionId, params) {
     //   safe = ทุกคนใช้ได้, warning/danger = admin เท่านั้น
     if (action.danger !== 'safe') {
       // [V6.0.070] QW-4: Cleanup dead ref isCurrentUserAdmin_ → use isAuthorizedUser_ directly
-      const isAdmin = typeof isAuthorizedUser_ === 'function' && isAuthorizedUser_();
+      const isAdmin = isAuthorizedOrFail_();
       if (!isAdmin) {
         return {
           ok: false,

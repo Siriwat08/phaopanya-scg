@@ -119,7 +119,7 @@ function buildShopKey_(shipmentNo, shipToName) {
 
 function fetchDataFromSCGJWD() {
   // [FIX v5.5.021 C4] Authorization Guard — ป้องกันคนไม่มีสิทธิ์เรียก API
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์ดึงข้อมูลจาก SCG\nกรุณาติดต่อ Admin');
     return;
   }
@@ -268,7 +268,7 @@ function readInputConfig_(ss) {
  */
 function setSCGCookie_UI() {
   // [SEC-002] Authorization Guard — เฉพาะ Admin เท่านั้นที่ตั้งค่า Cookie ได้
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์ตั้งค่า SCG Cookie\nกรุณาติดต่อ Admin');
     return;
   }
@@ -1022,7 +1022,7 @@ function buildSummarySheet_(sourceData, sheetName, ss, groupKeyFn, rowBuildFn, f
 
 function clearAllSCGSheets_UI() {
   // [SEC-002] Authorization Guard
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์ล้างข้อมูล\nกรุณาติดต่อ Admin');
     return;
   }
@@ -1110,7 +1110,7 @@ function clearAllSCGSheets_UI() {
  */
 function safeResetTransactional_UI() {
   // [SEC-002] Authorization Guard
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์ล้างข้อมูล\nกรุณาติดต่อ Admin');
     return;
   }

@@ -127,6 +127,44 @@ function requirePermission_(permission) {
 }
 
 /**
+ * isAuthorizedOrFail_ — [V6.0.072] Fail-closed admin authorization check
+ *   (Audit Round 5 — P2-R5-1 — Principal Auditor TD-016 + Static Audit N-2)
+ *
+ *   REPLACES the fail-open pattern:
+ *     `typeof isAuthorizedUser_ === 'function' && isAuthorizedUser_()`
+ *
+ *   PROBLEM with old pattern:
+ *     If 14_Utils.gs or 27_RbacService.gs fails to load (syntax error, missing file),
+ *     `typeof isAuthorizedUser_` returns 'undefined' → `&&` short-circuits to false
+ *     → auth check SKIPPED → operation proceeds WITHOUT authorization (fail-open).
+ *
+ *   FIX:
+ *     This helper checks `typeof` but FAILS CLOSED (returns false) if module not loaded.
+ *     - Module loaded + user is admin → true
+ *     - Module loaded + user not admin → false
+ *     - Module NOT loaded → false (DENY — fail-closed) + logError
+ *
+ *   This preserves backward compatibility with existing `if (!isAuthorizedOrFail_())` pattern
+ *   while closing the fail-open security hole.
+ *
+ * @return {boolean} true if user is authorized admin, false otherwise (including RBAC failure)
+ * @private
+ */
+function isAuthorizedOrFail_() {
+  // [V6.0.072] Fail-closed: if auth module not loaded, DENY (don't allow)
+  if (typeof isAuthorizedUser_ !== 'function') {
+    logError('Security', '[SEC-002] isAuthorizedUser_ not loaded — denying operation (fail-closed)');
+    return false;
+  }
+  try {
+    return isAuthorizedUser_();
+  } catch (e) {
+    logError('Security', '[SEC-002] isAuthorizedUser_ threw — denying operation (fail-closed): ' + e.message, e);
+    return false;
+  }
+}
+
+/**
  * setupRoleAssignments_UI — [V6.0.004] Menu wrapper to set role assignments
  *   Format: email:role,email:role (roles: viewer, reviewer, admin)
  */

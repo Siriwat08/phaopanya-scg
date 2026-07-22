@@ -474,7 +474,7 @@ function checkSystemIntegrity() {
 
 function setupEnvironment() {
   // [SEC-002 FIX] Authorization Guard — เฉพาะ Admin เท่านั้นที่ตั้งค่า API Key ได้
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์ตั้งค่า API Key\nกรุณาติดต่อ Admin');
     return;
   }
@@ -531,7 +531,7 @@ function setupEnvironment() {
  */
 function populateAliasFromSCGRawData() {
   // [SEC-002 FIX] Authorization Guard — bulk write M_ALIAS ต้องเป็น Admin เท่านั้น
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์รัน Alias Enrichment\nกรุณาติดต่อ Admin');
     return 0;
   }
