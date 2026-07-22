@@ -732,7 +732,7 @@ function computePlaceScore_(queryA, candidateB, candidate, srcProvince, isRevers
 function createPlace(normResult, province, district, subDistrict, postcode, reverseGeocodeAddress) {
   try {
     // [V6.0.063] AuthZ + LockService guard (Reviewer #3 AUD3-SEC-002 + AUD2-ATD-010)
-    if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+    if (!isAuthorizedOrFail_()) {
       throw new Error('SEC-002: Unauthorized createPlace attempt');
     }
     const lock = LockService.getScriptLock();

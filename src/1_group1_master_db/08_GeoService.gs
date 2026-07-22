@@ -227,7 +227,7 @@ function buildGridKey_(lat, lng) {
 function createGeoPoint(lat, lng, source, resolvedAddr, province, district, placeId) {
   try {
     // [V6.0.063] AuthZ + LockService guard (Reviewer #3 AUD3-SEC-002 + AUD2-ATD-011)
-    if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+    if (!isAuthorizedOrFail_()) {
       throw new Error('SEC-002: Unauthorized createGeoPoint attempt');
     }
     const lock = LockService.getScriptLock();

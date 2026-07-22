@@ -55,7 +55,7 @@ const _LOG_BUFFER_LIMIT = 50;
  */
 function setupAllSheets() {
   // [SEC-002] Authorization Guard
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์สร้าง/แก้ไขชีต\nกรุณาติดต่อ Admin');
     return;
   }

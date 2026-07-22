@@ -600,7 +600,7 @@ function calculateNameScore_(nameA, nameB) {
 function createPerson(normResult) {
   try {
     // [V6.0.063] AuthZ + LockService guard (Reviewer #3 AUD3-SEC-002 + AUD2-ATD-009)
-    if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+    if (!isAuthorizedOrFail_()) {
       throw new Error('SEC-002: Unauthorized createPerson attempt');
     }
     const lock = LockService.getScriptLock();
@@ -766,7 +766,7 @@ function updatePersonStats(personId) {
 function mergePersonRecords(sourceId, targetId) {
   try {
     // [V6.0.063] AuthZ guard on IRREVERSIBLE merge (Reviewer #3 AUD3-NEW-011)
-    if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+    if (!isAuthorizedOrFail_()) {
       throw new Error('SEC-002: Unauthorized mergePersonRecords attempt');
     }
     const lock = LockService.getScriptLock();

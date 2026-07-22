@@ -135,7 +135,7 @@ function extractGeoFromAddress(rawText) {
  */
 function populateGeoMetadata() {
   // [SEC-012 FIX] Authorization Guard — bulk write SYS_TH_GEO ต้องเป็น Admin เท่านั้น
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์รัน Populate Geo Metadata\nกรุณาติดต่อ Admin');
     return;
   }

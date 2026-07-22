@@ -124,6 +124,105 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [6.0.072] — 2026-07-22 — AUDIT ROUND 5 — AUTHZ FAIL-CLOSED (PR B)
+
+### Context
+
+**PR B of V6.0.072** (3-PR split: A=quick wins ✅ merged #191, B=AuthZ refactor this PR, C=M_PLACE+menu)
+
+P2-R5-1 (P0): AuthZ fail-open vulnerability — 24 sites used `typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()` pattern. If 27_RbacService.gs or 14_Utils.gs fails to load (syntax error, missing file, clasp push failure), `typeof` returns 'undefined' → `&&` short-circuits to false → auth check SKIPPED → operation proceeds WITHOUT authorization.
+
+This was flagged by all 3 AI auditors in round 5:
+- Principal Auditor: TD-016 (P0 — Critical)
+- Static Code Audit: N-002 (HIGH)
+- AUD-4: confirmed in documentation audit
+
+### Fix — New fail-closed helper `isAuthorizedOrFail_()`
+
+Added to `src/O_core_system/27_RbacService.gs`:
+
+```javascript
+function isAuthorizedOrFail_() {
+  // Fail-closed: if auth module not loaded, DENY (don't allow)
+  if (typeof isAuthorizedUser_ !== 'function') {
+    logError('Security', '[SEC-002] isAuthorizedUser_ not loaded — denying operation (fail-closed)');
+    return false;
+  }
+  try {
+    return isAuthorizedUser_();
+  } catch (e) {
+    logError('Security', '[SEC-002] isAuthorizedUser_ threw — denying operation (fail-closed): ' + e.message, e);
+    return false;
+  }
+}
+```
+
+**Behavior matrix:**
+
+| Scenario | Old pattern (fail-open) | New pattern (fail-closed) |
+|---|---|---|
+| Module loaded + user is admin | `true` (allow) | `true` (allow) |
+| Module loaded + user NOT admin | `false` (deny) | `false` (deny) |
+| Module NOT loaded | `false` → `&&` = false → **SKIP CHECK** (allow) | `false` (deny) + logError |
+| Module loaded + isAuthorizedUser_ throws | ReferenceError (crash) | `false` (deny) + logError |
+
+### Migration — 24 sites across 14 files
+
+**22 "deny" sites** — pattern: `typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()` → `!isAuthorizedOrFail_()`
+
+| File | Line | Function |
+|---|---|---|
+| `00_App.gs` | 477, 534 | menu functions |
+| `03_SetupSheets.gs` | 58 | setupAllSheets |
+| `06_PersonService.gs` | 603, 769 | createPerson, mergePersonRecords |
+| `07_PlaceService.gs` | 735 | createPlace |
+| `08_GeoService.gs` | 230 | createGeoPoint |
+| `09_DestinationService.gs` | 92 | createDestination |
+| `12_ReviewService.gs` | 994 | review function |
+| `12b_ReviewReprocessor.gs` | 53 | reprocessReviewQueue |
+| `14_Utils.gs` | 223, 925 | resetSourceSyncStatus, setupAdminList_UI |
+| `16_GeoDictionaryBuilder.gs` | 77 | buildGeoDictionary |
+| `18_ServiceSCG.gs` | 122, 271, 1025, 1113 | SCG functions |
+| `19_Hardening.gs` | 229, 628 | hardening functions |
+| `21_AliasService.gs` | 722, 932 | createGlobalAlias, populateAliasFromSCGRawData |
+| `20_ThGeoService.gs` | 138 | populateGeoMetadata |
+
+**2 "positive isAdmin" sites** — pattern: `typeof isAuthorizedUser_ === 'function' && isAuthorizedUser_()` → `isAuthorizedOrFail_()`
+
+| File | Line | Function |
+|---|---|---|
+| `28_WebAppActions.gs` | 434 | getWebAppActionRegistry (filter admin-only actions) |
+| `28_WebAppActions.gs` | 481 | executeWebAppAction (guard danger actions) |
+
+### Files Changed (PR B — 15 files)
+
+- `src/O_core_system/27_RbacService.gs` — NEW `isAuthorizedOrFail_()` helper (36 lines)
+- 14 files with 24 call sites migrated (1-line change each)
+
+### Verification
+
+- ✅ `node -e "new Function(code)"` — All 39 .gs files pass syntax check
+- ✅ `npx prettier --check "src/**/*.gs"` — All matched files use Prettier code style!
+- ✅ `grep -rn "typeof isAuthorizedUser_" src/` — only 3 remaining (all in 27_RbacService.gs comment + helper definition)
+- ✅ `grep -rn "isAuthorizedOrFail_" src/` — 24 call sites + 1 definition + 2 comment references = 27 total
+- ✅ No behavior change for normal case (module loaded) — only changes edge case (module not loaded) from allow → deny
+
+### What's NOT in this PR (deferred to PR C)
+
+| Task | Priority | Reason |
+|---|---|---|
+| P2-R4-4 M_PLACE.normalized_name → normalizeForCompare() | P2 | Affects matching accuracy |
+| P2-R4-5 M_PLACE.normalized_reverse_geocode | P2 | Same |
+| P2-R4-6 Menu split 30+ items → sub-menus | P2 | UX change |
+
+### Security Impact
+
+This PR closes the #1 P0 security finding from round 5 audit. After merge:
+- **Before:** If RBAC module fails to load → all 24 operations bypass auth (CRITICAL)
+- **After:** If RBAC module fails to load → all 24 operations DENIED + logError (fail-closed)
+
+---
+
 ## [6.0.072] — 2026-07-22 — AUDIT ROUND 5 — QUICK WINS + DOC SYNC
 
 ### Context

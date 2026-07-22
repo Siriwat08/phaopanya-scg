@@ -220,7 +220,7 @@ function ensembleNameMatch(nameA, nameB) {
  */
 function resetSourceSyncStatus() {
   // [SEC-002] Authorization Guard
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์รีเซ็ตสถานะ SYNC\nกรุณาติดต่อ Admin');
     return;
   }
@@ -922,7 +922,7 @@ function isAuthorizedUser_() {
  */
 function setupAdminList_UI() {
   // [SEC-002 FIX] Authorization Guard
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์ตั้งค่า Admin List\nกรุณาติดต่อ Admin');
     return;
   }

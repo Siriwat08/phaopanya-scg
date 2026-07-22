@@ -50,7 +50,7 @@
  */
 function reprocessReviewQueue() {
   // [FIX BUG-M01 V5.5.022] เพิ่ม AuthZ Guard — destructive op ที่เขียน Q_REVIEW + FACT_DELIVERY + SOURCE
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์รัน Reprocess Review Queue\nกรุณาติดต่อ Admin');
     return;
   }

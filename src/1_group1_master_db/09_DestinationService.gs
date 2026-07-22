@@ -89,7 +89,7 @@ function resolveDestination(personId, placeId, geoId) {
 function createDestination(personId, placeId, geoId, lat, lng, deliveryDate) {
   try {
     // [V6.0.063] AuthZ + LockService guard (Reviewer #3 AUD3-SEC-002 + AUD3-NEW-010)
-    if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+    if (!isAuthorizedOrFail_()) {
       throw new Error('SEC-002: Unauthorized createDestination attempt');
     }
     const lock = LockService.getScriptLock();

@@ -991,7 +991,7 @@ function safeExtractArr_(arr, idx) {
  *   ข้อมูลที่ถูกประมวลผลแล้วจะอยู่ใน FACT_DELIVERY (audit trail ครบ)
  */
 function clearDoneReviews_UI() {
-  if (typeof isAuthorizedUser_ === 'function' && !isAuthorizedUser_()) {
+  if (!isAuthorizedOrFail_()) {
     safeUiAlert_('🔒 คุณไม่มีสิทธิ์ล้าง Q_REVIEW\nกรุณาติดต่อ Admin');
     return;
   }
