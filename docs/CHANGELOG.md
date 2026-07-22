@@ -9,6 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date       | Cycle                                                                       | Issues                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ------- | ---------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6.0.072 | 2026-07-22 | AUDIT ROUND 5 — QUICK WINS + DOC SYNC                                       | (1) P2-R5-2: `getMatchEngineLiveStatus` JSON.parse wrapped in try-catch with fallback to `[]` + logWarn (`22c:916`) — prevents WebApp Live Status panel crash if MATCH_ENGINE_RECENT property is corrupted (2) P2-R5-3: `12b_ReviewReprocessor.gs:90` migrated `lock.releaseLock()` → `releaseScriptLock_(lock)` (null-safe hasLock guard) — completes V6.0.071 lock helper sweep (3) P2-R5-4/5/6: 7 docs synced 6.0.069 → 6.0.072 (README, BLUEPRINT, IT_Guide, System_Guide, Column_Dictionary, SOP_Admin, lmds_admin_manual.html with historical banner) |
 | 6.0.071 | 2026-07-21 | AUDIT ROUND 4 — 3 FIXES                                                     | (1) PipelineManager `lock.releaseLock()` → `releaseScriptLock_(lock)` at `24:759` (Audit ISSUE-001 — prevent double-release when runMatchEngine internally releases the same lock) (2) `maskSearchQuery_()` new helper in 22_WebApp.gs — masks phone/email/name/address before logging in searchLocations (`22c:697`) (3) `submitReviewDecision` uses `maskEmailSafe_()` on reviewer email in logInfo (`22c:257`) — completes V6.0.067 PII masking sweep |
 | 6.0.062 | 2026-07-16 | CLEANUP AI REVIEWS                                                          | Delete all original AI review files in `ai-reviewer-{1,2,3,4}/` (22 files, ~1.4MB) — important data already extracted to COMPARATIVE_ANALYSIS.md, AI-REVIEW-PROTOCOL.md, TODO.md, CI-CD-TROUBLESHOOTING.md. Folders kept with .gitkeep for future reviews.                                                                                                                                                                                                  |
 | 6.0.063 | 2026-07-16 | P0 ROUND 2 SECURITY FIXES                                                   | SSTI fix (Index.html <?!= escaped), LockService guards (createPerson/Place/GeoPoint/Destination/mergePersonRecords), AuthZ guards (isAuthorizedUser_ on 5 destructive ops)                                                                                                                                                                                                                                                                                  |
@@ -120,6 +121,108 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 | 5.5.006 | 2026-06-18 | CONSISTENCY SYNC                                                            | 28 doc inconsistencies                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 5.5.005 | 2026-06-16 | REVIEW SERVICE FIX                                                          | (intermediate)                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 5.5.004 | 2026-06-15 | INITIAL AUDIT CYCLES                                                        | 53 audit issues                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+
+---
+
+## [6.0.072] — 2026-07-22 — AUDIT ROUND 5 — QUICK WINS + DOC SYNC
+
+### Context
+
+หลัง PR #189 (V6.0.071) merged, ผู้ใช้ส่งรายงาน AI audit **3 ฉบับใหม่** และทักว่าผม "ลืมบ่อยเกินไป":
+1. Principal Auditor 5-Phase (~90 claims)
+2. Static Code Audit (9 issues file:line)
+3. AUD-4 Documentation Audit (17 issues)
+
+ตรวจทุก claim กับ V6.0.071 จริง พบว่าผมพลาด 2 อย่างในรอบ 4:
+- **Gap 1:** พบ N-1/N-2/N-3 ตอน verification แต่ไม่ได้ลงทะเบียนใน TODO.md
+- **Gap 2:** V6.0.070/071 ไม่ได้ sync docs ที่อ้าง version → 7 ไฟล์ค้าง 6.0.069
+
+PR #190 (docs only) ปิด Gap ทั้งคู่ — ลงทะเบียน P2-R5-1 ถึง P2-R5-6 + เพิ่ม Doc Debt section + บันทึกบทเรียน
+
+PR นี้ (**PR A ของ V6.0.072**) แก้ quick wins + doc sync:
+- P2-R5-2 + P2-R5-3 = code fixes (ปลอดภัยมาก)
+- P2-R5-4/5/6 = doc sync 7 ไฟล์
+
+P2-R5-1 (P0 AuthZ fail-open 24 จุด) และ P2-R4-4/5/6 (M_PLACE + menu split) อยู่ใน PR B และ PR C แยกต่างหาก เพื่อลด risk และให้ review ง่าย
+
+### (1) P2-R5-2: JSON.parse guard at 22c:916
+
+**ปัญหา:** `getMatchEngineLiveStatus()` ใช้ `JSON.parse(props.getProperty('MATCH_ENGINE_RECENT') || '[]')` โดยไม่มี try-catch
+
+**ความเสี่ยง:** ถ้า PropertiesService value เสียหาย (เช่น truncated จาก quota limit) → throw → WebApp Live Status panel พังทั้งหน้า
+
+**การแก้:** Wrap ใน try-catch + fallback เป็น `[]` + logWarn เพื่อให้ admin สืบสาเหตุได้:
+```javascript
+let recentMatches = [];
+try {
+  recentMatches = JSON.parse(props.getProperty('MATCH_ENGINE_RECENT') || '[]');
+  if (!Array.isArray(recentMatches)) recentMatches = [];
+} catch (parseErr) {
+  logWarn('WebApp', 'getMatchEngineLiveStatus: MATCH_ENGINE_RECENT corrupted — falling back to []: ' + parseErr.message);
+  recentMatches = [];
+}
+```
+
+### (2) P2-R5-3: 12b_ReviewReprocessor lock bare → releaseScriptLock_
+
+**ปัญหา:** `12b_ReviewReprocessor.gs:90` ใช้ `lock.releaseLock()` ตรงๆ ใน finally block
+
+**ความเสี่ยง:** เหมือนที่ PipelineManager แก้ใน V6.0.071 — ถ้า lock ถูก release ไปแล้วใน code path อื่น → bare releaseLock() จะ throw ใน finally → กลืน error ดั้งเดิม
+
+**การแก้:** Migrate เป็น `releaseScriptLock_(lock)` (helper ที่มี `hasLock()` guard null-safe):
+```javascript
+} finally {
+  releaseScriptLock_(lock);  // null-safe — hasLock() guard
+  if (typeof flushLogBuffer_ === 'function') flushLogBuffer_();
+}
+```
+
+### (3) P2-R5-4/5/6: Documentation sync 7 ไฟล์ → 6.0.072
+
+V6.0.069 PR #180 sync docs ครั้งสุดท้าย แต่ V6.0.070/071 ไม่ได้ sync ตาม → ทั้ง 7 ไฟล์ค้าง 6.0.069 หรือเก่ากว่า:
+
+| ไฟล์ | เดิม | ใหม่ |
+|---|---|---|
+| `README.md` | 6.0.069 + 24749 lines + 533 functions + V6.0.048 references | 6.0.072 + 28135 lines + 543 functions + V6.0.072 references |
+| `BLUEPRINT.md` | 6.0.069 (title + metadata + footer) | 6.0.072 (ทั้ง 3 จุด) |
+| `docs/02_IT_Guide_LMDS.md` | 6.0.069 (3 จุด) | 6.0.072 |
+| `docs/LMDS_System_Guide.md` | 6.0.069 (3 จุด) | 6.0.072 |
+| `docs/LMDS_Column_Dictionary_TH.md` | 6.0.069 (3 จุด) | 6.0.072 |
+| `docs/01_SOP_Admin_LMDS.md` | 6.0.044 (เก่ามาก) | 6.0.072 |
+| `docs/lmds_admin_manual.html` | title "LMDS V5.5" (เก่าที่สุด) | title "LMDS V5.5 (Historical)" + historical banner + DOC-TYPE: historical comment |
+
+### Files Changed (PR A only — 8 files)
+
+- `src/O_core_system/22c_WebAppActions.gs` — P2-R5-2 JSON.parse guard
+- `src/2_group2_daily_ops/12b_ReviewReprocessor.gs` — P2-R5-3 lock migration
+- `README.md` — version 6.0.072 + stats update + V6.0.048 → V6.0.072 references
+- `BLUEPRINT.md` — version 6.0.072 (title + metadata + footer)
+- `docs/02_IT_Guide_LMDS.md` — version 6.0.072 (3 spots)
+- `docs/LMDS_System_Guide.md` — version 6.0.072 (3 spots)
+- `docs/LMDS_Column_Dictionary_TH.md` — version 6.0.072 (3 spots)
+- `docs/01_SOP_Admin_LMDS.md` — version 6.0.072 (2 spots)
+- `docs/lmds_admin_manual.html` — historical banner + DOC-TYPE comment + title update
+- `docs/CHANGELOG.md` — this entry
+- All 39 `.gs` files — VERSION: header bump 6.0.071 → 6.0.072 (auto via bump_version.sh)
+- `src/O_core_system/01_Config.gs` — APP_VERSION + SCHEMA_VERSION
+- `package.json` — version field
+
+### Verification
+
+- ✅ `bash .github/scripts/doc-code-sync-checks/check_01_version.sh` — All versions consistent: 6.0.072
+- ✅ `npx prettier --check` — All matched files use Prettier code style!
+- ✅ `node -e "new Function(code)"` syntax check — both .gs files pass
+- ✅ grep ยืนยัน 12b ไม่มี `lock.releaseLock()` bare แล้ว
+- ✅ grep ยืนยัน README/BLUEPRINT ไม่มี 6.0.069 references แล้ว (เหลือเฉพาะ CHANGELOG ที่เป็น historical entries)
+
+### What's NOT in this PR (deferred to PR B and PR C of V6.0.072)
+
+| Task | PR | Priority | Reason |
+|---|---|---|---|
+| P2-R5-1 AuthZ fail-open 24 จุด → requirePermission_() | PR B | P0 | Security refactor ใหญ่ — ต้อง test ทุก role แยก |
+| P2-R4-4 M_PLACE.normalized_name ใช้ normalizeForCompare() | PR C | P2 | กระทบ matching accuracy — ต้อง snapshot test |
+| P2-R4-5 M_PLACE.normalized_reverse_geocode | PR C | P2 | เหมือนกัน |
+| P2-R4-6 Menu split 30+ รายการ → sub-menus | PR C | P2 | UX change — ต้อง user test |
 
 ---
 

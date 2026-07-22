@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.071
+ * VERSION: 6.0.072
  * FILE: 22c_WebAppActions.gs
  * LMDS V6.0 — Web App Actions
  * ===================================================
@@ -906,6 +906,23 @@ function getMapAnalyticsData(days, filterStatus) {
 function getMatchEngineLiveStatus() {
   if (!isAuthorizedDashboardUser_()) throw new Error('Unauthorized');
   const props = PropertiesService.getScriptProperties();
+
+  // [V6.0.072] P2-R5-2: Wrap JSON.parse in try-catch (Audit Round 5 — Static Audit H-2)
+  //   If MATCH_ENGINE_RECENT property is corrupted JSON (e.g., truncated by quota limit),
+  //   bare JSON.parse would throw and crash the entire Live Status panel in WebApp.
+  //   Defensive: fall back to empty array + log warning so admin can investigate.
+  let recentMatches = [];
+  try {
+    recentMatches = JSON.parse(props.getProperty('MATCH_ENGINE_RECENT') || '[]');
+    if (!Array.isArray(recentMatches)) recentMatches = [];
+  } catch (parseErr) {
+    logWarn(
+      'WebApp',
+      'getMatchEngineLiveStatus: MATCH_ENGINE_RECENT corrupted — falling back to []: ' + parseErr.message
+    );
+    recentMatches = [];
+  }
+
   return {
     isRunning: props.getProperty('MATCH_ENGINE_RUNNING') === 'true',
     currentRow: Number(props.getProperty('MATCH_ENGINE_CURRENT_ROW') || 0),
@@ -913,6 +930,6 @@ function getMatchEngineLiveStatus() {
     startedAt: props.getProperty('MATCH_ENGINE_STARTED_AT'),
     lastMatchAt: props.getProperty('MATCH_ENGINE_LAST_MATCH'),
     errorCount: Number(props.getProperty('MATCH_ENGINE_ERRORS') || 0),
-    recentMatches: JSON.parse(props.getProperty('MATCH_ENGINE_RECENT') || '[]')
+    recentMatches: recentMatches
   };
 }
