@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.072
+ * VERSION: 6.0.073
  * FILE: 26_AuditTrailService.gs
  * LMDS V6.0 — Audit Trail (Critical-Only Scope)
  * ===================================================
@@ -167,11 +167,17 @@ function logAuditTrail(entityType, entityId, action, fieldChanged, oldValue, new
     row[AUDIT_IDX.CHANGE_REASON] = reason || '';
     row[AUDIT_IDX.IP_ADDRESS] = ''; // Not available in GAS
 
-    // Append to sheet (single-row append is OK for audit — typically low frequency)
-    sheet.appendRow(row);
+    // [V6.0.073] P2-R6-3: Use setValues instead of appendRow (Audit Round 6 — TD-004)
+    //   Consistency with createPerson/createPlace/createDestination pattern
+    //   setValues is slightly faster + consistent with project standard
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow + 1, 1, 1, row.length).setValues([row]);
 
     // Logging at debug level only (avoid log spam for normal audit events)
     if (typeof logDebug === 'function') {
+      // [V6.0.073] P2-R6-5: Mask email in audit trail log (Audit Round 6 — SEC-013)
+      //   Use getMaskedEmail_() if available, fallback to '***' for safety
+      const maskedChangedBy = typeof getMaskedEmail_ === 'function' ? getMaskedEmail_(changedBy) : '***';
       logDebug(
         'AuditTrail',
         'logAuditTrail: ' +
@@ -181,7 +187,7 @@ function logAuditTrail(entityType, entityId, action, fieldChanged, oldValue, new
           ':' +
           String(entityId).substring(0, 20) +
           ' by ' +
-          changedBy +
+          maskedChangedBy +
           (reason ? ' (' + reason + ')' : '')
       );
     }

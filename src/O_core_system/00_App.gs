@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.072
+ * VERSION: 6.0.073
  * FILE: 00_App.gs
  * LMDS V6.0 — Application Entry Point & Menu Controller
  * ===================================================
@@ -565,6 +565,9 @@ function populateAliasFromSCGRawData() {
 
 function showVersionInfo() {
   // [V6.0.070] QW-1: Dynamic version info (was hardcoded 22 files v5.5.022)
+  // [V6.0.073] P2-R6-7: Remove hardcoded "542 functions | 25,421 lines" — these numbers
+  //   go stale every version. Stats are in README.md + CHANGELOG.md (single source of truth).
+  //   Showing only APP_VERSION + SCHEMA_VERSION here (always accurate).
   const msg =
     '🚚 ' +
     APP_NAME +
@@ -574,8 +577,8 @@ function showVersionInfo() {
     ' | Schema: v' +
     SCHEMA_VERSION +
     '\n\n' +
-    '📦 Source: 39 .gs files | 542 functions | 25,421 lines\n' +
-    '📋 ดู CHANGELOG ครบที่ docs/CHANGELOG.md';
+    '📋 ดู CHANGELOG ครบที่ docs/CHANGELOG.md\n' +
+    '📊 ดู stats ล่าสุดที่ README.md';
 
   // [FIX BUG-04 v5.5.001] เปลี่ยน ui.alert() เป็น safeUiAlert_()
   safeUiAlert_(msg);

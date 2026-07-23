@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.072
+ * VERSION: 6.0.073
  * FILE: 09_DestinationService.gs
  * LMDS V6.0 — Destination Master Service
  * ===================================================
@@ -141,7 +141,10 @@ function createDestination(personId, placeId, geoId, lat, lng, deliveryDate) {
       logDebug('DestinationService', `createDestination: ${newId} P:${personId} PL:${placeId} G:${geoId}`);
       return newId;
     } finally {
-      lock.releaseLock();
+      // [V6.0.073] P2-R6-2: Use releaseScriptLock_() (Audit Round 6 — TD-001)
+      //   Pattern มาตรฐาน V6.0.071+ — null-safe hasLock() guard
+      //   เหมือนที่แก้ใน PipelineManager V6.0.071 + 12b V6.0.072
+      releaseScriptLock_(lock);
     }
   } catch (err) {
     // [FIX B3 v5.5.002] เพิ่ม try-catch ตาม Rule 12

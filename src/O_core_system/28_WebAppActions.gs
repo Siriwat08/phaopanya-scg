@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.072
+ * VERSION: 6.0.073
  * FILE: 28_WebAppActions.gs
  * LMDS V6.0 — Web App Actions Server (Mobile Menu)
  * ===================================================
@@ -618,15 +618,20 @@ function analyzeRule5PlaceOnlyImpact_Web(params) {
       };
     }
     const lastRow = sheet.getLastRow();
-    const data = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
+    // [V6.0.073] P2-R6-4: Replace magic number 8 with SCHEMA length (Audit Round 6 — TD-005)
+    //   Before: getRange(2, 1, lastRow - 1, 8) — magic number
+    //   After:  getRange(2, 1, lastRow - 1, SCHEMA[SHEET.TEST_MATCH_RESULTS].length)
+    //   Law 3 (Index-based access) — if schema changes, no manual update needed
+    const numCols = SCHEMA[SHEET.TEST_MATCH_RESULTS] ? SCHEMA[SHEET.TEST_MATCH_RESULTS].length : 8;
+    const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
     let v6015PlaceOnly = 0;
     let v6016PlaceOnlyReview = 0;
     let v6015GeoPersonAnchor = 0;
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      const action = String(row[4] || '').trim();
-      const reason = String(row[5] || '').trim();
-      const evidence = String(row[7] || '').trim();
+      const action = String(row[TEST_MATCH_IDX.ACTION] || '').trim();
+      const reason = String(row[TEST_MATCH_IDX.REASON] || '').trim();
+      const evidence = String(row[TEST_MATCH_IDX.EVIDENCE] || '').trim();
       if (action === 'AUTO_MATCH' && reason === 'GEO_ANCHOR' && evidence.indexOf('place|geo') === 0) {
         v6015PlaceOnly++;
       }

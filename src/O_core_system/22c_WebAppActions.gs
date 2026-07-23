@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.072
+ * VERSION: 6.0.073
  * FILE: 22c_WebAppActions.gs
  * LMDS V6.0 — Web App Actions
  * ===================================================
@@ -341,7 +341,11 @@ function getReviewDetail(reviewId) {
       matchScore: Number(reviewRow[REVIEW_IDX.MATCH_SCORE] || 0),
       recommend: String(reviewRow[REVIEW_IDX.RECOMMEND] || ''),
       status: String(reviewRow[REVIEW_IDX.STATUS] || 'Pending'),
-      reviewer: String(reviewRow[REVIEW_IDX.REVIEWER] || ''),
+      // [V6.0.073] P2-R6-6: Mask reviewer email in response (Audit Round 6 — SEC-014)
+      //   Frontend should not receive raw email — display masked version for privacy
+      //   Falls back to '***' if maskEmailSafe_ not loaded (defense-in-depth)
+      reviewer:
+        typeof maskEmailSafe_ === 'function' ? maskEmailSafe_(String(reviewRow[REVIEW_IDX.REVIEWER] || '')) : '***',
       decision: String(reviewRow[REVIEW_IDX.DECISION] || ''),
       note: String(reviewRow[REVIEW_IDX.NOTE] || ''),
       _sheetRow: reviewSheetRow

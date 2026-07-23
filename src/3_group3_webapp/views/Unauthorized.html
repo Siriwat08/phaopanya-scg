@@ -5,7 +5,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>LMDS — ไม่มีสิทธิ์เข้าถึง</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- [V6.0.073] P2-R6-1: Replace cdn.tailwindcss.com (runtime CDN) with @tailwindcss/browser@4.3.2
+         (same as Index.html) — pinned version + SRI integrity hash
+         Reason: cdn.tailwindcss.com is deprecated + may be blocked by corporate firewalls -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.2"
+      integrity="sha384-shaHAtPgz0ulP7R/YmFe0nZtC8FxdhJPi73vwJQcADVttxvHLJBJt/pjzkLSbIvL"
+      crossorigin="anonymous"
+    ></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
