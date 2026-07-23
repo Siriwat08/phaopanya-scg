@@ -4,8 +4,8 @@
 
 > **สรุปการวิเคราะห์เปรียบเทียบ** AI reviewers ที่ตรวจรีวิว LMDS V6.0 codebase
 >
-> **วันที่สร้าง:** 2026-07-15 | **อัปเดตล่าสุด:** 2026-07-22 (รอบ 5 เสร็จครบ — V6.0.072 merged 3 PRs)
-> **เวอร์ชันที่ตรวจ:** รอบ 1: V6.0.046–V6.0.051 | รอบ 2: V6.0.062 | รอบ 3: V6.0.066 | รอบ 4: V6.0.070 | รอบ 5: V6.0.071 → แก้ครบใน V6.0.072
+> **วันที่สร้าง:** 2026-07-15 | **อัปเดตล่าสุด:** 2026-07-23 (รอบ 6 — 4 audit reports ใหม่ + Dependabot dismissed)
+> **เวอร์ชันที่ตรวจ:** รอบ 1: V6.0.046–V6.0.051 | รอบ 2: V6.0.062 | รอบ 3: V6.0.066 | รอบ 4: V6.0.070 | รอบ 5: V6.0.071 → แก้ครบใน V6.0.072 | รอบ 6: V6.0.072 → แก้ใน V6.0.073
 
 ---
 
@@ -445,3 +445,65 @@
 3. **AI auditor 3 ท่านเห็นตรงกันเรื่อง AuthZ fail-open** — Principal Auditor (TD-016 P0) + Static Audit (N-2) + AUD-4 — ต้องแก้ใน V6.0.072
 4. **TD-017 webapp.access = 'MYSELF' ไม่ใช่ code bug** — เป็น deployment config ที่บันทึกใน SECURITY.md §3 อยู่แล้ว — ต้องเปลี่ยนตอน deploy ไม่ใช่ตอนเขียน code
 5. **บทเรียนสำหรับการ merge ครั้งต่อไป:** หลัง merge ทุก PR — ต้อง (ก) sync docs ที่อ้าง version ทั้งหมด (ข) ลงทะเบียน issue ใหม่ที่เจอระหว่าง verification เข้า TODO.md ทันที
+
+---
+
+## 13. รอบ 6 — สรุปการตรวจสอบ V6.0.072 (2026-07-23) — 4 AI audit reports ใหม่
+
+### ภาพรวม
+
+หลัง V6.0.072 merged (PR #191/#192/#193), ผู้ใช้ส่งรายงาน AI audit **4 ฉบับใหม่** เข้ามาตรวจสอบ:
+
+| รายงาน                                               | ขอบเขต                                                              | จำนวน claims | ผล verification                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------- | ------------ | ---------------------------------------------------------- |
+| **รายงานที่ 1 — LMDS-audit-report**                  | 36 check scripts (12 ST + 12 RT + 12 DM) — run on V6.0.072          | ~15          | 7 จริง / 8 false positive ในตัว scripts เอง (61% accuracy) |
+| **รายงานที่ 2 — ตรวจสอบเอกสาร LMDS**                 | Documentation audit (10 issues)                                     | 10           | 7 จริง (ส่วนใหญ่แก้ใน V6.0.072 แล้ว) / 3 หลอน              |
+| **รายงานที่ 3 — LMDS_V6.0_PreDelivery_Audit_Report** | Principal Auditor — 18 TDs + SEC + Style + Refactor                 | ~40          | 12 จริง / 6 หลอน — คะแนน 84/100 (B+) แม่นยำที่สุด          |
+| **รายงานที่ 4 — audit 5 phase technical review**     | 5-Phase Technical Review (14 TDs + 5 tips + SEC + Style + Refactor) | ~50          | 11 จริง / 3 หลอน — คะแนน 84/100 (B+) แม่นยำที่สุด          |
+
+### P0 Claims — Verification ที่ละข้อ
+
+| P0 ID  | คำกล่าวหา                                     | ไฟล์:บรรทัด (อ้าง)                                      | สถานะใน V6.0.072                | การพิสูจน์                                                                                                                                         |
+| ------ | --------------------------------------------- | ------------------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0-001 | CDN import ใน Unauthorized.html               | `views/Unauthorized.html:8`                             | ❌ **จริง** — ต้องแก้           | grep ยืนยัน `<script src="https://cdn.tailwindcss.com"></script>` อยู่จริง                                                                         |
+| P0-002 | UrlFetchApp.fetch without try-catch (2 sites) | `15_GoogleMapsAPI.gs:20`, `18_ServiceSCG.gs:22`         | ✅ **หลอน**                     | ทั้ง 2 จุดเป็น comment ใน DEPENDENCIES block ไม่ใช่ code จริง — ฟังก์ชันจริงใช้ `Maps.newDirectionFinder()` และ `fetchWithRetry_()` (มี try-catch) |
+| P0-003 | webapp.access = 'MYSELF'                      | `appsscript.json:13`                                    | ✅ จริง — แต่ deployment config | บันทึกใน SECURITY.md §3 อยู่แล้ว                                                                                                                   |
+| P0-004 | LockService missing ใน 05 + 10f               | `05_NormalizeService.gs`, `10f_MatchAliasEnrichment.gs` | ⚠️ **น่าจะหลอน**                | 05 เป็น pure functions (ไม่มี setValues), 10f เรียก createGlobalAlias ที่มี lock อยู่แล้ว — ต้อง verify เพิ่ม                                      |
+
+### P1 — Quick wins (verified real — ทำใน V6.0.073)
+
+| ID      | คำกล่าวหา                                       | ไฟล์:บรรทัด                    | สถานะ                   |
+| ------- | ----------------------------------------------- | ------------------------------ | ----------------------- |
+| TD-001  | 09_DestinationService bare `lock.releaseLock()` | `09_DestinationService.gs:144` | ✅ Done (V6.0.073 PR B) |
+| TD-004  | `appendRow` → `setValues` (consistency)         | `26_AuditTrailService.gs:171`  | ✅ Done (V6.0.073 PR B) |
+| TD-005  | Magic number 8 → TEST_MATCH_IDX                 | `28_WebAppActions.gs:621`      | ✅ Done (V6.0.073 PR B) |
+| TD-011  | showVersionInfo hardcoded "542 functions"       | `00_App.gs:~584`               | ✅ Done (V6.0.073 PR B) |
+| SEC-013 | Audit trail log email ไม่ mask                  | `26_AuditTrailService.gs:184`  | ✅ Done (V6.0.073 PR B) |
+| SEC-014 | getReviewDetail reviewer email ไม่ mask         | `22c_WebAppActions.gs:344`     | ✅ Done (V6.0.073 PR B) |
+
+### Dependabot Alert #5 — @hono/node-server
+
+- **Vulnerability:** Path traversal in `serve-static` on Windows via `%5C`
+- **Status:** ✅ Dismissed via GitHub API on 2026-07-23
+- **Reason:** tolerable_risk — transitive dev-only dependency via @google/clasp (not in production runtime)
+
+### False Positives ใน AI audit รอบ 6 (8 ตัว)
+
+| #   | Check  | False positive reason                                                         |
+| --- | ------ | ----------------------------------------------------------------------------- |
+| 1   | ST-002 | regex ไม่ยอมรับ suffix letter (`10b_`, `21b_`, `22c_`) — LMDS pattern ถูกต้อง |
+| 2   | DM-001 | regex หา `RULE[1-8]` (uppercase) แต่จริงๆ คือ `evaluateRule[1-8]` (camelCase) |
+| 3   | DM-011 | ค้นหาแค่ UPPER_CASE ไม่ยอมรับ camelCase `makeMatchDecision()`                 |
+| 4   | DM-012 | ค้นหาแค่ `1_group1_master_db/` แต่จริงๆ อยู่ใน `2_group2_daily_ops/`          |
+| 5   | DM-002 | flagged ถ้า M_PERSON ปรากฏ ไม่ได้ตรวจ read/write                              |
+| 6   | DM-008 | LMDS ใช้ specialized functions ไม่ใช่ generic `maskPii_`                      |
+| 7   | RT-006 | heuristic ไม่แยก setup จาก data write                                         |
+| 8   | DM-009 | ตรวจแค่ 03_SetupSheets ไม่รวม 19_Hardening                                    |
+
+### สิ่งที่เราเรียนรู้เพิ่ม (รอบ 6)
+
+1. **AI ดูแค่ doc comment ไม่ได้ดู code จริง** — P0-002 อ้าง comment ใน DEPENDENCIES block แต่ไม่ใช่ code จริง — ต้อง verify ทุก claim ด้วย grep + read file
+2. **Template-based audit มี false positive สูง** — LMDS-audit-report ใช้ audit-template-v2 ที่มี bug 61% (8 ใน 36 checks เป็น false positive)
+3. **Principal Auditor + 5-Phase Technical Review แม่นยำสุด** — 84/100 (B+) — ใช้เป็นแหล่งหลักสำหรับ verification
+4. **Dependabot alerts ต้อง verify** — บางครั้งเป็น dev-only dependency ที่ไม่กระทบ production
+5. **บทเรียนสำหรับการ merge ครั้งต่อไป:** หลัง merge ทุก PR — ต้อง (ก) sync docs (ข) register new issues (ค) mark status Done — ทั้ง 3 อย่างทันที (บทเรียน #3 ยังไม่ฝังลึก)
