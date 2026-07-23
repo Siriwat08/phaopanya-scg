@@ -3,7 +3,7 @@
 # 📋 TODO — Pending Recommendations from AI Reviews
 
 > Track ทุกข้อเสนอที่ยังไม่ได้ทำ จาก AI reviewers ทั้งหมด
-> อัปเดต: 2026-07-22 | เวอร์ชั่น repo ปัจจุบัน: V6.0.072 (PR #191/#192/#193 merged)
+> อัปเดต: 2026-07-23 | เวอร์ชั่น repo ปัจจุบัน: V6.0.072 (PR #191/#192/#193 merged) — รอ V6.0.073 Sprint 0
 > ⚠️ WebApp ที่ deploy จริงยังเป็น V6.0.069 — ต้อง deploy V6.0.072 ขึ้น production (รวม 070+071+072)
 
 ---
@@ -25,6 +25,8 @@
 | ✅ P2 รอบ 4             | 10         | 6     | 3+3 เสร็จ (V6.0.071+072) + 4 ค้าง |
 | ✅ P2 รอบ 5             | 6          | 6     | เสร็จ (V6.0.072)                  |
 | ✅ Doc Debt (V6.0.072)  | 7          | 7     | เสร็จ (V6.0.072)                  |
+| 🟡 P2 รอบ 6             | 9          | 0     | ทยอยแก้ (V6.0.073 Sprint 0)       |
+| ✅ Dependabot #5        | 1          | 1     | เสร็จ (dismissed — dev-only)      |
 
 ---
 
@@ -178,6 +180,79 @@
 | 5   | `docs/LMDS_System_Guide.md:6,583,690`       | ค้าง 6.0.069 → sync 6.0.072                                                | ✅ Done |
 | 6   | `docs/LMDS_Column_Dictionary_TH.md:3,8,325` | ค้าง 6.0.069 → sync 6.0.072                                                | ✅ Done |
 | 7   | `docs/lmds_admin_manual.html`               | title "LMDS V5.5" → "(Historical)" + banner + DOC-TYPE                     | ✅ Done |
+
+---
+
+## 🟡 P2 รอบ 6 — V6.0.073 Sprint 0 (Quick Wins) — 9 รายการ
+
+> **แหล่ง:** รายงาน AI audit 4 ฉบับใหม่ (LMDS-audit-report, ตรวจสอบเอกสาร LMDS, LMDS_V6.0_PreDelivery_Audit_Report, audit 5 phase technical review)
+> ตรวจทุก claim กับโค้ด V6.0.072 จริง ตาม `docs/AI-REVIEW-PROTOCOL.md` 5 กฎ
+> ดูผล verification เต็มที่ `docs/ai-reviews/COMPARATIVE_ANALYSIS.md` section 13
+>
+> **Hallucination rate รอบ 6:** ~40% (P0-002 + P0-004 false positive + 8 false positives ใน check scripts)
+> **แม่นยำที่สุด:** ฉบับที่ 3 (PreDelivery Audit) + ฉบับที่ 4 (5-Phase Technical Review) — 84/100 (B+)
+
+### ✅ Sprint 0 — Quick Wins ทำใน V6.0.073 PR B (รอ merge) — 7 รายการ
+
+| #       | งาน                                                                    | ไฟล์:บรรทัด                    | สถานะ              | Effort  |
+| ------- | ---------------------------------------------------------------------- | ------------------------------ | ------------------ | ------- |
+| P2-R6-1 | **P0-001: CDN in Unauthorized.html** → download tailwind locally       | `views/Unauthorized.html:8`    | ✅ Done (V6.0.073) | 30 นาที |
+| P2-R6-2 | **TD-001: 09_DestinationService lock bare → releaseScriptLock\_()**    | `09_DestinationService.gs:144` | ✅ Done (V6.0.073) | 5 นาที  |
+| P2-R6-3 | **TD-004: appendRow → setValues** (consistency)                        | `26_AuditTrailService.gs:171`  | ✅ Done (V6.0.073) | 5 นาที  |
+| P2-R6-4 | **TD-005: magic number 8 → TEST_MATCH_IDX** (Law 3)                    | `28_WebAppActions.gs:621`      | ✅ Done (V6.0.073) | 5 นาที  |
+| P2-R6-5 | **SEC-013: audit trail mask email** (logDebug)                         | `26_AuditTrailService.gs:184`  | ✅ Done (V6.0.073) | 5 นาที  |
+| P2-R6-6 | **SEC-014: getReviewDetail mask reviewer** email                       | `22c_WebAppActions.gs:344`     | ✅ Done (V6.0.073) | 5 นาที  |
+| P2-R6-7 | **TD-011: showVersionInfo dynamic** (remove hardcoded "542 functions") | `00_App.gs:~584`               | ✅ Done (V6.0.073) | 10 นาที |
+
+### 🟡 P1 — Sprint 1 (ทยอยแก้ใน V6.0.074+) — 2 รายการ
+
+| #       | งาน                                                                     | ไฟล์:บรรทัด              | สถานะ                 | Effort      |
+| ------- | ----------------------------------------------------------------------- | ------------------------ | --------------------- | ----------- |
+| P2-R6-8 | **TD-003: getDriverHistory\_ cache** (N+1 read) — มีอยู่ใน P2-R4-7 แล้ว | `10_MatchEngine.gs:810`  | 🔜 V6.0.074 / Group D | M (1-2 ชม.) |
+| P2-R6-9 | **TD-006: getSourcePage N API calls** → batch read                      | `22b_WebAppViews.gs:908` | 🔜 V6.0.074           | M           |
+
+### 🟢 P2 — Refactor (defer Sprint 1-3) — รวมอยู่ใน Group D
+
+| #                  | งาน                                                                                           | Note     |
+| ------------------ | --------------------------------------------------------------------------------------------- | -------- |
+| TD-007             | haversine × 4 implementations → consolidate                                                   | Sprint 1 |
+| TD-008/009         | Magic indices ใน 22b + 28 (รอบก่อน)                                                           | Sprint 0 |
+| TD-013             | `console.log` fallback ใน logPipeline_                                                        | cosmetic |
+| TD-018             | `searchLocations` 184 บรรทัด — SRP refactor                                                   | Sprint 2 |
+| TD-014             | BLUEPRINT.md placeholders "Same as before"                                                    | Sprint 3 |
+| TD-002/003/004/005 | Long functions (runTestMatchDryRun_, getReviewDetail, runPipelineBatch, submitReviewDecision) | Sprint 2 |
+| TD-015/016         | Split 21_AliasService + 05_NormalizeService                                                   | Group D  |
+
+### ❌ False Positives ใน AI audit รอบ 6 (ไม่ต้องแก้)
+
+| #      | Claim                                              | สาเหตุที่เป็น false positive                                                                                                                                                                                          |
+| ------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0-002 | "UrlFetchApp.fetch without try-catch"              | AI อ้าง `15_GoogleMapsAPI.gs:20` และ `18_ServiceSCG.gs:22` แต่เป็น comment ใน DEPENDENCIES block ไม่ใช่ code จริง — ฟังก์ชันจริงใช้ `Maps.newDirectionFinder()` (ไม่ใช่ fetch) และ `fetchWithRetry_()` (มี try-catch) |
+| P0-004 | "LockService missing ใน 05_NormalizeService + 10f" | 05 เป็น pure functions (ไม่มี setValues), 10f เรียก createGlobalAlias ที่มี lock อยู่แล้ว                                                                                                                             |
+| ST-002 | "30 files bad filename"                            | regex ไม่ยอมรับ suffix letter (`10b_`, `21b_`, `22c_`) — LMDS pattern ถูกต้อง                                                                                                                                         |
+| DM-001 | "0 rules found"                                    | regex หา `RULE[1-8]` (uppercase) แต่จริงๆ คือ `evaluateRule[1-8]` (camelCase)                                                                                                                                         |
+| DM-011 | "MAKE_MATCH_DECISION not found"                    | ค้นหาแค่ UPPER_CASE ไม่ยอมรับ camelCase `makeMatchDecision()`                                                                                                                                                         |
+| DM-012 | "04_SourceRepository not found"                    | ค้นหาแค่ `1_group1_master_db/` แต่จริงๆ อยู่ใน `2_group2_daily_ops/`                                                                                                                                                  |
+| DM-008 | "30 files no maskPii_"                             | LMDS ใช้ specialized functions (`maskEmailSafe_`, `maskSearchQuery_`) ไม่ใช่ generic `maskPii_`                                                                                                                       |
+| RT-006 | "30 files cache invalidation missing"              | heuristic ไม่แยก setup จาก data write                                                                                                                                                                                 |
+
+---
+
+## ✅ Dependabot Alert #5 — Dismissed (V6.0.073)
+
+> **Vulnerability:** @hono/node-server <2.0.5 — Path traversal in `serve-static` on Windows via `%5C`
+> **Status:** ✅ Dismissed via GitHub API on 2026-07-23
+> **Reason:** tolerable_risk
+
+**เหตุผลในการ dismiss:**
+
+1. **Transitive dependency** — `@hono/node-server` มาผ่าน `@google/clasp@3.3.0` → `@modelcontextprotocol/sdk@1.29.0` → `@hono/node-server`
+2. **Dev tool only** — `@google/clasp` เป็น CLI สำหรับ push โค้ดไป Google Apps Script — ไม่ได้รันใน production
+3. **Production runtime คือ Google Apps Script** — Linux backend, ไม่ใช่ Node.js, ไม่ใช่ Windows
+4. **ไม่มี static file serving** — LMDS ไม่ใช้ `serve-static` ของ Hono เลย
+5. **Cannot update** — `@google/clasp@3.3.0` requires `^1.19.9` (no newer @google/clasp release available)
+
+จะ revisit เมื่อ `@google/clasp` release เวอร์ชั่นใหม่ที่รองรับ `@hono/node-server@2.0.5+`
 
 ---
 
