@@ -10,23 +10,24 @@
 
 ## สถานะ Group ทั้งหมด
 
-| Group                   | งานทั้งหมด | เสร็จ | สถานะ                             |
-| ----------------------- | ---------- | ----- | --------------------------------- |
-| ✅ Group A (Quick Wins) | 4          | 4     | เสร็จ (V6.0.052-053)              |
-| ✅ Group B (Security)   | 4          | 4     | เสร็จ (V6.0.054-056)              |
-| ✅ Group C (Code Fixes) | 5          | 5     | เสร็จ (V6.0.057-059)              |
-| ✅ Phase D (Process)    | 12         | 12    | เสร็จ (V6.0.060-062)              |
-| ✅ P0 รอบ 2             | 3          | 3     | เสร็จ (V6.0.063)                  |
-| ✅ P1 รอบ 2             | 4          | 4     | เสร็จ (V6.0.064-066)              |
-| ✅ P0 รอบ 3             | 4          | 4     | เสร็จ (V6.0.070)                  |
-| ✅ P1 รอบ 3             | 4          | 4     | เสร็จ (V6.0.070-068)              |
-| 🟡 Group D (Defer)      | 3          | 0     | รอเงื่อนไข                        |
-| 🔴 Group E (No-Go)      | 5          | 0     | ห้ามทำ (ไม่เหมาะ GAS)             |
-| ✅ P2 รอบ 4             | 10         | 6     | 3+3 เสร็จ (V6.0.071+072) + 4 ค้าง |
-| ✅ P2 รอบ 5             | 6          | 6     | เสร็จ (V6.0.072)                  |
-| ✅ Doc Debt (V6.0.072)  | 7          | 7     | เสร็จ (V6.0.072)                  |
-| 🟡 P2 รอบ 6             | 9          | 0     | ทยอยแก้ (V6.0.073 Sprint 0)       |
-| ✅ Dependabot #5        | 1          | 1     | เสร็จ (dismissed — dev-only)      |
+| Group                   | งานทั้งหมด | เสร็จ | สถานะ                                    |
+| ----------------------- | ---------- | ----- | ---------------------------------------- |
+| ✅ Group A (Quick Wins) | 4          | 4     | เสร็จ (V6.0.052-053)                     |
+| ✅ Group B (Security)   | 4          | 4     | เสร็จ (V6.0.054-056)                     |
+| ✅ Group C (Code Fixes) | 5          | 5     | เสร็จ (V6.0.057-059)                     |
+| ✅ Phase D (Process)    | 12         | 12    | เสร็จ (V6.0.060-062)                     |
+| ✅ P0 รอบ 2             | 3          | 3     | เสร็จ (V6.0.063)                         |
+| ✅ P1 รอบ 2             | 4          | 4     | เสร็จ (V6.0.064-066)                     |
+| ✅ P0 รอบ 3             | 4          | 4     | เสร็จ (V6.0.070)                         |
+| ✅ P1 รอบ 3             | 4          | 4     | เสร็จ (V6.0.070-068)                     |
+| 🟡 Group D (Defer)      | 3          | 0     | รอเงื่อนไข                               |
+| 🔴 Group E (No-Go)      | 5          | 0     | ห้ามทำ (ไม่เหมาะ GAS)                    |
+| ✅ P2 รอบ 4             | 10         | 6     | 3+3 เสร็จ (V6.0.071+072) + 4 ค้าง        |
+| ✅ P2 รอบ 5             | 6          | 6     | เสร็จ (V6.0.072)                         |
+| ✅ Doc Debt (V6.0.072)  | 7          | 7     | เสร็จ (V6.0.072)                         |
+| 🟡 P2 รอบ 6             | 9          | 0     | ทยอยแก้ (V6.0.073 Sprint 0)              |
+| 🟡 P2 รอบ 7             | 7          | 0     | ทยอยแก้ (V6.0.074+ doc replace + 6 bugs) |
+| ✅ Dependabot #5        | 1          | 1     | เสร็จ (dismissed — dev-only)             |
 
 ---
 
@@ -235,6 +236,36 @@
 | DM-012 | "04_SourceRepository not found"                    | ค้นหาแค่ `1_group1_master_db/` แต่จริงๆ อยู่ใน `2_group2_daily_ops/`                                                                                                                                                  |
 | DM-008 | "30 files no maskPii_"                             | LMDS ใช้ specialized functions (`maskEmailSafe_`, `maskSearchQuery_`) ไม่ใช่ generic `maskPii_`                                                                                                                       |
 | RT-006 | "30 files cache invalidation missing"              | heuristic ไม่แยก setup จาก data write                                                                                                                                                                                 |
+
+---
+
+## 🟡 P2 รอบ 7 — V6.0.074+ (Codebase audit 6 bugs + doc replace) — 7 รายการ
+
+> **แหล่ง:** ไฟล์ `docs/LMDS_SYSTEM_WORKFLOW_CODEBASE_TH.md` (V6.0.074 — ใหม่)
+> AI auditor อ่านโค้ด V6.0.073 จริงทั้งหมด แล้วพบ bug/inconsistency 6 จุด + เอกสาร workflow เดิมล้าสมัย
+
+### ✅ Doc Replace — เสร็จใน V6.0.074 PR A (รอ merge)
+
+| #       | งาน                                                                                                                                                                             | ไฟล์                                      | สถานะ              |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ------------------ |
+| P2-R7-0 | **Replace `LMDS_SYSTEM_WORKFLOW_TH.md`** เดิม (V6.0.044) ด้วย ACTUAL_TH.md (V6.0.073) + mark เดิมเป็น `_DEPRECATED.md` historical + เพิ่ม `LMDS_SYSTEM_WORKFLOW_CODEBASE_TH.md` | `docs/LMDS_SYSTEM_WORKFLOW_*.md` (3 ไฟล์) | ✅ Done (V6.0.074) |
+
+### 🟡 P2 — Codebase bugs 6 จุด (ทยอยแก้ใน V6.0.075+)
+
+| #       | งาน                                                                                                                                        | ไฟล์:บรรทัด                                 | สถานะ       | Effort           |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- | ----------- | ---------------- |
+| P2-R7-1 | **`bindAlias` dead reference** ใน dependency comment ของ 10e:27 — grep ไม่พบ function definition จริง                                      | `10e_MatchResolvePersist.gs:27`             | 🔜 V6.0.075 | S (5 นาที)       |
+| P2-R7-2 | **`readInputConfig_` อ้างผิดที่** ใน header comment ของ 01_Config.gs:20 + 14_Utils.gs:23 — จริงอยู่ใน 18_ServiceSCG.gs                     | `01_Config.gs:20`, `14_Utils.gs:23`         | 🔜 V6.0.075 | S                |
+| P2-R7-3 | **`ENV_*` constants ไม่มีจริง** — header comment ของ 01_Config.gs:19 อ้างว่ามี แต่ grep ทั้ง codebase ไม่พบ (จริงอยู่ใน PropertiesService) | `01_Config.gs:19`                           | 🔜 V6.0.075 | S                |
+| P2-R7-4 | **`ENV_MAPS_API_KEY` ใน comment ของ 15_GoogleMapsAPI.gs:16** — ไม่จำเป็น (ใช้ Maps built-in ไม่ต้อง API key)                               | `15_GoogleMapsAPI.gs:16`                    | 🔜 V6.0.075 | S                |
+| P2-R7-5 | **IDX inconsistency ระหว่าง FACT/SRC/DATA** สำหรับ `DRIVER_VERIFIED_NAME/ADDR` (32/37/29) — เป็นไปตาม schema จริง แต่ควรเพิ่ม comment ย้ำ  | `01_Config.gs:312-313, 436-437, 476-477`    | 🔜 V6.0.075 | S (comment only) |
+| P2-R7-6 | **ตรวจ external callers ของฟังก์ชันที่ลบใน V5.5.044** (14 ฟังก์ชัน) — ถ้ามี external script เรียก จะพัง                                    | หลายไฟล์ (ดู `[REMOVED V5.5.044]` comments) | 🔜 V6.0.075 | M (audit)        |
+
+### 🟢 P3 — Cosmetic / Defer
+
+| #       | งาน                                                                                                                        | สถานะ     |
+| ------- | -------------------------------------------------------------------------------------------------------------------------- | --------- |
+| P2-R7-7 | อัปเดต internal links ที่อ้าง `LMDS_SYSTEM_WORKFLOW_TH.md` ใน docs อื่น → ยังใช้ได้ (ชื่อไฟล์เดียวกัน) แต่ content เปลี่ยน | 🔜 Verify |
 
 ---
 
