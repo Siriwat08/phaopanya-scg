@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: living -->
+
 # LMDS V6.0 — Master Inspection Template
 
 > **คำเตือนด้านเวอร์ชั่น** — ไฟล์นี้ **ไม่ผูกกับเวอร์ชั่น** ของ LMDS (6.0.xxx) โดยตั้งใจ

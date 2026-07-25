@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: living -->
+
 # Aggregation Rules — กฎการรวมผล
 
 > ใช้โดย Agent 4 (Aggregator) — ถ้า conflict กันระหว่าง Agent ให้ยึดตามนี้

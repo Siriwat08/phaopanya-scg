@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.073
+ * VERSION: 6.0.075
  * FILE: 03_SetupSheets.gs
  * LMDS V6.0 — Sheet Setup & Configuration Service
  * ===================================================
@@ -109,23 +109,30 @@ function setupAllSheets() {
 function setupGroupOneSheets_(ss) {
   // [FIX v003] ทุก call ใช้ getSheetHeaders(SHEET.xxx) แทน SCHEMA.xxx
   createSheetIfMissing_(ss, SHEET.M_PERSON, getSheetHeaders(SHEET.M_PERSON));
+  ss.getSheetByName(SHEET.M_PERSON).setFrozenRows(1); // [V6.0.075] RT-014: freeze header row
 
   createSheetIfMissing_(ss, SHEET.M_PERSON_ALIAS, getSheetHeaders(SHEET.M_PERSON_ALIAS));
 
   createSheetIfMissing_(ss, SHEET.M_PLACE, getSheetHeaders(SHEET.M_PLACE));
+  ss.getSheetByName(SHEET.M_PLACE).setFrozenRows(1); // [V6.0.075] RT-014
 
   createSheetIfMissing_(ss, SHEET.M_PLACE_ALIAS, getSheetHeaders(SHEET.M_PLACE_ALIAS));
 
   // [NEW v5.4.000] สร้างชีต M_ALIAS สำหรับ Hybrid Alias Architecture
   createSheetIfMissing_(ss, SHEET.M_ALIAS, getSheetHeaders(SHEET.M_ALIAS));
+  ss.getSheetByName(SHEET.M_ALIAS).setFrozenRows(1); // [V6.0.075] RT-014
 
   createSheetIfMissing_(ss, SHEET.M_GEO_POINT, getSheetHeaders(SHEET.M_GEO_POINT));
+  ss.getSheetByName(SHEET.M_GEO_POINT).setFrozenRows(1); // [V6.0.075] RT-014
 
   createSheetIfMissing_(ss, SHEET.M_DESTINATION, getSheetHeaders(SHEET.M_DESTINATION));
+  ss.getSheetByName(SHEET.M_DESTINATION).setFrozenRows(1); // [V6.0.075] RT-014
 
   createSheetIfMissing_(ss, SHEET.FACT_DELIVERY, getSheetHeaders(SHEET.FACT_DELIVERY));
+  ss.getSheetByName(SHEET.FACT_DELIVERY).setFrozenRows(1); // [V6.0.075] RT-014
 
   createSheetIfMissing_(ss, SHEET.Q_REVIEW, getSheetHeaders(SHEET.Q_REVIEW));
+  ss.getSheetByName(SHEET.Q_REVIEW).setFrozenRows(1); // [V6.0.075] RT-014
 
   createSheetIfMissing_(ss, SHEET.RPT_QUALITY, getSheetHeaders(SHEET.RPT_QUALITY));
 

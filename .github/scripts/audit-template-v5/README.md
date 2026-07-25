@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: living -->
+
 # LMDS V6.0 — Master Inspection Template
 
 > เทมเพลตตรวจสอบ LMDS V6.0 แบบครอบคลุม 100%

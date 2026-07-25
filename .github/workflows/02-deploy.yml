@@ -2,7 +2,7 @@ name: 🚀 Deploy to Google Apps Script
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - 'src/**'
       - 'appsscript.json'
@@ -17,6 +17,11 @@ on:
         description: '⚠️ Force deploy (ข้าม confirm)'
         required: false
         default: 'false'
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
 
 concurrency:
   group: deploy-production
@@ -358,13 +363,13 @@ jobs:
 
           # ดึง access token — ลองหลายวิธีเพราะ clasprc.json format เปลี่ยนตาม clasp version
           ACCESS_TOKEN=""
-          
+
           # วิธีที่ 1: ใช้ clasp ตรงๆ (ถ้ามี command ที่ใช้ได้)
           if command -v clasp &> /dev/null; then
             # clasp ไม่มี command ดึง token ตรง — ข้ามไปวิธีอื่น
             :
           fi
-          
+
           # วิธีที่ 2: อ่านจาก clasprc.json ด้วย python (รองรับหลาย format)
           ACCESS_TOKEN=$(python3 -c "
           import json, os, sys

@@ -5,7 +5,7 @@
 # หมายเหตุ: Apps Script ใช้ .gs (ไม่ใช่ .js) — CodeQL ไม่รู้จัก .gs โดย default
 # วิธีแก้: เพิ่ม step ที่ copy .gs → .js ก่อน CodeQL สแกน
 
-name: "🔒 CodeQL Security Analysis"
+name: '🔒 CodeQL Security Analysis'
 
 on:
   push:
@@ -14,7 +14,12 @@ on:
     branches: [main]
   schedule:
     # รันทุกวันจันทร์ 08:00 ICT (Asia/Bangkok)
-    - cron: '0 01 * * 1'  # UTC 01:00 = ICT 08:00
+    - cron: '0 01 * * 1' # UTC 01:00 = ICT 08:00
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
 
 jobs:
   analyze:
@@ -58,7 +63,7 @@ jobs:
       - name: 🔍 Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
-          category: "/language:${{ matrix.language }}"
+          category: '/language:${{ matrix.language }}'
 
       - name: 🧹 Cleanup .js files
         if: always()

@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: living -->
+
 # วิธีเพิ่ม Check ใหม่เข้าเทมเพลต (EXTENDING)
 
 > ไฟล์นี้คือ **single source of truth** สำหรับการขยายเทมเพลต

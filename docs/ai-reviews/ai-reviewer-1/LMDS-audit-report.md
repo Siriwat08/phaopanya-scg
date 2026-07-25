@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: historical -->
+
 # LMDS V6.0 — Final Audit Report
 
 **Real run on phaopanya-scg v6.0.072** (cloned from github.com/Siriwat08/phaopanya-scg) using audit-template-v2 with 36 check scripts

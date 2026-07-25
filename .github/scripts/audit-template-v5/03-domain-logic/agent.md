@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: living -->
+
 # Agent 3 — DOMAIN LOGIC AUDIT
 
 > **คุณคือ Agent 3 (Domain Logic)** — หนึ่งใน 3 Agent ที่ตรวจ LMDS V6.0
