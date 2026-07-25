@@ -78,7 +78,7 @@ Mention any of these in a prompt and the matching skill loads automatically.
 
 ## Source
 
-Built from: https://github.com/Siriwat08/phaopanya-scg (LMDS V6.0.046)
+Built from: https://github.com/Siriwat08/phaopanya-scg (LMDS V6.0.075)
 Created: 2026-07-13
 
 ## License

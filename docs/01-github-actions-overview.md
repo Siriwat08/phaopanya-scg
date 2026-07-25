@@ -1,4 +1,5 @@
 <!-- DOC-TYPE: living -->
+
 # 🚀 GitHub Actions สำหรับ Phaopanya SCG
 
 คู่มือติดตั้งและใช้งาน GitHub Actions สำหรับโปรเจกต์ **Phaopanya SCG** (Google Apps Script)
@@ -7,16 +8,16 @@
 
 ## 📋 Workflows ที่มีให้
 
-| # | Workflow | ไฟล์ | ทำอะไร | Trigger |
-|---|----------|------|--------|---------|
-| 1 | 🔍 CI | `01-ci.yml` | ตรวจสอบ syntax + 16 Laws | push, PR |
-| 2 | 🚀 Deploy | `02-deploy.yml` | Deploy ไป Apps Script ผ่าน clasp | push to main |
-| 3 | 🔍 PR Validation | `03-pr-validation.yml` | ตรวจ PR + Auto comment + Label | PR |
-| 4 | 🏷️ Release | `04-release.yml` | ตัด Git Tag + สร้าง Release | push to main |
-| 5 | 💓 Health Check | `05-scheduled-health.yml` | เช็คสุขภาพระบบ | ทุกวันจันทร์ 09:00 |
-| 6 | 🛡️ CodeQL | `06-codeql.yml` | CodeQL semantic security analysis | push, PR, weekly |
-| 7 | 📚 Doc-Code Sync | `07-doc-code-sync.yml` | ตรวจ 9 checks เอกสาร ↔ โค้ดตรงกัน | push, PR |
-| 8 | 🔐 Gitleaks | `08-gitleaks.yml` | สแกน hardcoded secrets | push, PR |
+| #   | Workflow         | ไฟล์                      | ทำอะไร                            | Trigger            |
+| --- | ---------------- | ------------------------- | --------------------------------- | ------------------ |
+| 1   | 🔍 CI            | `01-ci.yml`               | ตรวจสอบ syntax + 16 Laws          | push, PR           |
+| 2   | 🚀 Deploy        | `02-deploy.yml`           | Deploy ไป Apps Script ผ่าน clasp  | push to main       |
+| 3   | 🔍 PR Validation | `03-pr-validation.yml`    | ตรวจ PR + Auto comment + Label    | PR                 |
+| 4   | 🏷️ Release       | `04-release.yml`          | ตัด Git Tag + สร้าง Release       | push to main       |
+| 5   | 💓 Health Check  | `05-scheduled-health.yml` | เช็คสุขภาพระบบ                    | ทุกวันจันทร์ 09:00 |
+| 6   | 🛡️ CodeQL        | `06-codeql.yml`           | CodeQL semantic security analysis | push, PR, weekly   |
+| 7   | 📚 Doc-Code Sync | `07-doc-code-sync.yml`    | ตรวจ 9 checks เอกสาร ↔ โค้ดตรงกัน | push, PR           |
+| 8   | 🔐 Gitleaks      | `08-gitleaks.yml`         | สแกน hardcoded secrets            | push, PR           |
 
 ---
 
@@ -73,6 +74,7 @@ bash scripts/setup-clasp.sh
 ```
 
 Script นี้จะ:
+
 1. ติดตั้ง clasp (ถ้ายังไม่มี)
 2. Login Google account
 3. ตรวจสอบ Script ID
@@ -85,14 +87,17 @@ Script นี้จะ:
 กด **"New repository secret"** แล้วเพิ่ม 2 ตัว:
 
 #### 🔐 Secret 1: `CLASPRC`
+
 - ใส่เนื้อหาทั้งหมดจากไฟล์ `~/.clasprc.json`
 - (ได้จากการรัน `scripts/setup-clasp.sh`)
 
 #### 🔐 Secret 2: `APPS_SCRIPT_ID`
+
 - ค่า Script ID ของ Apps Script project
 - หาได้จาก: เปิด https://script.google.com → Project Settings (⚙️) → IDs
 
 #### 🔐 (Optional) Secret 3: `DEPLOY_WEBHOOK`
+
 - Webhook URL สำหรับแจ้งเตือน Discord/Slack
 - ถ้าไม่ใส่ workflow จะไม่ส่งแจ้งเตือน
 
@@ -113,9 +118,11 @@ git push origin develop  # push ไป develop เพื่อไม่ให้
 ## 🎯 การใช้งาน Workflow แต่ละตัว
 
 ### 1. 🔍 CI (ตรวจโค้ด)
+
 **Trigger:** push ทุก branch + PR
 
 **ทำอะไร:**
+
 - ✅ ตรวจ syntax ของไฟล์ .gs (วงเล็บสมดุล, JSON valid)
 - ✅ นับบรรทัด/ขนาดไฟล์
 - ✅ ตรวจ Anti-pattern ตามกฎ 16 Immutable Laws
@@ -129,9 +136,11 @@ git push origin develop  # push ไป develop เพื่อไม่ให้
 ---
 
 ### 2. 🚀 Deploy (Deploy จริง)
+
 **Trigger:** push ไป `main` เท่านั้น (เพื่อความปลอดภัย)
 
 **ทำอะไร:**
+
 - 🛡️ Pre-flight: ตรวจ Secret + ไฟล์ที่จำเป็น
 - 📦 ติดตั้ง clasp + Node.js
 - 🔐 Login ด้วย CLASPRC
@@ -143,18 +152,22 @@ git push origin develop  # push ไป develop เพื่อไม่ให้
 - 📢 แจ้งเตือน Discord/Slack (ถ้าตั้ง Webhook)
 
 **⚠️ ข้อควรระวัง:**
+
 - ตั้ง Environment `production` ใน GitHub Settings เพื่อบังคับ approve
 - ทุก push ไป main = deploy จริง
 
 **Manual deploy:**
+
 - Actions → Deploy → Run workflow → ใส่ version label
 
 ---
 
 ### 3. 🔍 PR Validation (ตรวจ PR)
+
 **Trigger:** เมื่อเปิด/update PR
 
 **ทำอะไร:**
+
 - 📊 ตรวจขนาด PR (แจ้งเตือนถ้าใหญ่เกิน)
 - 🔍 ตรวจเฉพาะไฟล์ที่เปลี่ยน
 - 🛡️ ตรวจ Anti-pattern (Law 1, 3, 16)
@@ -166,9 +179,11 @@ git push origin develop  # push ไป develop เพื่อไม่ให้
 ---
 
 ### 4. 🏷️ Release (ตัด Tag)
+
 **Trigger:** push ไป main (เฉพาะไฟล์ใน src/)
 
 **ทำอะไร:**
+
 - 🔍 ดึง Version ปัจจุบันจากโค้ด
 - 📊 รวบรวม commits ตั้งแต่ tag ที่แล้ว
 - 📝 สร้าง Release Notes อัตโนมัติ
@@ -177,14 +192,17 @@ git push origin develop  # push ไป develop เพื่อไม่ให้
 - 🆕 Manual: ระบุ version เองได้ (เช่น v5.6.0)
 
 **Manual release:**
+
 - Actions → Release → Run workflow → ใส่ version
 
 ---
 
 ### 5. 💓 Health Check (ตรวจสุขภาพ)
+
 **Trigger:** ทุกวันจันทร์ 09:00 ICT (02:00 UTC)
 
 **ทำอะไร:**
+
 - 📊 ตรวจสถิติโปรเจกต์ (ไฟล์, บรรทัด, ขนาด)
 - 🔍 ตรวจ VERSION tag ครบทุกไฟล์
 - 📝 ดู commit activity
@@ -193,9 +211,11 @@ git push origin develop  # push ไป develop เพื่อไม่ให้
 ---
 
 ### 6. 🛡️ CodeQL (Semantic Security Scan)
+
 **Trigger:** push ทุก branch + PR + weekly schedule
 
 **ทำอะไร:**
+
 - 🔍 วิเคราะห์โค้ดด้วย CodeQL (semantic, ไม่ใช่แค่ regex)
 - 🛡️ ตรวจหา SQL injection, XSS, hardcoded credentials, ฯลฯ
 - 📝 อัปโหลดผลลัพธ์เข้า GitHub Security tab
@@ -203,9 +223,11 @@ git push origin develop  # push ไป develop เพื่อไม่ให้
 ---
 
 ### 7. 📚 Doc-Code Sync (9 checks)
+
 **Trigger:** push ทุก branch + PR
 
 **ทำอะไร:** รัน check scripts 9 ตัว (check_01 — check_09):
+
 - ✅ check_01 — VERSION ในไฟล์ .gs ตรงกับ `01_Config.gs`
 - ✅ check_02 — สถิติ (file count, line count, function count) ตรงกับที่อ้างใน docs
 - ✅ check_03 — local path references (no absolute paths)
@@ -219,9 +241,11 @@ git push origin develop  # push ไป develop เพื่อไม่ให้
 ---
 
 ### 8. 🔐 Gitleaks (Hardcoded Secret Scan)
+
 **Trigger:** push ทุก branch + PR
 
 **ทำอะไร:**
+
 - 🔍 สแกนโค้ดและ commit history เพื่อหา hardcoded secrets (API keys, tokens, passwords)
 - 🛡️ ป้องกันการ commit secret เข้า repo โดย accident
 - 📝 แจ้งเตือนบน PR ถ้าเจอ secret
@@ -238,6 +262,7 @@ chmod +x .git/hooks/pre-commit
 ```
 
 ทุกครั้งที่ commit ระบบจะ:
+
 - ❌ Block ถ้ามี Hardcoded Index
 - ❌ Block ถ้ามี Secret
 - ⚠️ เตือนถ้ามี setValue ในลูป
@@ -248,24 +273,29 @@ chmod +x .git/hooks/pre-commit
 ## 🔧 Troubleshooting
 
 ### ❌ `clasp: command not found`
+
 ```bash
 npm install -g @google/clasp
 ```
 
 ### ❌ `Permission denied` ตอน push
+
 - ตรวจว่า Google account ที่ login มีสิทธิ์ edit Apps Script project
 - ลอง `clasp login --status` ดูว่า login อยู่
 
 ### ❌ `Script ID not found`
+
 - ตรวจ Secret `APPS_SCRIPT_ID` ว่าถูกต้อง
 - ตรวจว่า Apps Script project ยังอยู่ (ไม่ถูกลบ)
 
 ### ❌ Workflow ไม่ทำงาน
+
 1. ตรวจ GitHub Actions เปิดอยู่: Settings → Actions → General
 2. ตรวจ branch name ตรงกับ trigger
 3. ดู Logs ใน Actions tab
 
 ### ❌ Diff ไม่ตรงหลัง Deploy
+
 - อาจมีไฟล์ที่ Apps Script ไม่มีใน repo
 - ลอง `clasp pull` มาดูว่ามีอะไรต่าง
 

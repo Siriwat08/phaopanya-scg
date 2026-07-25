@@ -1,6 +1,8 @@
 <!-- DOC-TYPE: living -->
+
 # 📘 พจนานุกรมโครงสร้างข้อมูล (LMDS Schema Dictionary)
-**เวอร์ชันระบบ:** V6.0.044 (DOC-CODE SYNC)
+
+**เวอร์ชันระบบ:** V6.0.075 (DOC-CODE SYNC)
 **วันที่สกัดข้อมูล:** 2026-07-13 ล่าสุดจากไฟล์ `01_Config.gs` และ `02_Schema.gs`
 
 เอกสารนี้ใช้สำหรับ **Cross-Check** (ตรวจสอบความถูกต้อง) ระหว่าง "ชื่อชีต", "ชื่อคอลัมน์" (Headers), และ "ตัวแปร Index ในโค้ด" เพื่อให้นักพัฒนาและ AI สามารถอ้างอิงได้อย่างถูกต้อง 100%
@@ -12,6 +14,7 @@
 ## 🏗️ กลุ่มที่ 1: Master Data (ฐานข้อมูลหลัก)
 
 ### 1. ชีต M_PERSON (ข้อมูลบุคคลหลัก)
+
 - **ตัวแปรเรียกชีต:** `SHEET.M_PERSON`
 - **โครงสร้างคอลัมน์ (PERSON_IDX):**
   - [0] `PERSON_IDX.PERSON_ID` ➡️ **"person_id"**
@@ -26,6 +29,7 @@
   - [9] `PERSON_IDX.MASTER_UUID` ➡️ **"master_uuid"**
 
 ### 2. ชีต M_PERSON_ALIAS (คำพ้องชื่อบุคคล)
+
 - **ตัวแปรเรียกชีต:** `SHEET.M_PERSON_ALIAS`
 - **โครงสร้างคอลัมน์ (PERSON_ALIAS_IDX):**
   - [0] `PERSON_ALIAS_IDX.ALIAS_ID` ➡️ **"alias_id"**
@@ -36,6 +40,7 @@
   - [5] `PERSON_ALIAS_IDX.ACTIVE_FLAG` ➡️ **"active_flag"**
 
 ### 3. ชีต M_PLACE (ข้อมูลสถานที่หลัก)
+
 - **ตัวแปรเรียกชีต:** `SHEET.M_PLACE`
 - **โครงสร้างคอลัมน์ (PLACE_IDX):**
   - [0] `PLACE_IDX.PLACE_ID` ➡️ **"place_id"**
@@ -54,6 +59,7 @@
   - [13] `PLACE_IDX.MASTER_UUID` ➡️ **"master_uuid"**
 
 ### 4. ชีต M_PLACE_ALIAS (คำพ้องสถานที่)
+
 - **ตัวแปรเรียกชีต:** `SHEET.M_PLACE_ALIAS`
 - **โครงสร้างคอลัมน์ (PLACE_ALIAS_IDX):**
   - [0] `PLACE_ALIAS_IDX.ALIAS_ID` ➡️ **"alias_id"**
@@ -64,6 +70,7 @@
   - [5] `PLACE_ALIAS_IDX.ACTIVE_FLAG` ➡️ **"active_flag"**
 
 ### 5. ชีต M_ALIAS (ระบบ Alias กลาง)
+
 - **ตัวแปรเรียกชีต:** `SHEET.M_ALIAS`
 - **โครงสร้างคอลัมน์ (ALIAS_IDX):**
   - [0] `ALIAS_IDX.ALIAS_ID` ➡️ **"alias_id"**
@@ -76,6 +83,7 @@
   - [7] `ALIAS_IDX.ACTIVE_FLAG` ➡️ **"active_flag"**
 
 ### 6. ชีต M_GEO_POINT (ข้อมูลพิกัด)
+
 - **ตัวแปรเรียกชีต:** `SHEET.M_GEO_POINT`
 - **โครงสร้างคอลัมน์ (GEO_IDX):**
   - [0] `GEO_IDX.GEO_ID` ➡️ **"geo_id"**
@@ -94,6 +102,7 @@
   - [13] `GEO_IDX.EXTRACTION` ➡️ **"extraction_method"**
 
 ### 7. ชีต M_DESTINATION (ปลายทางจัดส่ง)
+
 - **ตัวแปรเรียกชีต:** `SHEET.M_DESTINATION`
 - **โครงสร้างคอลัมน์ (DEST_IDX):**
   - [0] `DEST_IDX.DEST_ID` ➡️ **"dest_id"**
@@ -113,6 +122,7 @@
 ## 📊 กลุ่มที่ 2: Fact Table & Queue (ข้อมูลรายการเคลื่อนไหว)
 
 ### 8. ชีต FACT_DELIVERY (รายการจัดส่งที่ประมวลผลแล้ว)
+
 - **ตัวแปรเรียกชีต:** `SHEET.FACT_DELIVERY`
 - **โครงสร้างคอลัมน์ (FACT_IDX):**
   - [0] `FACT_IDX.TX_ID` ➡️ **"tx_id"**
@@ -151,6 +161,7 @@
   - [33] `FACT_IDX.DRIVER_VERIFIED_ADDR` ➡️ **"ชื่อสถานที่อยู่ลูกค้าปลายทางจริง"** [ADD V5.5.014]
 
 ### 9. ชีต Q_REVIEW (คิวตรวจสอบด้วยคน)
+
 - **ตัวแปรเรียกชีต:** `SHEET.Q_REVIEW`
 - **โครงสร้างคอลัมน์ (REVIEW_IDX):**
   - [0] `REVIEW_IDX.REVIEW_ID` ➡️ **"review_id"**
@@ -181,6 +192,7 @@
 ## 📥 กลุ่มที่ 3: Raw Data (ข้อมูลดิบที่ผู้ใช้มีอยู่)
 
 ### 10. ชีต SCGนครหลวงJWDภูมิภาค (ข้อมูลดิบ)
+
 - **ตัวแปรเรียกชีต:** `SHEET.SOURCE`
 - **SCHEMA Entry:** `SCHEMA['SCGนครหลวงJWDภูมิภาค']` [ADD V5.5.011]
 - **โครงสร้างคอลัมน์ (SRC_IDX):**
@@ -225,6 +237,7 @@
   - [38] `SRC_IDX.DRIVER_VERIFIED_ADDR` ➡️ **"ชื่อสถานที่อยู่ลูกค้าปลายทางจริง"** [ADD V5.5.014]
 
 ### 11. ชีต ตารางงานประจำวัน
+
 - **ตัวแปรเรียกชีต:** `SHEET.DAILY_JOB`
 - **โครงสร้างคอลัมน์ (DATA_IDX):**
   - [0] `DATA_IDX.JOB_ID` ➡️ **"ID_งานประจำวัน"**
@@ -260,6 +273,7 @@
   - [30] `DATA_IDX.DRIVER_VERIFIED_ADDR` ➡️ **"ชื่อสถานที่อยู่ลูกค้าปลายทางจริง"** [ADD V5.5.014]
 
 ### 12. ชีต ข้อมูลพนักงาน
+
 - **ตัวแปรเรียกชีต:** `SHEET.EMPLOYEE`
 - **โครงสร้างคอลัมน์ (EMPLOYEE_IDX):**
   - [0] `EMPLOYEE_IDX.EMP_ID` ➡️ **"ID_พนักงาน"**
@@ -272,6 +286,7 @@
   - [7] `EMPLOYEE_IDX.ROLE` ➡️ **"ROLE"**
 
 ### 13. ชีต Input
+
 - **ตัวแปรเรียกชีต:** `SHEET.INPUT`
 - **โครงสร้างคอลัมน์:**
   - [0] (Cell A1) ➡️ **"COOKIE"**
@@ -282,6 +297,7 @@
 ## ⚙️ กลุ่มที่ 4: System Support (ระบบรองรับและการตั้งค่า)
 
 ### 14. ชีต SYS_TH_GEO (ฐานข้อมูลรหัสไปรษณีย์)
+
 - **ตัวแปรเรียกชีต:** `SHEET.SYS_TH_GEO`
 - **โครงสร้างคอลัมน์ (TH_GEO_IDX):**
   - [0] `TH_GEO_IDX.POSTCODE` ➡️ **"รหัสไปรษณีย์"**
@@ -302,6 +318,7 @@
   - [15] `TH_GEO_IDX.NOTE_SCOPE` ➡️ **"note_scope"**
 
 ### 15. ชีต สรุป_เจ้าของสินค้า
+
 - **ตัวแปรเรียกชีต:** `SHEET.OWNER_SUMMARY`
 - **โครงสร้างคอลัมน์ (OWNER_SUM_IDX):**
   - [0] `OWNER_SUM_IDX.SUMMARY_KEY` ➡️ **"SummaryKey"**
@@ -312,6 +329,7 @@
   - [5] `OWNER_SUM_IDX.LAST_UPDATE` ➡️ **"LastUpdated"**
 
 ### 16. ชีต สรุป_Shipment
+
 - **ตัวแปรเรียกชีต:** `SHEET.SHIPMENT_SUM`
 - **โครงสร้างคอลัมน์ (SHIPMENT_SUM_IDX):**
   - [0] `SHIPMENT_SUM_IDX.SHIPMENT_KEY` ➡️ **"ShipmentKey"**
@@ -323,6 +341,7 @@
   - [6] `SHIPMENT_SUM_IDX.LAST_UPDATE` ➡️ **"LastUpdated"**
 
 ### 17. ชีต SYS_LOG
+
 - **ตัวแปรเรียกชีต:** `SHEET.SYS_LOG`
 - **โครงสร้างคอลัมน์ (SYS_LOG_IDX):**
   - [0] `SYS_LOG_IDX.LOG_ID` ➡️ **"log_id"**
@@ -333,6 +352,7 @@
   - [5] `SYS_LOG_IDX.DETAILS` ➡️ **"details"**
 
 ### 18. ชีต SYS_CONFIG
+
 - **ตัวแปรเรียกชีต:** `SHEET.SYS_CONFIG`
 - **โครงสร้างคอลัมน์:**
   - [0] ➡️ **"config_key"**
@@ -341,6 +361,7 @@
   - [3] ➡️ **"updated_at"**
 
 ### 19. ชีต RPT_DATA_QUALITY
+
 - **ตัวแปรเรียกชีต:** `SHEET.RPT_QUALITY`
 - **โครงสร้างคอลัมน์:**
   - [0] ➡️ **"report_date"**
@@ -361,6 +382,7 @@
 **ผลลัพธ์:** Compliance 8/16 PASS → 16/16 PASS (+5 REVIEW15) → **16/16 COMPLIANT** (+2 REFACTOR) | 14+16 ไฟล์แก้ไข | 211 Helper Functions ใหม่ (18 SRP + 172 REFACTOR + 6 cache + 9 perf + 6 reprocessReviewQueue) | 1 Critical Bug Hot-Fixed | 21 REF issues
 
 การเปลี่ยนแปลงหลัก:
+
 - Phantom Call `invalidateGlobalAliasCache_()` → `CacheService.removeAll()` โดยตรง
 - Hardcode Index 9 จุด → `*_IDX` constants
 - logError 8 จุด + `new Error()` stack trace
@@ -372,6 +394,7 @@
 - Critical Bug: `newRows.push(r)` → `newRows.push(aliasRow)` ใน 19_Hardening.gs
 
 **REFACTOR Cycle เพิ่มเติม:**
+
 - `resolveAndPersist_` gateway pattern (REF-001) — ลดการเขียนซ้ำใน Alias
 - `cachedGeoLookup_` 3-layer cache (REF-016) — RAM → CacheService → Sheet → API
 - `transformGeoMetadataRow_` + `flushGeoMetadataBatch_` (REF-006) — populateGeoMetadata split

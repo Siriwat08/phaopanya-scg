@@ -1,7 +1,8 @@
 <!-- DOC-TYPE: living -->
+
 # ⚡ Pipeline Manager — คู่มือใช้งาน (Standalone Module)
 
-> **เอกสารประกอบ LMDS V6.0.044**
+> **เอกสารประกอบ LMDS V6.0.075**
 > โมดูลจัดการการรัน `runMatchEngine()` สำหรับข้อมูลหลักหมื่นแถว
 > **ไม่ปนกับชุดหลัก** — อยู่ในไฟล์ `src/4_group4_pipeline_mgr/24_PipelineManager.gs` เพียงไฟล์เดียว
 
@@ -28,11 +29,11 @@ Pipeline Manager เป็นโมดูลแยกที่ทำหน้า
 
 ### Google Apps Script Free Tier Limits
 
-| ทรัพยากร | Limit | ที่ใช้ | เหลือ |
-|---------|------|------|------|
-| Runtime per day | 90 นาที | 75 นาที | 15 นาที buffer |
-| Runtime per run | 6 นาที (hard) | 4 นาที | 2 นาที buffer |
-| Trigger calls | 90 นาที total | 15 ครั้ง × 4 นาที | - |
+| ทรัพยากร        | Limit         | ที่ใช้            | เหลือ          |
+| --------------- | ------------- | ----------------- | -------------- |
+| Runtime per day | 90 นาที       | 75 นาที           | 15 นาที buffer |
+| Runtime per run | 6 นาที (hard) | 4 นาที            | 2 นาที buffer  |
+| Trigger calls   | 90 นาที total | 15 ครั้ง × 4 นาที | -              |
 
 ### การคำนวณ throughput
 
@@ -59,11 +60,13 @@ copy ไฟล์ `src/4_group4_pipeline_mgr/24_PipelineManager.gs` ไป Apps 
 ใน Apps Script Editor ไปที่ **Run** → เลือก function `installPipelineTriggers` → กด Run
 
 หรือรันใน console:
+
 ```javascript
 installPipelineTriggers();
 ```
 
 ผลที่ได้:
+
 - ✅ Trigger `runPipelineBatch` รันทุก 1 ชม ตั้งแต่ 08:00-22:00 (15 รอบ)
 - ✅ Trigger `resetDailyQuotaJob` รันทุกวัน 00:05 น.
 
@@ -74,6 +77,7 @@ startPipeline();
 ```
 
 ผล:
+
 - รีเซ็ต state + checkpoint + quota
 - รัน batch แรกทันที
 - รอบถัดไปจะรันอัตโนมัติตาม trigger
@@ -82,28 +86,28 @@ startPipeline();
 
 ## 🎛️ ฟังก์ชันที่ใช้บ่อย (Admin Actions)
 
-| Function | หน้าที่ | เรียกเมื่อไหร่ |
-|----------|--------|--------------|
-| `startPipeline()` | เริ่ม pipeline ใหม่ | ครั้งแรก / หลัง reset |
-| `pausePipeline()` | หยุดชั่วคราว | ต้องการหยุดรับ batch ใหม่ |
-| `resumePipeline()` | ทำต่อ | หลัง pause / หลัง reset circuit breaker |
-| `resetPipeline()` | รีเซ็ตทั้งหมด | เริ่มใหม่จากศูนย์ |
-| `showPipelineStatus()` | ดูสถานะ | ตรวจสอบยอด quota / errors |
-| `resetCircuitBreakerMenu()` | รีเซ็ต circuit breaker | หลังแก้ปัญหาที่ทำให้ error ซ้ำ |
-| `uninstallPipelineTriggers()` | ลบ triggers | หยุดใช้ Pipeline Manager |
+| Function                      | หน้าที่                | เรียกเมื่อไหร่                          |
+| ----------------------------- | ---------------------- | --------------------------------------- |
+| `startPipeline()`             | เริ่ม pipeline ใหม่    | ครั้งแรก / หลัง reset                   |
+| `pausePipeline()`             | หยุดชั่วคราว           | ต้องการหยุดรับ batch ใหม่               |
+| `resumePipeline()`            | ทำต่อ                  | หลัง pause / หลัง reset circuit breaker |
+| `resetPipeline()`             | รีเซ็ตทั้งหมด          | เริ่มใหม่จากศูนย์                       |
+| `showPipelineStatus()`        | ดูสถานะ                | ตรวจสอบยอด quota / errors               |
+| `resetCircuitBreakerMenu()`   | รีเซ็ต circuit breaker | หลังแก้ปัญหาที่ทำให้ error ซ้ำ          |
+| `uninstallPipelineTriggers()` | ลบ triggers            | หยุดใช้ Pipeline Manager                |
 
 ---
 
 ## 📊 สถานะ Pipeline (Pipeline States)
 
-| State | ความหมาย | รอบถัดไปทำอะไร |
-|-------|---------|---------------|
-| `IDLE` | ยังไม่เริ่ม | รอ trigger หรือ `startPipeline()` |
-| `RUNNING` | กำลังรัน | รอบถัดไปรันต่อ |
-| `PAUSED_QUOTA` | quota เต็ม | รอ 00:05 น. → auto reset → `RUNNING` |
+| State           | ความหมาย          | รอบถัดไปทำอะไร                                              |
+| --------------- | ----------------- | ----------------------------------------------------------- |
+| `IDLE`          | ยังไม่เริ่ม       | รอ trigger หรือ `startPipeline()`                           |
+| `RUNNING`       | กำลังรัน          | รอบถัดไปรันต่อ                                              |
+| `PAUSED_QUOTA`  | quota เต็ม        | รอ 00:05 น. → auto reset → `RUNNING`                        |
 | `PAUSED_ERRORS` | error ซ้ำ 3 ครั้ง | รอ admin → `resetCircuitBreakerMenu()` → `resumePipeline()` |
-| `PAUSED_MANUAL` | admin หยุด | รอ admin → `resumePipeline()` |
-| `COMPLETED` | เสร็จหมด | รอข้อมูลใหม่เข้ามา → `startPipeline()` ใหม่ |
+| `PAUSED_MANUAL` | admin หยุด        | รอ admin → `resumePipeline()`                               |
+| `COMPLETED`     | เสร็จหมด          | รอข้อมูลใหม่เข้ามา → `startPipeline()` ใหม่                 |
 
 ---
 
@@ -114,34 +118,34 @@ startPipeline();
 ```javascript
 const PIPELINE_CONFIG = Object.freeze({
   // === Quota Limits ===
-  MAX_RUNTIME_MS_PER_DAY:   75 * 60 * 1000,   // 75 นาที (Free tier 90 - 15 buffer)
-  MAX_RUNTIME_MS_PER_RUN:   4 * 60 * 1000,    // 4 นาที (hard limit 6 - 2 buffer)
-  MAX_RUNS_PER_DAY:         15,                // 15 รอบ/วัน
+  MAX_RUNTIME_MS_PER_DAY: 75 * 60 * 1000, // 75 นาที (Free tier 90 - 15 buffer)
+  MAX_RUNTIME_MS_PER_RUN: 4 * 60 * 1000, // 4 นาที (hard limit 6 - 2 buffer)
+  MAX_RUNS_PER_DAY: 15, // 15 รอบ/วัน
 
   // === Circuit Breaker ===
-  MAX_CONSECUTIVE_ERRORS:   3,                 // error 3 ครั้งติด → pause
-  ERROR_COOLDOWN_MS:        60 * 60 * 1000,    // 1 ชม
+  MAX_CONSECUTIVE_ERRORS: 3, // error 3 ครั้งติด → pause
+  ERROR_COOLDOWN_MS: 60 * 60 * 1000, // 1 ชม
 
   // === Trigger Schedule ===
-  BATCH_RUN_INTERVAL_HOURS: 1,                 // ทุก 1 ชม
-  BATCH_RUN_START_HOUR:     8,                 // 08:00 น.
-  BATCH_RUN_END_HOUR:       22,                // 22:00 น.
+  BATCH_RUN_INTERVAL_HOURS: 1, // ทุก 1 ชม
+  BATCH_RUN_START_HOUR: 8, // 08:00 น.
+  BATCH_RUN_END_HOUR: 22, // 22:00 น.
 
   // === Behavior ===
-  CLEAN_MATCH_ENGINE_TRIGGERS: true,           // ลบ MatchEngine auto-resume triggers
-  LOG_TO_SYS_LOG:               true,          // log ไป SYS_LOG
+  CLEAN_MATCH_ENGINE_TRIGGERS: true, // ลบ MatchEngine auto-resume triggers
+  LOG_TO_SYS_LOG: true // log ไป SYS_LOG
 });
 ```
 
 ### สูตรปรับแต่ง
 
-| ต้องการ | แก้ค่า |
-|--------|------|
-| รันเร็วขึ้น | `BATCH_RUN_INTERVAL_HOURS: 0.5` (ทุก 30 นาที) |
-| รอบละนานขึ้น | `MAX_RUNTIME_MS_PER_RUN: 5 * 60 * 1000` (5 นาที) |
+| ต้องการ                       | แก้ค่า                                              |
+| ----------------------------- | --------------------------------------------------- |
+| รันเร็วขึ้น                   | `BATCH_RUN_INTERVAL_HOURS: 0.5` (ทุก 30 นาที)       |
+| รอบละนานขึ้น                  | `MAX_RUNTIME_MS_PER_RUN: 5 * 60 * 1000` (5 นาที)    |
 | Workspace Business (6 ชม/วัน) | `MAX_RUNTIME_MS_PER_DAY: 5 * 60 * 60 * 1000` (5 ชม) |
-| รอบน้อยลง (กลัวเกิน) | `MAX_RUNS_PER_DAY: 10` + `BATCH_RUN_END_HOUR: 18` |
-| ปิด circuit breaker | `MAX_CONSECUTIVE_ERRORS: 999` |
+| รอบน้อยลง (กลัวเกิน)          | `MAX_RUNS_PER_DAY: 10` + `BATCH_RUN_END_HOUR: 18`   |
+| ปิด circuit breaker           | `MAX_CONSECUTIVE_ERRORS: 999`                       |
 
 ---
 
@@ -256,29 +260,35 @@ if (tripped) {
 ใน Apps Script Editor → **⚡ Executions** หรือ **Logs**
 
 หรือรัน:
+
 ```javascript
-showPipelineStatus();  // แสดงสถานะปัจจุบันใน console
+showPipelineStatus(); // แสดงสถานะปัจจุบันใน console
 ```
 
 ### ดู Script Properties
 
 ```javascript
 const props = PropertiesService.getScriptProperties().getProperties();
-console.log(JSON.stringify({
-  STATE: props.PIPELINE_STATE,
-  CHECKPOINT: props.PIPELINE_CHECKPOINT,
-  QUOTA: props.PIPELINE_DAILY_QUOTA,
-  CIRCUIT: props.PIPELINE_CIRCUIT_BREAKER,
-  HISTORY: props.PIPELINE_HISTORY,
-}, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      STATE: props.PIPELINE_STATE,
+      CHECKPOINT: props.PIPELINE_CHECKPOINT,
+      QUOTA: props.PIPELINE_DAILY_QUOTA,
+      CIRCUIT: props.PIPELINE_CIRCUIT_BREAKER,
+      HISTORY: props.PIPELINE_HISTORY
+    },
+    null,
+    2
+  )
+);
 ```
 
 ### ดู triggers
 
 ```javascript
 const triggers = ScriptApp.getProjectTriggers();
-triggers.forEach(t => console.log(t.getHandlerFunction(), t.getTriggerSource(),
-  t.getEventType(), t.getUniqueId()));
+triggers.forEach((t) => console.log(t.getHandlerFunction(), t.getTriggerSource(), t.getEventType(), t.getUniqueId()));
 ```
 
 ---
@@ -286,30 +296,40 @@ triggers.forEach(t => console.log(t.getHandlerFunction(), t.getTriggerSource(),
 ## ❓ คำถามที่พบบ่อย
 
 ### Q: ถ้าหยุด Apps Script กลางคัน จะเกิดอะไรขึ้น?
+
 **A:** Pipeline Manager บันทึก checkpoint ทุก batch — รอบถัดไปจะรันต่อจากที่หยุดอัตโนมัติ (ข้อมูลที่ประมวลผลแล้วจะมี SYNC_STATUS=SUCCESS อยู่แล้ว)
 
 ### Q: ถ้ารันซ้อนกัน (trigger ทำงานพร้อมกัน) จะเกิดอะไรขึ้น?
+
 **A:** LockService ป้องกัน — batch ที่มาทีหลังจะ skip ถ้า acquire lock ไม่ได้ภายใน 30 วิ
 
 ### Q: ถ้าอยากหยุดใช้ Pipeline Manager ถาวร?
+
 **A:**
+
 ```javascript
-uninstallPipelineTriggers();  // ลบ triggers
-pausePipeline();              // ตั้ง state เป็น PAUSED_MANUAL
+uninstallPipelineTriggers(); // ลบ triggers
+pausePipeline(); // ตั้ง state เป็น PAUSED_MANUAL
 ```
+
 แล้วจะไม่มี batch รันอีก — สามารถใช้ `runMatchEngine()` แบบ manual ได้ตามปกติ
 
 ### Q: ถ้าเปลี่ยนจาก Free เป็น Workspace Business?
+
 **A:** แก้ `MAX_RUNTIME_MS_PER_DAY` เป็น `5 * 60 * 60 * 1000` (5 ชม — เหลือ 1 ชม buffer) — pipeline จะรันเร็วขึ้นมาก
 
 ### Q: จะรู้ได้ยังไงว่า pipeline เสร็จแล้ว?
+
 **A:** state = `COMPLETED` — ดูได้จาก:
+
 ```javascript
-getPipelineState_().state;  // คืน 'COMPLETED'
+getPipelineState_().state; // คืน 'COMPLETED'
 ```
 
 ### Q: จะรู้ได้ยังไงว่า error ซ้ำ?
+
 **A:** state = `PAUSED_ERRORS` + circuit breaker `pausedAt !== null`:
+
 ```javascript
 const cb = getCircuitBreaker_();
 console.log('Tripped:', cb.pausedAt !== null);
@@ -320,13 +340,13 @@ console.log('Last error:', cb.lastError);
 
 ## 📦 ไฟล์ที่เกี่ยวข้อง
 
-| ไฟล์ | หน้าที่ |
-|------|--------|
+| ไฟล์                                              | หน้าที่                              |
+| ------------------------------------------------- | ------------------------------------ |
 | `src/4_group4_pipeline_mgr/24_PipelineManager.gs` | โค้ด Pipeline Manager (1,124 บรรทัด) |
-| `docs/05_Pipeline_Manager_Guide.md` | คู่มือนี้ |
+| `docs/05_Pipeline_Manager_Guide.md`               | คู่มือนี้                            |
 
 **ไม่กระทบไฟล์อื่นใน repo** — Pipeline Manager เป็น standalone module ที่เรียกใช้ `runMatchEngine()` แบบ wrapper
 
 ---
 
-*เอกสารนี้เป็นส่วนหนึ่งของชุดเอกสาร LMDS V6.0.044 — Pipeline Manager Module*
+_เอกสารนี้เป็นส่วนหนึ่งของชุดเอกสาร LMDS V6.0.075 — Pipeline Manager Module_

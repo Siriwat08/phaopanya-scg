@@ -1,7 +1,8 @@
 <!-- DOC-TYPE: living -->
+
 # 🔵 สายที่ 2: เริ่มจากชีต "ตารางงานประจำวัน"
 
-> **เอกสารประกอบ LMDS V6.0.044**
+> **เอกสารประกอบ LMDS V6.0.075**
 > อธิบาย Data Flow สายที่ 2 — การดึงข้อมูล SCG JWD รายวัน และการหาพิกัด GPS จาก Master DB
 > เกี่ยวข้องกับ: `00_App.gs`, `17_SearchService.gs`, `18_ServiceSCG.gs`, `21_AliasService.gs`, `04_SourceRepository.gs`
 
@@ -48,11 +49,13 @@ A6: SH240624003
 รันฟังก์ชัน `fetchDataFromSCGJWD()` ใน `18_ServiceSCG.gs` ทำ **8 ขั้นตอน**:
 
 ### Step 1: อ่านค่า Input (`readInputConfig_`)
+
 - อ่าน **Cookie** จาก Script Properties (key: `SCG_COOKIE`)
 - อ่าน **เลข Shipment** จากชีต Input (A4 ลงไป ตาม `SCG_CONFIG.INPUT_START_ROW`)
 - รวมเลข Shipment ด้วยคอมมา คั่นด้วยจุลภาค เช่น `"SH001,SH002,SH003"`
 
 ### Step 2: เรียก SCG API (`callSCGApi_`)
+
 - ส่ง POST request ไปที่เซิร์ฟเวอร์ SCG พร้อม Cookie
 - Payload: `{ ShipmentNos: "SH001,SH002,SH003" }`
 - Retry 3 ครั้ง (1s → 2s → 4s — Exponential Backoff) ถ้าล้มเหลว
@@ -61,6 +64,7 @@ A6: SH240624003
 การ Retry ใช้ `Utilities.sleep()` ระหว่างครั้ง เพื่อรอเซิร์ฟเวอร์กลับมา และ catch error ทั้งหมด (`Exception` และ `URLFetchApp.HTTPError`)
 
 ### Step 3: แปลง JSON → แถวข้อมูล (`flattenShipmentsToRows_`)
+
 API ตอบกลับเป็น JSON แบบซ้อน (Shipment → DeliveryNotes → Items) ระบบ "แบน" ให้เป็นแถวๆ ราบ:
 
 ```
@@ -78,6 +82,7 @@ Shipment 2
 การ flatten ทำใน `flattenShipmentsToRows_()` โดย maintain ลำดับ Shipment → Note → Item และ propagate ค่าระดับบน (ShipmentNo, DriverName) ลงไปทุกแถว Item
 
 ### Step 4: คำนวณ Aggregate ต่อร้าน (`aggregateShopData_`)
+
 นับรวมสำหรับแต่ละร้าน (จัดกลุ่มด้วย ShopKey = ShipmentNo|ShipToName):
 
 - จำนวนสินค้ารวมของร้านนี้ → คอลัมน์ [23]
@@ -88,41 +93,42 @@ Shipment 2
 การ Aggregate ใช้ `Map` เพื่อ group แถวตาม ShopKey แล้วคำนวณผลรวม เพื่อให้ได้ข้อมูล "ต่อร้าน" แทน "ต่อ Item" ทำให้คนขับเห็นภาพรวมของแต่ละร้านในแถวเดียว
 
 ### Step 5: เขียนลงชีต "ตารางงานประจำวัน" (`writeDailyJobSheet_`)
+
 เขียนทั้ง 31 คอลัมน์ โดย Mapping จาก API:
 
-| คอลัมน์ [index] | ชื่อ | มาจาก API ไหน |
-|---|---|---|
-| [0] | ID_งานประจำวัน | PurchaseOrder + ลำดับแถว |
-| [1] | PlanDelivery | note.PlanDelivery |
-| [2] | InvoiceNo | note.PurchaseOrder |
-| [3] | ShipmentNo | shipment.ShipmentNo |
-| [4] | DriverName | shipment.DriverName |
-| [5] | TruckLicense | shipment.TruckLicense |
-| [6] | CarrierCode | shipment.CarrierCode |
-| [7] | CarrierName | shipment.CarrierName |
-| [8] | SoldToCode | note.SoldToCode |
-| [9] | SoldToName | note.SoldToName |
-| **[10]** | **ShipToName** | **note.ShipToName** ← **คอลัมน์สำคัญที่สุด!** |
-| [11] | ShipToAddress | note.ShipToAddress (ไม่น่าเชื่อถือ เพราะ SCG กรอกไม่ครบ) |
-| [12] | LatLong_SCG | ShipToLatitude + "," + ShipToLongitude |
-| [13] | MaterialName | item.MaterialName |
-| [14] | ItemQuantity | item.ItemQuantity |
-| [15] | QuantityUnit | item.QuantityUnit |
-| [16] | ItemWeight | item.ItemWeight |
-| [17] | DeliveryNo | note.DeliveryNo |
-| [18] | จำนวนปลายทาง_System | นับจาก ShipToName ไม่ซ้ำ |
-| [19] | รายชื่อปลายทาง_System | รายชื่อร้านทั้งหมดคั่นด้วยคอมมา |
-| [20] | ScanStatus | "รอสแกน" (ค่าเริ่มต้น) |
-| [21] | DeliveryStatus | "ยังไม่ได้ส่ง" (ค่าเริ่มต้น) |
-| [22] | Email พนักงาน | จากชีต "ข้อมูลพนักงาน" (lookup ด้วย DriverName) |
-| [23] | จำนวนสินค้ารวมของร้านนี้ | Step 4 |
-| [24] | น้ำหนักสินค้ารวมของร้านนี้ | Step 4 |
-| [25] | จำนวน_Invoice_ที่ต้องสแกน | Step 4 |
-| **[26]** | **LatLong_Actual** | **ว่างเปล่า (รอ Step 6)** ← **ผลลัพธ์หลัก** |
-| [27] | ชื่อเจ้าของสินค้า... | Step 4 |
-| [28] | ShopKey | ShipmentNo + "\|" + ShipToName |
-| [29] | ชื่อลูกค้าปลายทางจริง | คัดลอกจาก Source (ถ้ามี) |
-| [30] | ชื่อสถานที่อยู่ลูกค้า... | คัดลอกจาก Source (ถ้ามี) |
+| คอลัมน์ [index] | ชื่อ                       | มาจาก API ไหน                                            |
+| --------------- | -------------------------- | -------------------------------------------------------- |
+| [0]             | ID_งานประจำวัน             | PurchaseOrder + ลำดับแถว                                 |
+| [1]             | PlanDelivery               | note.PlanDelivery                                        |
+| [2]             | InvoiceNo                  | note.PurchaseOrder                                       |
+| [3]             | ShipmentNo                 | shipment.ShipmentNo                                      |
+| [4]             | DriverName                 | shipment.DriverName                                      |
+| [5]             | TruckLicense               | shipment.TruckLicense                                    |
+| [6]             | CarrierCode                | shipment.CarrierCode                                     |
+| [7]             | CarrierName                | shipment.CarrierName                                     |
+| [8]             | SoldToCode                 | note.SoldToCode                                          |
+| [9]             | SoldToName                 | note.SoldToName                                          |
+| **[10]**        | **ShipToName**             | **note.ShipToName** ← **คอลัมน์สำคัญที่สุด!**            |
+| [11]            | ShipToAddress              | note.ShipToAddress (ไม่น่าเชื่อถือ เพราะ SCG กรอกไม่ครบ) |
+| [12]            | LatLong_SCG                | ShipToLatitude + "," + ShipToLongitude                   |
+| [13]            | MaterialName               | item.MaterialName                                        |
+| [14]            | ItemQuantity               | item.ItemQuantity                                        |
+| [15]            | QuantityUnit               | item.QuantityUnit                                        |
+| [16]            | ItemWeight                 | item.ItemWeight                                          |
+| [17]            | DeliveryNo                 | note.DeliveryNo                                          |
+| [18]            | จำนวนปลายทาง_System        | นับจาก ShipToName ไม่ซ้ำ                                 |
+| [19]            | รายชื่อปลายทาง_System      | รายชื่อร้านทั้งหมดคั่นด้วยคอมมา                          |
+| [20]            | ScanStatus                 | "รอสแกน" (ค่าเริ่มต้น)                                   |
+| [21]            | DeliveryStatus             | "ยังไม่ได้ส่ง" (ค่าเริ่มต้น)                             |
+| [22]            | Email พนักงาน              | จากชีต "ข้อมูลพนักงาน" (lookup ด้วย DriverName)          |
+| [23]            | จำนวนสินค้ารวมของร้านนี้   | Step 4                                                   |
+| [24]            | น้ำหนักสินค้ารวมของร้านนี้ | Step 4                                                   |
+| [25]            | จำนวน_Invoice_ที่ต้องสแกน  | Step 4                                                   |
+| **[26]**        | **LatLong_Actual**         | **ว่างเปล่า (รอ Step 6)** ← **ผลลัพธ์หลัก**              |
+| [27]            | ชื่อเจ้าของสินค้า...       | Step 4                                                   |
+| [28]            | ShopKey                    | ShipmentNo + "\|" + ShipToName                           |
+| [29]            | ชื่อลูกค้าปลายทางจริง      | คัดลอกจาก Source (ถ้ามี)                                 |
+| [30]            | ชื่อสถานที่อยู่ลูกค้า...   | คัดลอกจาก Source (ถ้ามี)                                 |
 
 ### Step 6: จับคู่พิกัด GPS (`applyMasterCoordinatesToDailyJob` → `17_SearchService.gs`)
 
@@ -157,12 +163,14 @@ ShipToName "บริษัท ไทวัสดุ จำกัด 081-234-567
 **Tier 1 (Fallback)** ใช้ `resolvePerson()` เหมือนสายที่ 1 แต่จะเอา `Destination` ที่ใช้บ่อยสุด (sort by `usage_count` DESC) มาเป็นพิกัด เพราะบางครั้งคนหนึ่งมีหลายสถานที่
 
 ### Step 7: คัดลอก "ชื่อจริง" จาก Source (`copyDriverVerifiedToDailyJob_`)
+
 - ใช้ **ShopKey** (ShipmentNo|ShipToName) เป็นกุญแจเชื่อม
 - ค้นในชีต Source → ถ้าเจอ → คัดลอกคอลัมน์ [37] [38] ไปยัง Daily Job คอลัมน์ [29] [30]
 
 ขั้นตอนนี้ทำให้คนขับที่เคยยืนยันชื่อ "จริง" ในชีต Source แล้ว ไม่ต้องมาพิมพ์ใหม่ใน Daily Job — ระบบจะดึงข้อมูลที่ verify แล้วมาใช้โดยอัตโนมัติ (Driver Verified Columns pattern ตาม V5.5.011)
 
 ### Step 8: สร้างสรุป (`buildOwnerSummary_` + `buildShipmentSummary_`)
+
 - **ชีต "สรุป_เจ้าของสินค้า"** → รวมจำนวนบิล/E-POD ต่อบริษัท (SoldToName)
 - **ชีต "สรุป_Shipment"** → รวมจำนวนบิล/E-POD ต่อ Shipment
 
@@ -213,16 +221,16 @@ ShipToName "บริษัท ไทวัสดุ จำกัด 081-234-567
 
 ## 🔗 ความเชื่อมโยงกับสายที่ 1
 
-| สายที่ 1 (Source → Master) | สายที่ 2 (Daily Job → Lookup) |
-|---|---|
-| สร้าง M_PERSON + M_PLACE + M_GEO_POINT + M_DESTINATION | อ่าน M_DESTINATION เพื่อหา lat,lng |
-| สร้าง M_ALIAS อัตโนมัติ (Single Writer) | ใช้ M_ALIAS เป็น Tier 0 Fast Track |
-| Normalize ชื่อดิบ → cleanName + normalizedKey | ใช้ normalizedKey เดียวกันในการ lookup |
-| บันทึก FACT_DELIVERY | ไม่เขียน Master (อ่านอย่างเดียว) |
-| ทำงานแบบ batch (ทุกแถวใน Source) | ทำงานแบบ batch (ทุกแถวใน Daily Job) |
+| สายที่ 1 (Source → Master)                             | สายที่ 2 (Daily Job → Lookup)          |
+| ------------------------------------------------------ | -------------------------------------- |
+| สร้าง M_PERSON + M_PLACE + M_GEO_POINT + M_DESTINATION | อ่าน M_DESTINATION เพื่อหา lat,lng     |
+| สร้าง M_ALIAS อัตโนมัติ (Single Writer)                | ใช้ M_ALIAS เป็น Tier 0 Fast Track     |
+| Normalize ชื่อดิบ → cleanName + normalizedKey          | ใช้ normalizedKey เดียวกันในการ lookup |
+| บันทึก FACT_DELIVERY                                   | ไม่เขียน Master (อ่านอย่างเดียว)       |
+| ทำงานแบบ batch (ทุกแถวใน Source)                       | ทำงานแบบ batch (ทุกแถวใน Daily Job)    |
 
 > **Note**: สายที่ 2 ไม่เขียน Master Data — เป็น read-only consumer ของ Master ที่สายที่ 1 สร้างไว้ ทำให้ Daily Job ทำงานเร็วและปลอดภัย (ไม่มี risk ของการ corrupt Master)
 
 ---
 
-*เอกสารนี้เป็นส่วนหนึ่งของชุดเอกสาร LMDS V6.0.044 — ดูเอกสารที่เกี่ยวข้อง: [LMDS_สายที่1_SCG_Source.md](LMDS_สายที่1_SCG_Source.md) | [LMDS_Q_REVIEW_คู่มือ.md](LMDS_Q_REVIEW_คู่มือ.md)*
+_เอกสารนี้เป็นส่วนหนึ่งของชุดเอกสาร LMDS V6.0.075 — ดูเอกสารที่เกี่ยวข้อง: [LMDS_สายที่1_SCG_Source.md](LMDS_สายที่1_SCG_Source.md) | [LMDS_Q_REVIEW_คู่มือ.md](LMDS_Q_REVIEW_คู่มือ.md)_

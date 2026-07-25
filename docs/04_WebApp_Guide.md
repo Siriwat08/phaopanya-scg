@@ -1,7 +1,8 @@
 <!-- DOC-TYPE: living -->
+
 # 📖 คู่มือ LMDS Dashboard Web App (Phase 1)
 
-> **เอกสารประกอบ LMDS V6.0.044**
+> **เอกสารประกอบ LMDS V6.0.075**
 > คู่มือติดตั้งและใช้งาน Web App สำหรับดูข้อมูล LMDS แบบ real-time
 
 ---
@@ -11,6 +12,7 @@
 LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงานบน Google Apps Script (HtmlService) สำหรับให้ผู้ใช้ดูข้อมูลใน Google Sheet แบบ real-time โดยไม่ต้องเปิด Sheet ตรงๆ
 
 **คุณสมบัติ Phase 1:**
+
 - ✅ Dashboard หน้าเดียวแสดง 6 สถิติหลัก
 - ✅ อัปเดตอัตโนมัติทุก 60 วินาที (polling)
 - ✅ แสดงสัดส่วนสถานะการจับคู่ (Match Status Breakdown)
@@ -29,9 +31,11 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 ตรวจว่าโปรเจกต์ Apps Script มีไฟล์ต่อไปนี้ครบ:
 
 **โฟลเดอร์ `src/O_core_system/`:**
+
 - `22_WebApp.gs` — Server-side functions (doGet, getDashboardData, etc.)
 
 **โฟลเดอร์ `src/3_group3_webapp/`:**
+
 - `Index.html` — HTML shell (main page)
 - `views/Dashboard.html` — Dashboard view template
 - `views/Unauthorized.html` — หน้า "ไม่มีสิทธิ์"
@@ -49,8 +53,8 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 
 ใน Apps Script Editor ไปที่ **Project Settings → Script Properties** แล้วเพิ่ม:
 
-| Property | Value | คำอธิบาย |
-|----------|-------|---------|
+| Property          | Value                                 | คำอธิบาย                                             |
+| ----------------- | ------------------------------------- | ---------------------------------------------------- |
 | `DASHBOARD_USERS` | `user1@gmail.com,user2@gmail.com,...` | รายชื่อ email ที่เข้า Dashboard ได้ (คั่นด้วยจุลภาค) |
 
 > 💡 ถ้าไม่ตั้ง `DASHBOARD_USERS` → ระบบจะ fallback ไปใช้ `LMDS_ADMINS` ที่มีอยู่แล้ว
@@ -61,7 +65,7 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 1. ใน Apps Script Editor ไปที่ **Deploy → New deployment**
 2. คลิก **Select type → Web app**
 3. ตั้งค่า:
-   - **Description:** `LMDS Dashboard V6.0.044`
+   - **Description:** `LMDS Dashboard V6.0.075`
    - **Execute as:** `Me (your-email@gmail.com)`
    - **Who has access:** `Anyone with Google Account`
 4. คลิก **Deploy**
@@ -71,6 +75,7 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 ### ขั้นตอนที่ 4: แจกจ่าย URL ให้ผู้ใช้
 
 ส่ง URL ให้ผู้ใช้ในรายชื่อ `DASHBOARD_USERS` — พวกเขาจะ:
+
 1. เปิด URL ในเบราว์เซอร์
 2. Google ขอให้ login (ถ้ายังไม่ได้ login)
 3. ระบบตรวจ auth → แสดง Dashboard หรือหน้า "ไม่มีสิทธิ์"
@@ -83,14 +88,14 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 
 แสดง 6 สถิติหลัก:
 
-| การ์ด | ความหมาย |
-|------|---------|
-| **FACT_DELIVERY** | จำนวนระเบียนในชีต FACT_DELIVERY ทั้งหมด |
-| **Q_REVIEW (รอตรวจ)** | จำนวนระเบียนใน Q_REVIEW ที่ status = PENDING |
-| **Auto Match Rate** | % ของการจับคู่อัตโนมัติ (FULL_MATCH + GEO_ANCHOR + FUZZY_MATCH) |
-| **การจัดส่งวันนี้** | จำนวนระเบียนที่ DELIVERY_DATE = วันนี้ |
-| **Source Sheet (ดิบ)** | จำนวนแถวใน Source sheet (SCGนครหลวงJWDภูมิภาค) |
-| **Source รอประมวลผล** | จำนวนแถวที่ SYNC_STATUS ≠ SUCCESS |
+| การ์ด                  | ความหมาย                                                        |
+| ---------------------- | --------------------------------------------------------------- |
+| **FACT_DELIVERY**      | จำนวนระเบียนในชีต FACT_DELIVERY ทั้งหมด                         |
+| **Q_REVIEW (รอตรวจ)**  | จำนวนระเบียนใน Q_REVIEW ที่ status = PENDING                    |
+| **Auto Match Rate**    | % ของการจับคู่อัตโนมัติ (FULL_MATCH + GEO_ANCHOR + FUZZY_MATCH) |
+| **การจัดส่งวันนี้**    | จำนวนระเบียนที่ DELIVERY_DATE = วันนี้                          |
+| **Source Sheet (ดิบ)** | จำนวนแถวใน Source sheet (SCGนครหลวงJWDภูมิภาค)                  |
+| **Source รอประมวลผล**  | จำนวนแถวที่ SYNC_STATUS ≠ SUCCESS                               |
 
 ### ส่วนอื่นๆ ในหน้า
 
@@ -119,6 +124,7 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 **สาเหตุ:** Email ของคุณไม่อยู่ในรายชื่อ `DASHBOARD_USERS` หรือ `LMDS_ADMINS`
 
 **วิธีแก้:**
+
 1. ติดต่อผู้ดูแลระบบ
 2. ขอให้เพิ่ม email ใน Script Properties → `DASHBOARD_USERS`
 3. รีโหลดหน้า
@@ -130,6 +136,7 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 **สาเหตุ:** Server-side error (อาจเป็น sheet หาย, สิทธิ์ scope ไม่ครบ, ฯลฯ)
 
 **วิธีแก้:**
+
 1. ลองรีโหลดหน้า
 2. ถ้ายังไม่ได้ → ติดต่อผู้ดูแลให้ดู Stackdriver Logs
    - Apps Script Editor → ⚡ Executions หรือ Logs
@@ -142,6 +149,7 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 **สาเหตุ:** Polling หยุดทำงาน (อาจเป็นเพราะ tab ไม่ active หรือ session หมดอายุ)
 
 **วิธีแก้:**
+
 1. ตรวจ "Live indicator" ที่แถบบน — ถ้าเป็น "Paused" แสดงว่า polling หยุด
 2. กดปุ่ม 🔄 เพื่อ refresh ทันที
 3. ถ้ามี toast "Session หมดอายุ" → รีโหลดหน้า
@@ -153,6 +161,7 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 **สาเหตุ:** ข้อมูลใน Sheet เยอะมาก (>10,000 แถว) — server ต้องอ่านทั้งหมด
 
 **วิธีแก้:**
+
 - Phase 2 จะมี pagination + caching เพื่อแก้ปัญหานี้
 - ชั่วคราว: ลบข้อมูลเก่าใน FACT_DELIVERY ที่ไม่จำเป็นออก
 
@@ -200,15 +209,15 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 
 ## 🔐 Security Model
 
-| Layer | Mechanism |
-|-------|-----------|
-| **Transport** | HTTPS (Google default) |
-| **Authentication** | Google Account (OAuth 2.0) |
-| **Authorization** | `DASHBOARD_USERS` whitelist (Script Properties) |
+| Layer                | Mechanism                                                              |
+| -------------------- | ---------------------------------------------------------------------- |
+| **Transport**        | HTTPS (Google default)                                                 |
+| **Authentication**   | Google Account (OAuth 2.0)                                             |
+| **Authorization**    | `DASHBOARD_USERS` whitelist (Script Properties)                        |
 | **Defense-in-depth** | Server-side auth check ในทุก function (`isAuthorizedDashboardUser_()`) |
-| **PII Protection** | Email masking ใน logs (`maskEmailSafe_`) |
-| **Session Timeout** | 30 นาที (frontend-side, defense-in-depth) |
-| **XSS Protection** | HtmlService sandbox mode (CSP enforced) |
+| **PII Protection**   | Email masking ใน logs (`maskEmailSafe_`)                               |
+| **Session Timeout**  | 30 นาที (frontend-side, defense-in-depth)                              |
+| **XSS Protection**   | HtmlService sandbox mode (CSP enforced)                                |
 
 ---
 
@@ -224,11 +233,11 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 
 ## 🗺️ Roadmap ต่อ
 
-| Phase | สิ่งที่จะได้ | ระยะเวลา |
-|-------|------------|---------|
-| **Phase 2** | หน้า FACT_DELIVERY, Q_REVIEW, Source Sheet พร้อม filter + pagination + search | 4-5 วัน |
-| **Phase 3** | หน้า Match Engine Metrics พร้อม charts + หน้า Search ข้ามชีต | 3-4 วัน |
-| **Phase 4** | Polish + responsive + dark mode + production deployment | 2-3 วัน |
+| Phase       | สิ่งที่จะได้                                                                  | ระยะเวลา |
+| ----------- | ----------------------------------------------------------------------------- | -------- |
+| **Phase 2** | หน้า FACT_DELIVERY, Q_REVIEW, Source Sheet พร้อม filter + pagination + search | 4-5 วัน  |
+| **Phase 3** | หน้า Match Engine Metrics พร้อม charts + หน้า Search ข้ามชีต                  | 3-4 วัน  |
+| **Phase 4** | Polish + responsive + dark mode + production deployment                       | 2-3 วัน  |
 
 ---
 
@@ -240,4 +249,4 @@ LMDS Dashboard Web App เป็นหน้าเว็บที่ทำงา
 
 ---
 
-*เอกสารนี้เป็นส่วนหนึ่งของชุดเอกสาร LMDS V6.0.044 — Phase 1 Web App*
+_เอกสารนี้เป็นส่วนหนึ่งของชุดเอกสาร LMDS V6.0.075 — Phase 1 Web App_

@@ -86,6 +86,6 @@ ls /your/workspace/.skills/lmds-*/SKILL.md
 ## Source
 
 - **Project:** https://github.com/Siriwat08/phaopanya-scg
-- **Version:** LMDS V6.0.046
+- **Version:** LMDS V6.0.075
 - **Created:** 2026-07-13
 - **License:** MIT
