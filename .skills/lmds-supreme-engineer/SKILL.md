@@ -1702,7 +1702,7 @@ The 9 checks:
 2	check_02_stats.sh	⚠️ WARN	File/line/function counts in docs match reality
 3	check_03_local_paths.sh	❌ BLOCKING	No file:/// absolute paths in docs
 4	check_04_phantom_deps.sh	❌ BLOCKING	No calls to undefined functions
-5	check_05_internal_links.sh	⚠️ WARN	All [link](file.md) targets exist
+5	check_05_internal_links.sh	⚠️ WARN	All `[link](file.md)` targets exist
 6	check_06_verify_fixes.sh	❌ BLOCKING	Docs don't claim fixes that aren't actually fixed
 7	check_07_header_changelog.sh	⚠️ WARN	File header VERSION matches CHANGELOG entry
 8	check_08_header_dependencies.sh	⚠️ WARN	All files have DEPENDENCIES section in header

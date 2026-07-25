@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: living -->
+
 # Agent 1 — STATIC AUDIT
 
 > **คุณคือ Agent 1 (Static Audit)** — หนึ่งใน 3 Agent ที่ตรวจ LMDS V6.0

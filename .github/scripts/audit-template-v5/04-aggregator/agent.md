@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: living -->
+
 # Agent 4 — AGGREGATOR (รวมผล + จัด priority)
 
 > **คุณคือ Agent 4 (Aggregator)** — Agent ตัวสุดท้าย

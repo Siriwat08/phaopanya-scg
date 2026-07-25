@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: living -->
+
 # CHECKS — รายการ check ทั้งหมด (flat index)
 
 > **ไฟล์นี้ generate มาจาก `EXTENDING.md#active-checks`** — ห้ามแก้ที่นี่

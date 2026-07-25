@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: living -->
+
 # Agent 2 — RUNTIME / GAS-SPECIFIC AUDIT
 
 > **คุณคือ Agent 2 (Runtime / GAS)** — หนึ่งใน 3 Agent ที่ตรวจ LMDS V6.0

@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: living -->
+
 # Audit Template v5 — Embedded in LMDS repo
 
 > **Embedded:** V6.0.074 (PR #201) — 2026-07-24
@@ -21,12 +23,12 @@ ls .github/scripts/audit-template-v5/06-evidence/
 
 ## What it checks (49 checks total)
 
-| Agent | Checks | Coverage |
-|---|---|---|
-| **01-static** (ST-001..013) | 13 | Structure, headers, naming, lint, function length |
-| **02-runtime-gas** (RT-001..014) | 14 | Quota, lock, batch, cache, CDN, library version |
-| **03-domain-logic** (DM-001..021) | 21 | Match Engine, RBAC, Thai, PII, SEC-001..012 |
-| **05-doc-sync** (DS-000) | 1 wrapper | Auto-runs 18 existing LMDS doc-code-sync checks |
+| Agent                             | Checks    | Coverage                                          |
+| --------------------------------- | --------- | ------------------------------------------------- |
+| **01-static** (ST-001..013)       | 13        | Structure, headers, naming, lint, function length |
+| **02-runtime-gas** (RT-001..014)  | 14        | Quota, lock, batch, cache, CDN, library version   |
+| **03-domain-logic** (DM-001..021) | 21        | Match Engine, RBAC, Thai, PII, SEC-001..012       |
+| **05-doc-sync** (DS-000)          | 1 wrapper | Auto-runs 18 existing LMDS doc-code-sync checks   |
 
 **Total:** 49 checks (13 ST + 14 RT + 21 DM + 1 DS wrapper that runs 18 LMDS checks)
 
@@ -51,6 +53,7 @@ This is intentional — shell-only checks can't prioritize findings across agent
 ## Updating the template
 
 Template is versioned. To update:
+
 1. Download new version from upstream
 2. Replace `.github/scripts/audit-template-v5/` contents
 3. Run audit to verify no regression

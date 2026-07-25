@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: historical -->
+
 # 📊 LMDS V6.0 Pre-Delivery Audit Report
 
 **Audited By:** Principal Software Auditor (AI Agent)

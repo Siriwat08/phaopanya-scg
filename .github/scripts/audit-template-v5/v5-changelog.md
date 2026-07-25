@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: living -->
+
 # v5 Patch — FINAL Changelog
 
 **Date:** 2026-07-24

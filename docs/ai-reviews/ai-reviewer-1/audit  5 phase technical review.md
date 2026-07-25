@@ -1,3 +1,5 @@
+<!-- DOC-TYPE: historical -->
+
 Now I have enough data to write the comprehensive audit report. Let me compile the findings into the structured output.Now I have all the data needed for the complete report. Let me write it.ผมมีข้อมูลครบแล้ว เขียนรายงานเต็มรูปแบบได้เลย
 
 ---

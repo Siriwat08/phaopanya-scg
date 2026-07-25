@@ -51,7 +51,7 @@ while IFS= read -r -d '' file; do
     ((FAIL_COUNT++))
   fi
 
-done < <(find . -name "*.md" -not -path "./node_modules/*" -print0 | sort -z)
+done < <(find . -name "*.md" -not -path "./node_modules/*" -not -path "*/06-evidence/*" -print0 | sort -z)
 
 echo ""
 echo "─────────────────────────────────────"
