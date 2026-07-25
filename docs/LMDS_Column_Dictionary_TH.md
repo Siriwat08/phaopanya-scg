@@ -1,11 +1,11 @@
 <!-- DOC-TYPE: living -->
 
-# 📖 LMDS V6.0.072 — พจนานุกรมคอลัมน์ (Column Dictionary)
+# 📖 LMDS V6.0.075 — พจนานุกรมคอลัมน์ (Column Dictionary)
 
 > **เอกสารฉบับนี้อธิบายความหมายของทุกคอลัมน์ในทุกตารางของระบบ LMDS**
 > ใช้สำหรับ Admin / IT / Developer ที่ต้องการเข้าใจว่าแต่ละคอลัมน์เก็บอะไร และค่ามาจากไหน
 
-**เวอร์ชันเอกสาร:** V6.0.072 (2026-07-22, DOC-CODE SYNC)
+**เวอร์ชันเอกสาร:** V6.0.075 (2026-07-25, DOC-CODE SYNC)
 **ตารางทั้งหมด:** 19 ตาราง (16 IDX sets; MAPS_CACHE ถูกลบใน V5.5.013 — ใช้ @customFunction formulas แทน; FACT_DELIVERY +2 cols ใน V5.5.014 DRIVER-VERIFIED)
 **รูปแบบ:** ตาราง | คอลัมน์ | ชื่อคอลัมน์ภาษาไทย | ผลลัพท์ (ความหมาย / ที่มา)
 
@@ -72,22 +72,22 @@
 **จำนวนคอลัมน์:** 14 คอลัมน์
 **IDX constant:** `PLACE_IDX` (01_Config.gs)
 
-| ตาราง   | คอลัมน์               | ชื่อคอลัมน์ภาษาไทย     | ผลลัพท์ (ความหมาย / ที่มา)                                               |
-| ------- | --------------------- | ---------------------- | ------------------------------------------------------------------------ |
-| M_PLACE | [0] `place_id`        | รหัสสถานที่            | รหัสเฉพาะของสถานที่ — สร้างโดย `generateShortId('PL')`                   |
-| M_PLACE | [1] `canonical_name`  | ชื่อมาตรฐาน            | ชื่อสถานที่ที่สะอาดที่สุด — มาจาก `getBestName_Smart()`                  |
-| M_PLACE | [2] `normalized_name` | ชื่อที่ normalize แล้ว | ชื่อที่ผ่าน `normalizeForCompare()` เพื่อใช้ค้นหา                        |
-| M_PLACE | [3] `place_type`      | ประเภทสถานที่          | ประเภทของสถานที่ (เช่น ร้านค้า, คลังสินค้า, บ้าน)                        |
-| M_PLACE | [4] `sub_district`    | ตำบล/แขวง              | ตำบลหรือแขวง — ดึงจาก `extractGeoFromAddress()` ใน 20_ThGeoService.gs    |
-| M_PLACE | [5] `district`        | อำเภอ/เขต              | อำเภอหรือเขต — ดึงจาก `extractGeoFromAddress()`                          |
-| M_PLACE | [6] `province`        | จังหวัด                | จังหวัด — ดึงจาก `extractGeoFromAddress()` หรือ Google Maps              |
-| M_PLACE | [7] `postcode`        | รหัสไปรษณีย์           | รหัสไปรษณีย์ 5 หลัก — ดึงจาก address หรือ `parseAddressFromText()`       |
-| M_PLACE | [8] `first_seen`      | วันที่เห็นครั้งแรก     | วันที่สถานที่นี้ถูกสร้าง — จาก `createPlace()` ใน 07_PlaceService.gs     |
-| M_PLACE | [9] `last_seen`       | วันที่เห็นล่าสุด       | วันที่สถานที่ถูกอ้างถึงล่าสุด — อัปเดตโดย `batchUpdatePlaceStats_()`     |
-| M_PLACE | [10] `usage_count`    | จำนวนครั้งที่ใช้       | จำนวนครั้งที่สถานที่นี้ถูก match — อัปเดตโดย `batchUpdateEntityStats_()` |
-| M_PLACE | [11] `record_status`  | สถานะระเบียน           | `Active` / `Inactive` / `Merged`                                         |
-| M_PLACE | [12] `note`           | หมายเหตุ               | หมายเหตุเพิ่มเติม                                                        |
-| M_PLACE | [13] `master_uuid`    | UUID หลัก              | UUID v4 สำหรับ merge tracking                                            |
+| ตาราง   | คอลัมน์               | ชื่อคอลัมน์ภาษาไทย     | ผลลัพท์ (ความหมาย / ที่มา)                                                                        |
+| ------- | --------------------- | ---------------------- | ------------------------------------------------------------------------------------------------- |
+| M_PLACE | [0] `place_id`        | รหัสสถานที่            | รหัสเฉพาะของสถานที่ — สร้างโดย `generateShortId('PL')`                                            |
+| M_PLACE | [1] `canonical_name`  | ชื่อมาตรฐาน            | ชื่อสถานที่ที่สะอาดที่สุด — มาจาก `normResult.cleanPlace` (ใน `createPlace()` 07_PlaceService.gs) |
+| M_PLACE | [2] `normalized_name` | ชื่อที่ normalize แล้ว | ชื่อที่ผ่าน `normalizeForCompare()` เพื่อใช้ค้นหา                                                 |
+| M_PLACE | [3] `place_type`      | ประเภทสถานที่          | ประเภทของสถานที่ (เช่น ร้านค้า, คลังสินค้า, บ้าน)                                                 |
+| M_PLACE | [4] `sub_district`    | ตำบล/แขวง              | ตำบลหรือแขวง — ดึงจาก `extractGeoFromAddress()` ใน 20_ThGeoService.gs                             |
+| M_PLACE | [5] `district`        | อำเภอ/เขต              | อำเภอหรือเขต — ดึงจาก `extractGeoFromAddress()`                                                   |
+| M_PLACE | [6] `province`        | จังหวัด                | จังหวัด — ดึงจาก `extractGeoFromAddress()` หรือ Google Maps                                       |
+| M_PLACE | [7] `postcode`        | รหัสไปรษณีย์           | รหัสไปรษณีย์ 5 หลัก — ดึงจาก address หรือ `parseAddressFromText()`                                |
+| M_PLACE | [8] `first_seen`      | วันที่เห็นครั้งแรก     | วันที่สถานที่นี้ถูกสร้าง — จาก `createPlace()` ใน 07_PlaceService.gs                              |
+| M_PLACE | [9] `last_seen`       | วันที่เห็นล่าสุด       | วันที่สถานที่ถูกอ้างถึงล่าสุด — อัปเดตโดย `batchUpdatePlaceStats_()`                              |
+| M_PLACE | [10] `usage_count`    | จำนวนครั้งที่ใช้       | จำนวนครั้งที่สถานที่นี้ถูก match — อัปเดตโดย `batchUpdateEntityStats_()`                          |
+| M_PLACE | [11] `record_status`  | สถานะระเบียน           | `Active` / `Inactive` / `Merged`                                                                  |
+| M_PLACE | [12] `note`           | หมายเหตุ               | หมายเหตุเพิ่มเติม                                                                                 |
+| M_PLACE | [13] `master_uuid`    | UUID หลัก              | UUID v4 สำหรับ merge tracking                                                                     |
 
 ---
 
@@ -322,4 +322,4 @@
 
 ---
 
-_LMDS V6.0.072 — Column Dictionary — Last Updated: 2026-07-22 (DOC-CODE SYNC)_
+_LMDS V6.0.075 — Column Dictionary — Last Updated: 2026-07-25 (DOC-CODE SYNC)_

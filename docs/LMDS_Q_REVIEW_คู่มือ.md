@@ -1,7 +1,8 @@
 <!-- DOC-TYPE: living -->
+
 # อธิบายชีต Q_REVIEW (22 คอลัมน์) — คิวรอคนตรวจสอบ
 
-> **เอกสารประกอบ LMDS V6.0.044 (DOC-CODE SYNC, 2026-07-13)**
+> **เอกสารประกอบ LMDS V6.0.075 (DOC-CODE SYNC, 2026-07-25)**
 > อธิบายโครงสร้างและวิธีใช้งานชีต Q_REVIEW สำหรับคนตรวจสอบข้อมูล
 > เกี่ยวข้องกับ: `02_Schema.gs`, `12_ReviewService.gs`, `10_MatchEngine.gs`, `00_App.gs`
 
@@ -23,30 +24,30 @@
 
 จากโค้ด `02_Schema.gs` (Q_REVIEW_HEADERS) และ `01_Config.gs` (REVIEW_IDX):
 
-| Index | คอลัมน์ | ชื่อ Header | อธิบายแบบเด็ก 5 ขวบ | ที่มาจากโค้ด |
-|:---:|:---:|---|---|---|
-| 0 | **A** | `review_id` | เลขบอกกันว่าเป็นแถวที่เท่าไหร่ในคิว (RV + 12 hex) | Auto ใน `addToQReview()` |
-| 1 | **B** | `issue_type` | ประเภทปัญหาที่ทำให้เข้าคิว (เช่น `INVALID_LATLNG`, `GEO_PROVINCE_CONFLICT`, `NAME_TOO_SHORT`, `FUZZY_AMBIGUOUS`, `GEO_NEARBY_YELLOW`, `NO_MATCH_NEW_ENTITY`) | คำนวณใน `10_MatchEngine.gs` |
-| 2 | **C** | `priority` | ลำดับความสำคัญ: HIGH / MEDIUM / LOW — คำนวณจาก severity ของ issue_type | คำนวณใน `addToQReview()` |
-| 3 | **D** | `source_record_id` | ID ระเบียนต้นทาง — ใช้สำหรับอ้างอิงกลับไปยัง Source sheet | จาก Source [1] |
-| 4 | **E** | `source_row` | แถวในชีตต้นทางที่ข้อมูลนี้มาจาก | จาก Source sheet row number |
-| 5 | **F** | `invoice_no` | รหัส Invoice ของแถวนี้ — ใช้สำหรับอ้างอิงกลับไปยัง Source | จาก Source [8] |
-| 6 | **G** | `raw_person_name` | ชื่อบริษัท/บุคคลจากไฟล์ต้นทางที่เข้ามา เช่น "บริษัท สมชาย ขนส่ง" | จาก `rawName` ที่ยังไม่ Normalize |
-| 7 | **H** | `raw_place_name` | ชื่อสถานที่/ที่อยู่จากไฟล์ต้นทาง เช่น "123/45 ม.6 ต.ปลากลอย" | จาก `rawAddress` ที่ยังไม่ Normalize |
-| 8 | **I** | `raw_system_address` | ที่อยู่ที่ระบบ resolve ได้จาก LatLong | จาก `lookupResult.thName` |
-| 9 | **J** | `raw_lat` | ละติจูดดิบจาก Source | จาก Source [14] |
-| 10 | **K** | `raw_lng` | ลองจิจูดดิบจาก Source | จาก Source [15] |
-| 11 | **L** | `candidate_person_ids` | **ถ้าระบบหาบุคคลที่ตรงกันแล้ว จะแสดง ID ที่นี่** เช่น "P_0042, P_0043" ถ้ายังไม่เจอ → ว่างเปล่า | จาก match `Person_ID` จาก M_PERSON |
-| 12 | **M** | `candidate_place_ids` | **ถ้าหาสาขาที่ตรงกันแล้ว จะแสดง ID** เช่น "PL_0088" | จาก match `Place_ID` จาก M_PLACE |
-| 13 | **N** | `candidate_geo_ids` | **ถ้าหาพื้นที่/จุด GPS ที่ตรงกันแล้วจะแสดง ID** เช่น "G_0015" | จาก match `Geo_ID` จาก M_GEO |
-| 14 | **O** | `candidate_destination_ids` | **ถ้าระบบหา "จุดหมายปลายทาง" (Person + Place + Geo รวมกัน) ที่ตรงกันแล้วจะแสดง ID** เช่น "D_0123" | จาก match `Destination_ID` จาก M_DESTINATION |
-| 15 | **P** | `match_score` | คะแนนความมั่นใจ 0-100 — ถ้า 100 = ตรงทุกอย่าง, ถ้าต่ำ = ระบบไม่แน่ใจ ต้องให้คนดู | `matchScore` จาก MatchEngine |
-| 16 | **Q** | `recommended_action` | **คอลัมน์สำคัญ!** คำแนะนำของระบบ: CREATE_NEW / MERGE / ESCALATE / IGNORE — คลิกที่ cell แล้วระบบนำทางให้ [V5.5.011] | `recommended_action` จาก MatchEngine |
-| 17 | **R** | `status` | สถานะของแถว: **PENDING** (รอตรวจ), **IN_REVIEW** (กำลังตรวจ), **DONE** (เสร็จ), **ESCALATED** (ส่งต่อ) | `status` เริ่มต้นที่ "PENDING" |
-| 18 | **S** | `reviewer` | อีเมลผู้ตรวจที่ตรวจแถวนี้ — ระบบกรอกอัตโนมัติ (masked ตาม SEC-007) | จาก `Session.getActiveUser()` |
-| 19 | **T** | `reviewed_at` | วันเวลาที่ตรวจสอบเสร็จ | ตอนเรียก `applyReviewDecision()` |
-| 20 | **U** | `decision` | **คอลัมน์สำหรับคนกรอกข้อมูล!** Dropdown: APPROVED / REJECTED / CREATE_NEW / SKIP | ใช้ Data Validation Dropdown |
-| 21 | **V** | `note` | คนตรวจสอบเขียนหมายเหตุได้ เช่น "ตรงกับ P_0042 แล้ว" หรือ "ชื่อนี้ผิด ต้องแก้เป็น..." | **คอลัมน์สำหรับคนกรอกข้อมูล!** |
+| Index | คอลัมน์ | ชื่อ Header                 | อธิบายแบบเด็ก 5 ขวบ                                                                                                                                          | ที่มาจากโค้ด                                 |
+| :---: | :-----: | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+|   0   |  **A**  | `review_id`                 | เลขบอกกันว่าเป็นแถวที่เท่าไหร่ในคิว (RV + 12 hex)                                                                                                            | Auto ใน `addToQReview()`                     |
+|   1   |  **B**  | `issue_type`                | ประเภทปัญหาที่ทำให้เข้าคิว (เช่น `INVALID_LATLNG`, `GEO_PROVINCE_CONFLICT`, `NAME_TOO_SHORT`, `FUZZY_AMBIGUOUS`, `GEO_NEARBY_YELLOW`, `NO_MATCH_NEW_ENTITY`) | คำนวณใน `10_MatchEngine.gs`                  |
+|   2   |  **C**  | `priority`                  | ลำดับความสำคัญ: HIGH / MEDIUM / LOW — คำนวณจาก severity ของ issue_type                                                                                       | คำนวณใน `addToQReview()`                     |
+|   3   |  **D**  | `source_record_id`          | ID ระเบียนต้นทาง — ใช้สำหรับอ้างอิงกลับไปยัง Source sheet                                                                                                    | จาก Source [1]                               |
+|   4   |  **E**  | `source_row`                | แถวในชีตต้นทางที่ข้อมูลนี้มาจาก                                                                                                                              | จาก Source sheet row number                  |
+|   5   |  **F**  | `invoice_no`                | รหัส Invoice ของแถวนี้ — ใช้สำหรับอ้างอิงกลับไปยัง Source                                                                                                    | จาก Source [8]                               |
+|   6   |  **G**  | `raw_person_name`           | ชื่อบริษัท/บุคคลจากไฟล์ต้นทางที่เข้ามา เช่น "บริษัท สมชาย ขนส่ง"                                                                                             | จาก `rawName` ที่ยังไม่ Normalize            |
+|   7   |  **H**  | `raw_place_name`            | ชื่อสถานที่/ที่อยู่จากไฟล์ต้นทาง เช่น "123/45 ม.6 ต.ปลากลอย"                                                                                                 | จาก `rawAddress` ที่ยังไม่ Normalize         |
+|   8   |  **I**  | `raw_system_address`        | ที่อยู่ที่ระบบ resolve ได้จาก LatLong                                                                                                                        | จาก `lookupResult.thName`                    |
+|   9   |  **J**  | `raw_lat`                   | ละติจูดดิบจาก Source                                                                                                                                         | จาก Source [14]                              |
+|  10   |  **K**  | `raw_lng`                   | ลองจิจูดดิบจาก Source                                                                                                                                        | จาก Source [15]                              |
+|  11   |  **L**  | `candidate_person_ids`      | **ถ้าระบบหาบุคคลที่ตรงกันแล้ว จะแสดง ID ที่นี่** เช่น "P_0042, P_0043" ถ้ายังไม่เจอ → ว่างเปล่า                                                              | จาก match `Person_ID` จาก M_PERSON           |
+|  12   |  **M**  | `candidate_place_ids`       | **ถ้าหาสาขาที่ตรงกันแล้ว จะแสดง ID** เช่น "PL_0088"                                                                                                          | จาก match `Place_ID` จาก M_PLACE             |
+|  13   |  **N**  | `candidate_geo_ids`         | **ถ้าหาพื้นที่/จุด GPS ที่ตรงกันแล้วจะแสดง ID** เช่น "G_0015"                                                                                                | จาก match `Geo_ID` จาก M_GEO                 |
+|  14   |  **O**  | `candidate_destination_ids` | **ถ้าระบบหา "จุดหมายปลายทาง" (Person + Place + Geo รวมกัน) ที่ตรงกันแล้วจะแสดง ID** เช่น "D_0123"                                                            | จาก match `Destination_ID` จาก M_DESTINATION |
+|  15   |  **P**  | `match_score`               | คะแนนความมั่นใจ 0-100 — ถ้า 100 = ตรงทุกอย่าง, ถ้าต่ำ = ระบบไม่แน่ใจ ต้องให้คนดู                                                                             | `matchScore` จาก MatchEngine                 |
+|  16   |  **Q**  | `recommended_action`        | **คอลัมน์สำคัญ!** คำแนะนำของระบบ: CREATE_NEW / MERGE / ESCALATE / IGNORE — คลิกที่ cell แล้วระบบนำทางให้ [V5.5.011]                                          | `recommended_action` จาก MatchEngine         |
+|  17   |  **R**  | `status`                    | สถานะของแถว: **PENDING** (รอตรวจ), **IN_REVIEW** (กำลังตรวจ), **DONE** (เสร็จ), **ESCALATED** (ส่งต่อ)                                                       | `status` เริ่มต้นที่ "PENDING"               |
+|  18   |  **S**  | `reviewer`                  | อีเมลผู้ตรวจที่ตรวจแถวนี้ — ระบบกรอกอัตโนมัติ (masked ตาม SEC-007)                                                                                           | จาก `Session.getActiveUser()`                |
+|  19   |  **T**  | `reviewed_at`               | วันเวลาที่ตรวจสอบเสร็จ                                                                                                                                       | ตอนเรียก `applyReviewDecision()`             |
+|  20   |  **U**  | `decision`                  | **คอลัมน์สำหรับคนกรอกข้อมูล!** Dropdown: APPROVED / REJECTED / CREATE_NEW / SKIP                                                                             | ใช้ Data Validation Dropdown                 |
+|  21   |  **V**  | `note`                      | คนตรวจสอบเขียนหมายเหตุได้ เช่น "ตรงกับ P_0042 แล้ว" หรือ "ชื่อนี้ผิด ต้องแก้เป็น..."                                                                         | **คอลัมน์สำหรับคนกรอกข้อมูล!**               |
 
 > **Note**: ตารางข้างต้นเป็น 22 คอลัมน์ตาม `REVIEW_IDX` ใน `01_Config.gs` (Object.freeze) — ตรงกับ `Q_REVIEW_HEADERS` ใน `02_Schema.gs` 100%
 
@@ -59,6 +60,7 @@
 มี 2 ทางหลัก:
 
 **ทางที่ 1: จากชีต "SCGนครหลวงJWDภูมิภาค"**
+
 1. เปิดชีต "SCGนครหลวงJWDภูมิภาค"
 2. กดเมนู → **LMDS V6.0** → **"ประมวลผล SCG → Master DB"** (เรียกฟังก์ชัน `processSCGData()`)
 3. ระบบอ่านข้อมูลทีละแถว จากคอลัมน์ในชีต
@@ -66,11 +68,13 @@
 5. ถ้าจับคู่ไม่ได้หรือไม่มั่นใจ → ข้อมูลแถวนั้นถูก **ส่งเข้า Q_REVIEW** พร้อมคะแนน Match Result และคะแนนความมั่นใจ
 
 **ทางที่ 2: จากชีต "ตารางงานประจำวัน"**
+
 1. เปิดชีต "ตารางงานประจำวัน"
 2. กดเมนู → **LMDS V6.0** → **"โหลดข้อมูล → จับคู่อัตโนมัติ"** (เรียกฟังก์ชัน `autoMatchDaily()`)
 3. ระบบอ่านข้อมูลทีละแถว → Normalize → Match → ถ้าไม่แน่ใจ → ส่งเข้า Q_REVIEW
 
 ### ขั้นที่ 2: เปิดชีต Q_REVIEW ดู
+
 1. คลิกที่แท็บชื่อ **"Q_REVIEW"** ด้านล่างของ Spreadsheet
 2. จะเห็นแถวที่รออยู่พร้อมข้อมูล 22 คอลัมน์ทุกแถว
 
@@ -125,15 +129,15 @@
 
 `issue_type` ในคอลัมน์ B บอกสาเหตุที่ข้อมูลเข้า Q_REVIEW:
 
-| issue_type | ความหมาย | คำแนะนำ |
-|---|---|---|
-| `INVALID_LATLNG` | พิกัด GPS ไม่ถูกต้อง (เช่น 0,0 หรือ null) | ตรวจที่มาของพิกัด อาจเป็น GPS คนขับเสีย |
-| `GEO_PROVINCE_CONFLICT` | พิกัดอยู่จังหวัดต่างจากที่อยู่ | อาจเป็นคนขับส่งผิดที่ หรือพิกัด Master ผิด |
-| `NAME_TOO_SHORT` | ชื่อสั้นเกินไปหลัง Normalize (เช่น เหลือแค่ "ร้าน") | คนขับกรอกชื่อไม่ครบ ให้ SKIP หรือตามหาชื่อจริง |
-| `FUZZY_AMBIGUOUS` | ชื่อคล้ายหลายร้านใน Master ระบบไม่แน่ใจว่าตัวไหน | ใช้ที่อยู่ + GPS ช่วยตัดสินใจ |
-| `GEO_NEARBY_YELLOW` | พิกัดใกล้ 50-80m แต่ไม่ตรง | อาจเป็นจุดส่งจริงที่อยู่ใกล้คลัง ให้ APPROVED ถ้าดูสมเหตุสมผล |
-| `GEO_NEARBY_ORANGE` | พิกัดใกล้ 80-100m แต่ไม่ตรง | ระวัง — อาจเป็นร้านอื่นที่อยู่ใกล้กัน |
-| `NO_MATCH_NEW_ENTITY` | ไม่เจอเลย แต่มี GPS ที่ดี | CREATE_NEW ถ้าเป็นร้านใหม่จริง |
+| issue_type              | ความหมาย                                            | คำแนะนำ                                                       |
+| ----------------------- | --------------------------------------------------- | ------------------------------------------------------------- |
+| `INVALID_LATLNG`        | พิกัด GPS ไม่ถูกต้อง (เช่น 0,0 หรือ null)           | ตรวจที่มาของพิกัด อาจเป็น GPS คนขับเสีย                       |
+| `GEO_PROVINCE_CONFLICT` | พิกัดอยู่จังหวัดต่างจากที่อยู่                      | อาจเป็นคนขับส่งผิดที่ หรือพิกัด Master ผิด                    |
+| `NAME_TOO_SHORT`        | ชื่อสั้นเกินไปหลัง Normalize (เช่น เหลือแค่ "ร้าน") | คนขับกรอกชื่อไม่ครบ ให้ SKIP หรือตามหาชื่อจริง                |
+| `FUZZY_AMBIGUOUS`       | ชื่อคล้ายหลายร้านใน Master ระบบไม่แน่ใจว่าตัวไหน    | ใช้ที่อยู่ + GPS ช่วยตัดสินใจ                                 |
+| `GEO_NEARBY_YELLOW`     | พิกัดใกล้ 50-80m แต่ไม่ตรง                          | อาจเป็นจุดส่งจริงที่อยู่ใกล้คลัง ให้ APPROVED ถ้าดูสมเหตุสมผล |
+| `GEO_NEARBY_ORANGE`     | พิกัดใกล้ 80-100m แต่ไม่ตรง                         | ระวัง — อาจเป็นร้านอื่นที่อยู่ใกล้กัน                         |
+| `NO_MATCH_NEW_ENTITY`   | ไม่เจอเลย แต่มี GPS ที่ดี                           | CREATE_NEW ถ้าเป็นร้านใหม่จริง                                |
 
 ---
 
@@ -187,4 +191,4 @@ REJECTED / SKIP → ลบออก
 
 ---
 
-*เอกสารนี้เป็นส่วนหนึ่งของชุดเอกสาร LMDS V6.0.044 — ดูเอกสารที่เกี่ยวข้อง: [LMDS_สายที่1_SCG_Source.md](LMDS_สายที่1_SCG_Source.md) | [LMDS_สายที่2_Daily_Job.md](LMDS_สายที่2_Daily_Job.md)*
+_เอกสารนี้เป็นส่วนหนึ่งของชุดเอกสาร LMDS V6.0.075 — ดูเอกสารที่เกี่ยวข้อง: [LMDS_สายที่1_SCG_Source.md](LMDS_สายที่1_SCG_Source.md) | [LMDS_สายที่2_Daily_Job.md](LMDS_สายที่2_Daily_Job.md)_

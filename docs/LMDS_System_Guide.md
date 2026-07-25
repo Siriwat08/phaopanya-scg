@@ -3,9 +3,9 @@
 # 📘 LMDS System Guide — คู่มือระบบฉบับเต็ม
 
 > **Logistics Master Data System (LMDS)** — ระบบจัดการข้อมูลหลักด้านโลจิสติกส์
-> เวอร์ชัน: V6.0.072 (DOC-CODE SYNC) | อัปเดตล่าสุด: 2026-07-22
+> เวอร์ชัน: V6.0.075 (DOC-CODE SYNC) | อัปเดตล่าสุด: 2026-07-25
 > แพลตฟอร์ม: Google Apps Script (GAS) บน Google Sheets
-> ฟังก์ชันทั้งหมด: 535 | บรรทัดโค้ด: ~27,213 (.gs only, non-blank) | Production Readiness: 97% (Security Hardened)
+> ฟังก์ชันทั้งหมด: 544 | บรรทัดโค้ด: ~28,236 (.gs only, non-blank) | Production Readiness: 97% (Security Hardened)
 
 ---
 
@@ -487,29 +487,57 @@ Hybrid Alias เป็นระบบจดจำชื่อแฝงแบบ�
 | 📍 จับคู่พิกัด       | `applyMasterCoordinatesToDailyJob()` | ใส่พิกัดให้งานประจำวัน |
 | 🗑️ ล้างข้อมูลทั้งหมด | `clearAllSCGSheets_UI()`             | ลบข้อมูล SCG ทั้งหมด   |
 
-### 🔧 ระบบ & ตั้งค่า
+### 🔧 ระบบ & ตั้งค่า — แบ่งเป็น 4 Sub-menus (V6.0.072+)
 
-| เมนู                               | ฟังก์ชัน                             | คำอธิบาย                                                         |
-| ---------------------------------- | ------------------------------------ | ---------------------------------------------------------------- |
-| ⚙️ ตั้งค่า API Key                 | `setupEnvironment()`                 | ใส่ Gemini API Key                                               |
-| 🏗️ สร้างชีตทั้งหมด                 | `setupAllSheets()`                   | สร้าง/ซ่อมแซมชีตทั้งหมด                                          |
-| 🌍 อัปเดตฐานข้อมูลภูมิศาสตร์       | `buildGeoDictionary()`               | สร้างพจนานุกรม SYS_TH_GEO                                        |
-| 🛠️ เติมข้อมูลภูมิศาสตร์ 16 คอลัมน์ | `populateGeoMetadata()`              | เพิ่ม metadata ให้ SYS_TH_GEO                                    |
-| 🔗 สร้าง Alias อัตโนมัติ           | `generatePersonAliasesFromHistory()` | สร้าง Alias จาก FACT                                             |
-| 🔄 Migration: Hybrid Alias System  | `MIGRATION_HybridAliasSystem()`      | ย้ายข้อมูล Alias ระบบเก่า (รันครั้งเดียว)                        |
-| 🔗 ตรวจสอบ Master UUID             | `assignMasterUuidIfMissing()`        | เพิ่ม UUID ให้ entity ที่ขาด                                     |
-| 📥 ดึงชื่อจาก SCG ดิบ → M_ALIAS    | `populateAliasFromSCGRawData()`      | นำเข้า Alias จาก SCG ดิบ                                         |
-| 🛡️ Preflight Audit                 | `runPreflightAudit()`                | ตรวจสอบก่อนรัน                                                   |
-| 🧹 Detect Duplicates               | `detectDoubleProcessing()`           | ตรวจข้อมูลซ้ำ                                                    |
-| ✅ ตรวจสอบ System Integrity        | `checkSystemIntegrity()`             | ตรวจชีตครบไหม                                                    |
-| 🔍 วินิจฉัย Pipeline               | `diagnoseSystemState()`              | วินิจฉัยปัญหา                                                    |
-| 🔄 รีเซ็ตสถานะ SYNC                | `resetSourceSyncStatus()`            | ล้าง SYNC_STATUS เพื่อรันใหม่                                    |
-| 🧹 ล้างความจำระบบ                  | `invalidateAllGlobalCaches()`        | เคลียร์ RAM Cache                                                |
-| 📖 ดู Version Info                 | `showVersionInfo()`                  | แสดงเวอร์ชัน                                                     |
-| 🚀 ติดตั้ง Smart Navigation        | `installSmartNavTrigger()`           | เปิดคลิกนำทางใน Q_REVIEW                                         |
-| 🔐 **ตั้งค่า SCG Cookie**          | `setupScgCookie()`                   | เก็บ Cookie ใน Script Properties อย่างปลอดภัย (SEC-001, SEC-003) |
-| 👥 **ตั้งค่ารายชื่อ Admin**        | `setupAdminList()`                   | กำหนดผู้ใช้ที่มีสิทธิ์รัน Destructive Operation (SEC-002)        |
-| 🛡️ **ป้องกันข้อมูล Sensitive**     | `setupProtectedRanges()`             | ตั้งค่า Protected Ranges สำหรับชีตที่มี PII (SEC-005)            |
+> **[V6.0.072]** เมนู "🔧 ระบบ & ตั้งค่า" เดิม (30+ รายการ) ถูกแบ่งเป็น 4 sub-menus เพื่อให้มองเห็นครบโดยไม่ต้อง scroll
+
+#### ⚙️ ตั้งค่าระบบ (12 รายการ)
+
+| เมนู                               | ฟังก์ชัน                             | คำอธิบาย                                  |
+| ---------------------------------- | ------------------------------------ | ----------------------------------------- |
+| ⚙️ ตั้งค่า API Key                 | `setupEnvironment()`                 | ใส่ Gemini API Key                        |
+| 🔐 ตั้งค่า SCG Cookie              | `setSCGCookie_UI()`                  | ตั้งค่า Cookie สำหรับ SCG API             |
+| 👥 ตั้งค่ารายชื่อ Admin            | `setupAdminList_UI()`                | ตั้งค่า LMDS_ADMINS                       |
+| 👥 [V6] ตั้งค่า Roles (RBAC)       | `setupRoleAssignments_UI()`          | ตั้งค่า viewer/reviewer/admin             |
+| 🏗️ สร้างชีตทั้งหมด                 | `setupAllSheets()`                   | สร้าง/ซ่อมแซมชีตทั้งหมด                   |
+| 🛡️ ป้องกันข้อมูล Sensitive         | `applySheetProtection_UI()`          | ป้องกันการแก้ไขข้อมูลสำคัญ                |
+| 🌍 อัปเดตฐานข้อมูลภูมิศาสตร์       | `buildGeoDictionary()`               | สร้างพจนานุกรม SYS_TH_GEO                 |
+| 🛠️ เติมข้อมูลภูมิศาสตร์ 16 คอลัมน์ | `populateGeoMetadata()`              | เพิ่ม metadata ให้ SYS_TH_GEO             |
+| 🔗 สร้าง Alias อัตโนมัติ           | `generatePersonAliasesFromHistory()` | สร้าง Alias จาก FACT                      |
+| 🔄 Migration: Hybrid Alias System  | `MIGRATION_HybridAliasSystem()`      | ย้ายข้อมูล Alias ระบบเก่า (รันครั้งเดียว) |
+| 🔗 ตรวจสอบ Master UUID             | `assignMasterUuidIfMissing()`        | เพิ่ม UUID ให้ entity ที่ขาด              |
+| 📥 ดึงชื่อจาก SCG ดิบ → M_ALIAS    | `populateAliasFromSCGRawData()`      | นำเข้า Alias จาก SCG ดิบ                  |
+
+#### 🔍 ตรวจสอบ & วินิจฉัย (7 รายการ)
+
+| เมนู                                | ฟังก์ชัน                          | คำอธิบาย              |
+| ----------------------------------- | --------------------------------- | --------------------- |
+| ✅ ตรวจสอบ System Integrity         | `checkSystemIntegrity()`          | ตรวจชีตครบไหม         |
+| 🛡️ [PH2] Preflight Audit            | `runPreflightAudit()`             | ตรวจสอบก่อนรัน        |
+| 🔍 [V6] Pipeline Preflight (Strict) | `runPipelinePreflightStrict_UI()` | ตรวจสอบเข้มงวดก่อนรัน |
+| 🔍 วินิจฉัย Pipeline                | `diagnoseSystemState()`           | วินิจฉัยปัญหา         |
+| 🧹 [PH2] Detect Duplicates          | `detectDoubleProcessing()`        | ตรวจข้อมูลซ้ำ         |
+| 🔍 [V6] Dedup Audit (Person)        | `runDedupAuditPerson_UI()`        | ตรวจข้อมูล Person ซ้ำ |
+| 🔍 [V6] Dedup Audit (Place)         | `runDedupAuditPlace_UI()`         | ตรวจข้อมูล Place ซ้ำ  |
+
+#### 🧹 ล้าง & Cleanup (5 รายการ)
+
+| เมนู                                 | ฟังก์ชัน                         | คำอธิบาย                      |
+| ------------------------------------ | -------------------------------- | ----------------------------- |
+| 🔄 รีเซ็ตสถานะ SYNC                  | `resetSourceSyncStatus()`        | ล้าง SYNC_STATUS เพื่อรันใหม่ |
+| 🧹 ล้างความจำระบบ                    | `invalidateAllGlobalCaches()`    | เคลียร์ RAM Cache             |
+| 🧹 [V6] ลบ Trigger ค้าง (Cleanup)    | `cleanupStaleTriggers_UI()`      | ลบ trigger ค้าง               |
+| 🧹 [V6] Cleanup Auto-Resume Triggers | `cleanupAutoResumeTriggers_UI()` | ลบ auto-resume triggers       |
+| 📜 [V6] Prune Audit Trail (90 วัน)   | `cleanupAuditTrail_UI()`         | ลบ audit trail เก่า           |
+
+#### 📸 Snapshot & ข้อมูล (4 รายการ)
+
+| เมนู                                    | ฟังก์ชัน                     | คำอธิบาย                               |
+| --------------------------------------- | ---------------------------- | -------------------------------------- |
+| 📖 ดู Version Info                      | `showVersionInfo()`          | แสดงเวอร์ชัน (V6.0.073+ dynamic)       |
+| 📸 [V6.0.028] Snapshot — Save Baseline  | `snapshotSaveBaseline_UI()`  | บันทึก baseline สำหรับ regression test |
+| 📸 [V6.0.028] Snapshot — Compare        | `snapshotCompare_UI()`       | เปรียบเทียบกับ baseline                |
+| 📸 [V6.0.028] Snapshot — Clear Baseline | `snapshotClearBaseline_UI()` | ล้าง baseline                          |
 
 ---
 
@@ -580,7 +608,7 @@ Hybrid Alias เป็นระบบจดจำชื่อแฝงแบบ�
 
 ### การจัดการความปลอดภัย (V5.5.004 → V5.5.017 SECURITY-POSTFIX, SEC-001→012)
 
-ระบบ LMDS V5.5.004 (ปัจจุบัน V6.0.072) เพิ่มชั้นความปลอดภัย 12 ด้าน (SEC-001→012):
+ระบบ LMDS V5.5.004 (ปัจจุบัน V6.0.075) เพิ่มชั้นความปลอดภัย 12 ด้าน (SEC-001→012):
 
 1. **Secret Management (SEC-001)** — Cookie และ API Key เก็บใน PropertiesService ไม่ใช่ Spreadsheet Cell
 2. **Authorization Guard (SEC-002, deny-by-default)** — 13/13 Destructive Operations ต้องผ่าน `isAuthorizedUser_()` ก่อนดำเนินการ
@@ -687,4 +715,4 @@ Hybrid Alias เป็นระบบจดจำชื่อแฝงแบบ�
 
 ---
 
-> **เอกสารนี้จัดทำโดย AI Assistant** | เวอร์ชัน: V6.0.072 | อัปเดตล่าสุด: 2026-07-22
+> **เอกสารนี้จัดทำโดย AI Assistant** | เวอร์ชัน: V6.0.075 | อัปเดตล่าสุด: 2026-07-25
