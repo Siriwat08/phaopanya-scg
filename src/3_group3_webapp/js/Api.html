@@ -172,6 +172,13 @@
       submitReviewDecision: (reviewId, decision, note) => promisify_('submitReviewDecision', reviewId, decision, note),
 
       /**
+       * submitBulkReviewDecisions — [V6.0.077] Bulk approve/reject multiple reviews at once
+       * @param {Array<{reviewId: string, decision: string, note?: string}>} decisions
+       * @return {Promise<{ok, totalRequested, totalSuccess, totalFailed, results, message}>}
+       */
+      submitBulkReviewDecisions: (decisions) => promisify_('submitBulkReviewDecisions', decisions),
+
+      /**
        * getReviewDetail — Phase 2: ดึงรายละเอียดเต็มของ review item
        *   รวม source row + candidate persons/places/destinations + distance
        * @param {string} reviewId

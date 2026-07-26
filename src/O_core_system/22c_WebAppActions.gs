@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.075
+ * VERSION: 6.0.077
  * FILE: 22c_WebAppActions.gs
  * LMDS V6.0 — Web App Actions
  * ===================================================
@@ -277,6 +277,234 @@ function submitReviewDecision(reviewId, decision, note) {
   } finally {
     // [V6.0.009 P2.1] Always release lock — ใช้ shared helper
     releaseScriptLock_(lock);
+  }
+}
+
+/**
+ * submitBulkReviewDecisions — [V6.0.077] Bulk approve/reject multiple review items in one call
+ *   ลดเวลารอจากการกดทีละรายการ → กดครั้งเดียวสำหรับหลายรายการ
+ *
+ *   ใช้ single LockService acquisition สำหรับทั้ง batch (ไม่ใช่ lock ทีละรายการ)
+ *   ประมวลผลตามลำดับ ถ้ารายการใด fail → บันทึก error แล้วไปต่อ (partial success)
+ *
+ * @param {Array<{reviewId: string, decision: string, note?: string}>} decisions — array of decision objects
+ *   decision values: 'CREATE_NEW' | 'MERGE_TO_CANDIDATE' | 'IGNORE' | 'ESCALATE'
+ * @return {Object} { ok, totalRequested, totalSuccess, totalFailed, results: [...], message }
+ */
+function submitBulkReviewDecisions(decisions) {
+  if (!isAuthorizedDashboardUser_()) throw new Error('Unauthorized');
+  if (typeof requirePermission_ === 'function') requirePermission_('action:approve_review');
+
+  // [V6.0.077] Validate input
+  const validation = validateInput_(
+    { decisions: decisions },
+    {
+      decisions: { type: 'array', required: true, minLength: 1, maxLength: 50 }
+    }
+  );
+  if (!validation.valid) {
+    return { ok: false, message: validation.errors.join('; '), totalRequested: 0, totalSuccess: 0, totalFailed: 0 };
+  }
+  const sanitizedDecisions = validation.sanitized.decisions;
+
+  // [V6.0.077] Single LockService for entire batch — ลด API calls จาก N locks → 1 lock
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    logWarn('WebApp', 'submitBulkReviewDecisions: lock not acquired — another bulk submit in progress');
+    return {
+      ok: false,
+      message: 'กำลังประมวลผล bulk review อื่นอยู่ กรุณารอสักครู่แล้วลองอีกครั้ง',
+      code: 'LOCK_BUSY',
+      totalRequested: sanitizedDecisions.length,
+      totalSuccess: 0,
+      totalFailed: sanitizedDecisions.length
+    };
+  }
+
+  const results = [];
+  let totalSuccess = 0;
+  let totalFailed = 0;
+  const pendingFactRows = [];
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
+    if (!sheet) {
+      return {
+        ok: false,
+        message: 'ไม่พบ sheet Q_REVIEW',
+        totalRequested: sanitizedDecisions.length,
+        totalSuccess: 0,
+        totalFailed: sanitizedDecisions.length
+      };
+    }
+
+    // [V6.0.077] Read Q_REVIEW once (not per-decision) — batch read
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return {
+        ok: false,
+        message: 'Q_REVIEW ว่าง',
+        totalRequested: sanitizedDecisions.length,
+        totalSuccess: 0,
+        totalFailed: sanitizedDecisions.length
+      };
+    }
+    const allData = sheet.getRange(2, 1, lastRow - 1, SCHEMA[SHEET.Q_REVIEW].length).getValues();
+
+    // Build reviewId → rowIndex map for O(1) lookup
+    const reviewIndexMap = {};
+    for (let i = 0; i < allData.length; i++) {
+      const rid = String(allData[i][REVIEW_IDX.REVIEW_ID] || '').trim();
+      if (rid) reviewIndexMap[rid] = i + 2; // +2 because row 2 is first data row
+    }
+
+    const batchNow = new Date();
+    const factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
+    const factSchemaLen = SCHEMA[SHEET.FACT_DELIVERY].length;
+    const factSheetCols = factSheet ? Math.min(factSchemaLen, factSheet.getLastColumn()) : 0;
+
+    // [V6.0.077] Process each decision
+    for (let i = 0; i < sanitizedDecisions.length; i++) {
+      const item = sanitizedDecisions[i];
+      const reviewId = String(item.reviewId || '').trim();
+      const decision = String(item.decision || '').trim();
+      const note = String(item.note || '').trim();
+
+      // Validate decision enum
+      if (!['CREATE_NEW', 'MERGE_TO_CANDIDATE', 'IGNORE', 'ESCALATE'].includes(decision)) {
+        results.push({ reviewId: reviewId, ok: false, message: 'Invalid decision: ' + decision });
+        totalFailed++;
+        continue;
+      }
+
+      // Find row
+      const targetRow = reviewIndexMap[reviewId];
+      if (!targetRow) {
+        results.push({ reviewId: reviewId, ok: false, message: 'ไม่พบ reviewId' });
+        totalFailed++;
+        continue;
+      }
+
+      // Check if already processed
+      const rowData = allData[targetRow - 2];
+      const currentStatus = String(rowData[REVIEW_IDX.STATUS] || '')
+        .trim()
+        .toLowerCase();
+      if (['approved', 'rejected', 'done', 'escalated'].includes(currentStatus)) {
+        results.push({
+          reviewId: reviewId,
+          ok: false,
+          message: 'รายการนี้ถูกตัดสินใจแล้ว (status=' + currentStatus + ')'
+        });
+        totalFailed++;
+        continue;
+      }
+
+      try {
+        // Add note if provided
+        if (note) {
+          rowData[REVIEW_IDX.NOTE] = note;
+        }
+
+        const originalStatus = String(rowData[REVIEW_IDX.STATUS] || '').trim();
+        const result = applyReviewDecision(reviewId, decision, rowData, targetRow);
+
+        // [V6.0.077] Batch FACT_DELIVERY writes — collect rows, write once after loop
+        if (result && result.factRowData && factSheet) {
+          pendingFactRows.push(
+            factSheetCols === factSchemaLen ? result.factRowData : result.factRowData.slice(0, factSheetCols)
+          );
+        }
+
+        // Update Q_REVIEW status + reviewer + decision (batch update later)
+        rowData[REVIEW_IDX.STATUS] = 'Done';
+        rowData[REVIEW_IDX.REVIEWED_AT] = batchNow;
+        rowData[REVIEW_IDX.REVIEWER] = (getCurrentDashboardUser_() || {}).email || 'bulk';
+        rowData[REVIEW_IDX.DECISION] = decision;
+        sheet.getRange(targetRow, 1, 1, SCHEMA[SHEET.Q_REVIEW].length).setValues([rowData]);
+
+        results.push({
+          reviewId: reviewId,
+          ok: true,
+          message: 'บันทึกสำเร็จ',
+          decision: decision,
+          factRowWritten: !!(result && result.factRowData)
+        });
+        totalSuccess++;
+      } catch (itemErr) {
+        logError('WebApp', 'submitBulkReviewDecisions: item ' + reviewId + ' failed: ' + itemErr.message, itemErr);
+        results.push({ reviewId: reviewId, ok: false, message: itemErr.message });
+        totalFailed++;
+      }
+    }
+
+    // [V6.0.077] Batch write FACT_DELIVERY rows — เขียนทั้งหมดครั้งเดียว
+    if (pendingFactRows.length > 0 && factSheet) {
+      try {
+        factSheet
+          .getRange(factSheet.getLastRow() + 1, 1, pendingFactRows.length, factSheetCols)
+          .setValues(pendingFactRows);
+        if (typeof invalidateFactInvoiceCache_ === 'function') invalidateFactInvoiceCache_();
+        logInfo('WebApp', 'submitBulkReviewDecisions: เขียน FACT_DELIVERY ' + pendingFactRows.length + ' แถว');
+      } catch (factErr) {
+        logError('WebApp', 'submitBulkReviewDecisions: FACT_DELIVERY batch write failed: ' + factErr.message, factErr);
+      }
+    }
+
+    // [V6.0.077] Alias enrichment for batch
+    if (pendingFactRows.length > 0 && typeof autoEnrichAliasesFromFactBatch_ === 'function') {
+      try {
+        autoEnrichAliasesFromFactBatch_(pendingFactRows);
+      } catch (enrichErr) {
+        logError(
+          'WebApp',
+          'submitBulkReviewDecisions: autoEnrich failed (non-blocking): ' + enrichErr.message,
+          enrichErr
+        );
+      }
+    }
+
+    const msg =
+      'Bulk ประมวลผล ' +
+      totalSuccess +
+      '/' +
+      sanitizedDecisions.length +
+      ' รายการสำเร็จ' +
+      (totalFailed > 0 ? ' (' + totalFailed + ' ล้มเหลว)' : '');
+
+    logInfo(
+      'WebApp',
+      'submitBulkReviewDecisions: ' +
+        maskEmailSafe_((getCurrentDashboardUser_() || {}).email || '') +
+        ' → ' +
+        totalSuccess +
+        '/' +
+        sanitizedDecisions.length +
+        ' success'
+    );
+
+    return {
+      ok: totalFailed === 0,
+      totalRequested: sanitizedDecisions.length,
+      totalSuccess: totalSuccess,
+      totalFailed: totalFailed,
+      results: results,
+      message: msg
+    };
+  } catch (err) {
+    logError('WebApp', 'submitBulkReviewDecisions ล้มเหลว: ' + err.message, err);
+    return {
+      ok: false,
+      message: err.message || 'Unknown error',
+      totalRequested: sanitizedDecisions.length,
+      totalSuccess: totalSuccess,
+      totalFailed: totalFailed,
+      results: results
+    };
+  } finally {
+    releaseScriptLock_(lock);
+    if (typeof flushLogBuffer_ === 'function') flushLogBuffer_();
   }
 }
 
