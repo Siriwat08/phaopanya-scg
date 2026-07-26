@@ -65,3 +65,4 @@ temp/
 #   After applying fixes, delete the folder — don't keep AI reports in production codebase.
 Quick file check/
 Quick file check_*/
+audit/
