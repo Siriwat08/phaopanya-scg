@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.077
+ * VERSION: 6.0.078
  * FILE: 22b_WebAppViews.gs
  * LMDS V6.0 — Web App View Data Providers
  * ===================================================

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.077
+ * VERSION: 6.0.078
  * FILE: 10f_MatchAliasEnrichment.gs
  * LMDS V6.0 — Match Alias Enrichment (Single Writer Pattern for M_ALIAS)
  * ===================================================
@@ -109,6 +109,16 @@ function resetAliasEnrichmentContext_() {
 function autoEnrichAliasesFromFactBatch_(factBatch) {
   if (!factBatch || factBatch.length === 0) return;
 
+  // [V6.0.078] P1 F-02: LockService guard (audit RT-004)
+  //   Callers (10_MatchEngine, 12_ReviewService, 22c_WebAppActions) ถือ lock อยู่แล้ว
+  //   แต่ถ้าถูกเรียกโดยตรง → ขอ lock ใหม่ป้องกัน race condition บน M_ALIAS
+  //   GAS LockService เป็น re-entrant → tryLock จะ return true ทันทีถ้า same execution
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    logWarn('MatchEngine', 'autoEnrichAliasesFromFactBatch_: lock busy — ข้าม auto-enrich');
+    return;
+  }
+
   try {
     // 1. เตรียมข้อมูล (Extract Data Loading)
     const context = prepareAliasEnrichmentData_();
@@ -139,6 +149,9 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
   } catch (err) {
     logError('autoEnrichAliasesFromFactBatch_', err.message, err);
     throw err;
+  } finally {
+    // [V6.0.078] P1 F-02: Release lock
+    releaseScriptLock_(lock);
   }
 }
 
