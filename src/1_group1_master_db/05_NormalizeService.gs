@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.077
+ * VERSION: 6.0.078
  * FILE: 05_NormalizeService.gs
  * LMDS V6.0 — Thai Name & Place Normalization
  * ===================================================
@@ -1145,9 +1145,22 @@ function storeNote_(entityType, entityId, noteType, noteValue, noteRaw, source, 
       true
     ];
 
-    const lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
-    return noteId;
+    // [V6.0.078] P1 F-02: LockService guard for storeNote_ (audit RT-004)
+    //   ถ้าถูกเรียกจาก caller ที่ถือ lock อยู่แล้ว → tryLock จะ return true ทันที (re-entrant)
+    //   ถ้าถูกเรียกโดยตรง (ไม่มี lock) → ขอ lock ใหม่ ป้องกัน race condition
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(5000)) {
+      logWarn('NormalizeService', 'storeNote_: lock busy — ข้ามการบันทึก note');
+      return null;
+    }
+
+    try {
+      const lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
+      return noteId;
+    } finally {
+      releaseScriptLock_(lock);
+    }
   } catch (err) {
     logError('NormalizeService', `storeNote_ ล้มเหลว: ${err.message}`, err);
     return null;
