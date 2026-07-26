@@ -3,8 +3,9 @@
 # 📋 TODO — Pending Recommendations from AI Reviews
 
 > Track ทุกข้อเสนอที่ยังไม่ได้ทำ จาก AI reviewers ทั้งหมด
-> อัปเดต: 2026-07-23 | เวอร์ชั่น repo ปัจจุบัน: V6.0.072 (PR #191/#192/#193 merged) — รอ V6.0.073 Sprint 0
-> ⚠️ WebApp ที่ deploy จริงยังเป็น V6.0.069 — ต้อง deploy V6.0.072 ขึ้น production (รวม 070+071+072)
+> อัปเดต: 2026-07-26 | เวอร์ชั่น repo ปัจจุบัน: V6.0.075 (PR #202) + docs V6.0.076 (PR #203)
+> 📦 v1.0-submit DoD: ดู `SUBMIT_EVIDENCE.md` สำหรับหลักฐานการส่งมอบ
+> ⚠️ WebApp ที่ deploy จริงยังเป็น V6.0.069 — ต้อง deploy V6.0.075 ขึ้น production (P0 blocker)
 
 ---
 
