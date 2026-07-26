@@ -164,6 +164,22 @@
       }
 
       let html = '<div class="bg-white border border-gray-200 rounded-lg overflow-hidden">';
+
+      // [V6.0.077] Bulk action toolbar — แสดงเฉพาะ Pending tab
+      if (statusFilter === 'Pending') {
+        html +=
+          '<div id="qreview-bulk-bar" class="bg-blue-50 border-b border-blue-200 px-4 py-2 flex items-center gap-3">';
+        html += '<span class="text-sm font-medium text-blue-700">📋 Bulk Actions:</span>';
+        html += '<span id="qreview-selected-count" class="text-xs text-blue-600">เลือก 0 รายการ</span>';
+        html +=
+          '<button type="button" id="qreview-bulk-approve" class="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>✓ อนุมัติที่เลือก</button>';
+        html +=
+          '<button type="button" id="qreview-bulk-reject" class="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>✕ ปฏิเสธที่เลือก</button>';
+        html +=
+          '<button type="button" id="qreview-bulk-escalate" class="px-3 py-1.5 bg-orange-100 text-orange-700 text-xs rounded hover:bg-orange-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>⇪ ส่งต่อที่เลือก</button>';
+        html += '</div>';
+      }
+
       html += '<div class="overflow-x-auto">';
       html += '<table class="w-full text-sm">';
       html += buildTableHeader_();
@@ -178,6 +194,7 @@
       return (
         '<thead class="bg-gray-50 border-b border-gray-200">' +
         '<tr>' +
+        '<th class="px-2 py-2 text-center"><input type="checkbox" id="qreview-select-all" class="rounded border-gray-300" title="เลือกทั้งหมด" /></th>' +
         '<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Issue</th>' +
         '<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>' +
         '<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ชื่อ/สถานที่</th>' +
@@ -293,6 +310,15 @@
         '<tr class="hover:bg-gray-50 cursor-pointer qreview-row" data-review-id="' +
         escapeHtml_(row.reviewId) +
         '">' +
+        '<td class="px-2 py-2 text-center">' +
+        (isPending
+          ? '<input type="checkbox" class="qreview-row-checkbox rounded border-gray-300" data-review-id="' +
+            escapeHtml_(row.reviewId) +
+            '" data-approve-decision="' +
+            escapeHtml_(approveDecision) +
+            '" />'
+          : '<span class="text-gray-300">—</span>') +
+        '</td>' +
         '<td class="px-3 py-2">' +
         '<div class="flex items-center gap-1.5">' +
         '<span class="text-base">' +
@@ -456,6 +482,53 @@
           loadPage_(offset);
         });
       });
+
+      // [V6.0.077] Bulk action: Select All checkbox
+      const selectAll = container.querySelector('#qreview-select-all');
+      if (selectAll) {
+        selectAll.addEventListener('change', function () {
+          const checkboxes = container.querySelectorAll('.qreview-row-checkbox');
+          checkboxes.forEach(function (cb) {
+            cb.checked = selectAll.checked;
+          });
+          updateBulkBar_(container);
+        });
+      }
+
+      // [V6.0.077] Bulk action: individual checkbox change → update bar
+      const rowCheckboxes = container.querySelectorAll('.qreview-row-checkbox');
+      rowCheckboxes.forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          updateBulkBar_(container);
+        });
+        // [V6.0.077] Prevent row click (expand detail) when clicking checkbox
+        cb.addEventListener('click', function (e) {
+          e.stopPropagation();
+        });
+      });
+
+      // [V6.0.077] Bulk action: Approve / Reject / Escalate buttons
+      const bulkApprove = container.querySelector('#qreview-bulk-approve');
+      if (bulkApprove) {
+        bulkApprove.addEventListener('click', function () {
+          handleBulkDecision_(container, 'approve');
+        });
+      }
+      const bulkReject = container.querySelector('#qreview-bulk-reject');
+      if (bulkReject) {
+        bulkReject.addEventListener('click', function () {
+          handleBulkDecision_(container, 'reject');
+        });
+      }
+      const bulkEscalate = container.querySelector('#qreview-bulk-escalate');
+      if (bulkEscalate) {
+        bulkEscalate.addEventListener('click', function () {
+          handleBulkDecision_(container, 'escalate');
+        });
+      }
+
+      // [V6.0.077] Initial bulk bar state
+      updateBulkBar_(container);
 
       // [Phase 2.2] Click row to expand detail panel
       const rows = container.querySelectorAll('.qreview-row');
@@ -900,6 +973,113 @@
       // Render lucide icons
       if (globalThis.lucide && typeof globalThis.lucide.createIcons === 'function') {
         globalThis.lucide.createIcons();
+      }
+    }
+
+    /**
+     * updateBulkBar_ — [V6.0.077] อัปเดต bulk action bar (count + enable/disable buttons)
+     * @param {HTMLElement} container
+     * @private
+     */
+    function updateBulkBar_(container) {
+      const checkboxes = container.querySelectorAll('.qreview-row-checkbox:checked');
+      const count = checkboxes.length;
+      const countEl = container.querySelector('#qreview-selected-count');
+      if (countEl) {
+        countEl.textContent = 'เลือก ' + count + ' รายการ';
+      }
+      const buttons = container.querySelectorAll('#qreview-bulk-approve, #qreview-bulk-reject, #qreview-bulk-escalate');
+      buttons.forEach(function (btn) {
+        btn.disabled = count === 0;
+      });
+    }
+
+    /**
+     * handleBulkDecision_ — [V6.0.077] รวบรวม checkbox ที่เลือก → ส่ง bulk request
+     * @param {HTMLElement} container
+     * @param {string} actionType — 'approve' | 'reject' | 'escalate'
+     * @private
+     */
+    async function handleBulkDecision_(container, actionType) {
+      const checkboxes = container.querySelectorAll('.qreview-row-checkbox:checked');
+      if (checkboxes.length === 0) return;
+
+      // Map actionType → decision value
+      const decisionMap = {
+        approve: '__auto__',
+        reject: 'IGNORE',
+        escalate: 'ESCALATE'
+      };
+
+      // Build decisions array — for approve, use each row's recommended decision
+      const decisions = [];
+      checkboxes.forEach(function (cb) {
+        const reviewId = cb.dataset.reviewId;
+        let decision = decisionMap[actionType];
+        if (actionType === 'approve') {
+          // Use row's recommended decision (CREATE_NEW or MERGE_TO_CANDIDATE)
+          decision = cb.dataset.approveDecision || 'CREATE_NEW';
+        }
+        decisions.push({ reviewId: reviewId, decision: decision });
+      });
+
+      // Confirm
+      const actionLabel = {
+        approve: 'อนุมัติ',
+        reject: 'ปฏิเสธ',
+        escalate: 'ส่งต่อ'
+      };
+      const confirmMsg =
+        'ยืนยัน' +
+        actionLabel[actionType] +
+        ' ' +
+        decisions.length +
+        ' รายการพร้อมกัน?\n' +
+        'ระบบจะประมวลผลทั้งหมดในครั้งเดียว (อาจใช้เวลา 10-30 วินาที)';
+      if (!globalThis.confirm(confirmMsg)) return;
+
+      // Disable bulk buttons + show overlay
+      const bulkBtns = container.querySelectorAll(
+        '#qreview-bulk-approve, #qreview-bulk-reject, #qreview-bulk-escalate'
+      );
+      bulkBtns.forEach(function (b) {
+        b.disabled = true;
+      });
+
+      const overlay = document.createElement('div');
+      overlay.id = 'qreview-bulk-overlay';
+      overlay.style.cssText =
+        'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);z-index:9999;' +
+        'display:flex;align-items:center;justify-content:center;cursor:wait;';
+      overlay.innerHTML =
+        '<div style="background:white;padding:24px 48px;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);">' +
+        '<div style="display:inline-block;width:24px;height:24px;border:3px solid #3b82f6;border-top:transparent;border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:12px;"></div>' +
+        '<span style="font-size:14px;color:#374151;">กำลัง' +
+        actionLabel[actionType] +
+        ' ' +
+        decisions.length +
+        ' รายการ...</span>' +
+        '</div>';
+      document.body.appendChild(overlay);
+
+      try {
+        // [V6.0.077] Call new bulk endpoint
+        const result = await globalThis.api.submitBulkReviewDecisions(decisions);
+        if (result && result.totalSuccess > 0) {
+          const msg = result.message || 'สำเร็จ ' + result.totalSuccess + '/' + result.totalRequested;
+          showToast_('✅ Bulk สำเร็จ', msg, 'success', 5000);
+          // Refresh page
+          loadPage_(currentOffset);
+        } else {
+          const msg = (result && result.message) || 'ไม่สามารถประมวลผลได้';
+          showToast_('ล้มเหลว', msg, 'error', 5000);
+        }
+      } catch (err) {
+        console.error('[QReviewView] handleBulkDecision_ failed:', err);
+        showToast_('ล้มเหลว', err.message, 'error', 5000);
+      } finally {
+        const ov = document.getElementById('qreview-bulk-overlay');
+        if (ov) ov.remove();
       }
     }
 
