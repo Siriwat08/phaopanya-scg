@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.078
+ * VERSION: 6.0.080
  * FILE: 09_DestinationService.gs
  * LMDS V6.0 — Destination Master Service
  * ===================================================
@@ -68,11 +68,11 @@ function resolveDestination(personId, placeId, geoId) {
     return { destId: exactMatch.destId, status: 'FOUND', isNew: false };
   }
 
-  // Partial Match (Person + Geo) — fallback กรณียังไม่รู้ Place
-  const partialMatch = allDests.find((d) => d.personId === pId && d.geoId === gId);
-  if (partialMatch) {
-    return { destId: partialMatch.destId, status: 'PARTIAL_MATCH', isNew: false };
-  }
+  // [V6.0.080] P0-4: ลบ PARTIAL_MATCH fallback — ห้ามคืน destId เมื่อ placeId ไม่ตรง
+  //   สาเหตุ: ถ้ามี destination (P1, PL1, G1) แล้วแถวใหม่มา (P1, PL2, G1)
+  //   partialMatch จะคืน destId ของ PL1 → FACT เขียน place_id=PL2 แต่ dest_id ชี้ PL1
+  //   → รายงานที่ join ตาม destination จะผิดทั้งหมด
+  //   วิธีแก้: ไม่คืน PARTIAL_MATCH เป็น destId — ให้ caller ตัดสินใจเอง (สร้างใหม่ หรือส่ง REVIEW)
 
   return { destId: null, status: 'NOT_FOUND', isNew: false };
 }
@@ -88,7 +88,26 @@ function resolveDestination(personId, placeId, geoId) {
  */
 function createDestination(personId, placeId, geoId, lat, lng, deliveryDate) {
   try {
-    // [V6.0.063] AuthZ + LockService guard (Reviewer #3 AUD3-SEC-002 + AUD3-NEW-010)
+    // [V6.0.080] P0-5: บังคับ Trinity เต็ม — ห้ามสร้าง destination ที่ placeId ว่าง
+    //   สาเหตุ: resolveDestination() ปฏิเสธ placeId ว่าง (line 48) แต่ createDestination()
+    //   ยอมรับ (line 125: placeId || '') → สร้าง destination ที่ resolver หาไม่เจอ
+    //   → duplicate สะสมทุกครั้งที่ retry
+    //   วิธีแก้: ถ้า placeId ว่าง → คืน null (caller ตัดสินใจเอง: destId=null หรือส่ง REVIEW)
+    if (!personId || !placeId || !geoId) {
+      logWarn(
+        'DestinationService',
+        'createDestination: ปฏิเสธ — Trinity ไม่ครบ (personId=' +
+          personId +
+          ', placeId=' +
+          placeId +
+          ', geoId=' +
+          geoId +
+          ')'
+      );
+      return null;
+    }
+
+    // [V6.0.063] AuthZ + LockService guard
     if (!isAuthorizedOrFail_()) {
       throw new Error('SEC-002: Unauthorized createDestination attempt');
     }

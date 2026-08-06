@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.078
+ * VERSION: 6.0.080
  * FILE: 11_TransactionService.gs
  * LMDS V6.0 — FACT_DELIVERY Transaction Service
  * ===================================================
@@ -277,6 +277,16 @@ function factCreateRow_(
   newRow[FACT_IDX.DRIVER_VERIFIED_ADDR] = srcObj.driverVerifiedAddr || '';
 
   // [RULE 4] คืนค่าแถวเพื่อให้ caller ทำ batch write แทน appendRow ในลูป
+  // [V6.0.080] P0-3: เพิ่ม invoice ใหม่เข้า RAM cache ทันที เพื่อป้องกัน duplicate
+  //   ใน batch เดียวกัน (ถ้า source มี invoice ซ้ำ 2 แถว → แถวที่ 2 จะเจอใน cache → UPDATE แทน INSERT)
+  if (_FACT_INVOICE_RAM_CACHE && srcObj.invoiceNo) {
+    const normInvoice = normalizeInvoiceNo(srcObj.invoiceNo);
+    if (normInvoice) {
+      // ใช้ negative number เพื่อ mark ว่าเป็น "pending row" (ยังไม่ได้เขียนลง sheet)
+      // caller จะเขียนจริงใน batch flush — แถวจริงจะได้ row number จริงหลัง flush
+      _FACT_INVOICE_RAM_CACHE.set(normInvoice, -1);
+    }
+  }
   return { txId: txId, isNew: true, rowData: newRow };
 }
 

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.078
+ * VERSION: 6.0.080
  * FILE: 12_ReviewService.gs
  * LMDS V6.0 — Review Queue Service
  * ===================================================
@@ -236,7 +236,7 @@ function applyAllPendingDecisions() {
     let reviewer;
     try {
       // [SEC-007] Mask reviewer email สำหรับ Audit Trail
-      const rawEmail = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || 'Admin';
+      const rawEmail = Session.getActiveUser().getEmail() || 'Admin';
       reviewer = maskReviewerEmail_(rawEmail);
     } catch (e) {
       reviewer = 'Admin (Auto)';
@@ -452,7 +452,7 @@ function applyReviewDecision(reviewId, decisionVal, rowData, optTargetRow) {
     // [FIX CodeQL js/useless-assignment-to-local V5.5.035] ไม่กำหนดค่าเริ่มต้น — try/catch จะกำหนดให้แน่
     let reviewer;
     try {
-      const rawEmail = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || 'Admin';
+      const rawEmail = Session.getActiveUser().getEmail() || 'Admin';
       reviewer = maskReviewerEmail_(rawEmail);
     } catch (e) {
       reviewer = 'Admin (Auto)';
@@ -909,9 +909,7 @@ function markAsNegativeSample_(rowData) {
 
     let markedBy = 'Admin';
     try {
-      markedBy = maskReviewerEmail_(
-        Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || 'Admin'
-      );
+      markedBy = maskReviewerEmail_(Session.getActiveUser().getEmail() || 'Admin');
     } catch (e) {
       /* ignore — WebApp context may not expose email */
     }

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.078
+ * VERSION: 6.0.080
  * FILE: 22_WebApp.gs
  * LMDS V6.0 — Web App Server (Dashboard)
  * ===================================================
@@ -129,16 +129,17 @@ function include_(filename) {
  */
 function isAuthorizedDashboardUser_() {
   try {
-    // [FIX WebApp] ใช้ effectiveUser เป็นหลัก เพราะ executeAs=USER_DEPLOYING
-    //   สาเหตุ: Session.getActiveUser() ใน Web App context (access=ANYONE)
-    //   มักจะคืนค่าว่าง เพราะผู้ใช้อาจไม่ได้ login ด้วย Google Account
-    //   แต่ effectiveUser จะเป็น email ของเจ้าของ Apps Script เสมอ (เพราะ executeAs=USER_DEPLOYING)
-    const email = String(Session.getEffectiveUser().getEmail() || '')
+    // [V6.0.080] P0-1 CRITICAL FIX: ใช้ getActiveUser() แทน getEffectiveUser()
+    //   สาเหตุ: executeAs=USER_DEPLOYING ทำให้ getEffectiveUser() คืน email
+    //   ของเจ้าของสคริปต์เสมอ ไม่ว่าใครจะเข้าใช้ → auth bypass ทั้งระบบ
+    //   getActiveUser() คืน email ของผู้เข้าชมจริง (ต้อง login Google)
+    //   ถ้า access=MYSELF หรือไม่ได้ login → คืนค่าว่าง → deny
+    const email = String(Session.getActiveUser().getEmail() || '')
       .trim()
       .toLowerCase();
 
-    // [V6.0.067] PII masking — mask email + downgrade to logDebug (Reviewer #1+#2 Round 3)
-    logDebug('WebApp', '[Auth DEBUG] effectiveUser="' + maskEmailSafe_(email) + '"');
+    // [V6.0.067] PII masking — mask email + downgrade to logDebug
+    logDebug('WebApp', '[Auth DEBUG] activeUser="' + maskEmailSafe_(email) + '"');
 
     if (!email) {
       // [FIX BUG-PM-003 V5.5.041] เปลี่ยนเป็น Deny-by-default
@@ -201,8 +202,9 @@ function isAuthorizedDashboardUser_() {
  * @return {Object} { authorized, email, name, isOwner }
  */
 function getCurrentDashboardUser_() {
-  // [FIX WebApp] ใช้ effectiveUser เป็นหลัก (executeAs=USER_DEPLOYING)
-  const email = String(Session.getEffectiveUser().getEmail() || '').trim();
+  // [V6.0.080] P0-1: ใช้ getActiveUser() แทน getEffectiveUser()
+  //   เหตุผลเดียวกับ isAuthorizedDashboardUser_() — ป้องกัน auth bypass
+  const email = String(Session.getActiveUser().getEmail() || '').trim();
   let displayName = 'User';
 
   // [FIX] Session.getEffectiveUser() คืน User object ที่มีแค่ getEmail()

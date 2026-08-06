@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.078
+ * VERSION: 6.0.080
  * FILE: 10e_MatchResolvePersist.gs
  * LMDS V6.0 — Resolve & Persist for Q_REVIEW
  * ===================================================
@@ -202,7 +202,7 @@ function resolveAndPersistMerge_(srcObj, candidates, optReviewId) {
     // [V6.0.003] ดึง email ผู้ Reviewer สำหรับ verified_by field
     let verifiedBy = '';
     try {
-      verifiedBy = Session.getEffectiveUser().getEmail() || '';
+      verifiedBy = Session.getActiveUser().getEmail() || '';
     } catch (e) {
       /* WebApp context — Session may not be available */
     }
