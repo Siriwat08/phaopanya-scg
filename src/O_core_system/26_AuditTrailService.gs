@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.078
+ * VERSION: 6.0.080
  * FILE: 26_AuditTrailService.gs
  * LMDS V6.0 — Audit Trail (Critical-Only Scope)
  * ===================================================
@@ -137,7 +137,9 @@ function logAuditTrail(entityType, entityId, action, fieldChanged, oldValue, new
     // Get caller email (best effort)
     let changedBy = 'system';
     try {
-      const email = Session.getEffectiveUser().getEmail();
+      // [V6.0.080] P0-1: ใช้ getActiveUser() แทน getEffectiveUser()
+      //   เพื่อบันทึก email ของผู้กระทำจริง ไม่ใช่ email เจ้าของสคริปต์
+      const email = Session.getActiveUser().getEmail();
       if (email) changedBy = email;
     } catch (e) {
       // Keep 'system' default

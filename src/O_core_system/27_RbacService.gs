@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.078
+ * VERSION: 6.0.080
  * FILE: 27_RbacService.gs
  * LMDS V6.0 — Role-Based Access Control
  * ===================================================
@@ -64,7 +64,11 @@ const RBAC_CONFIG = Object.freeze({
  */
 function getCurrentUserRole_() {
   try {
-    const email = String(Session.getEffectiveUser().getEmail() || '')
+    // [V6.0.080] P0-2 CRITICAL FIX: ใช้ getActiveUser() แทน getEffectiveUser()
+    //   สาเหตุ: executeAs=USER_DEPLOYING ทำให้ getEffectiveUser() คืน email
+    //   ของเจ้าของสคริปต์เสมอ → ทุกคนที่เข้าใช้จะได้สิทธิ์ admin
+    //   getActiveUser() คืน email ของผู้เข้าชมจริง (ต้อง login Google)
+    const email = String(Session.getActiveUser().getEmail() || '')
       .trim()
       .toLowerCase();
     if (!email) return null;
@@ -92,7 +96,11 @@ function getCurrentUserRole_() {
       }
     });
 
-    return map[email] || RBAC_CONFIG.ROLES.VIEWER; // Default: viewer
+    // [V6.0.080] P0-2: เปลี่ยน default จาก VIEWER → null (deny-by-default)
+    //   สาเหตุ: ถ้า email ไม่อยู่ใน ROLE_ASSIGNMENTS และไม่ใช่ admin
+    //   ไม่ควรให้ viewer access โดยอัตโนมัติ — ต้องปฏิเสธก่อน
+    //   ผู้ดูแลต้องเพิ่ม email เข้า ROLE_ASSIGNMENTS หรือ DASHBOARD_USERS อย่างชัดเจน
+    return map[email] || null; // Default: null (deny-by-default)
   } catch (e) {
     logError('Rbac', 'getCurrentUserRole_ failed: ' + e.message, e);
     return null;
