@@ -407,7 +407,6 @@ function submitBulkReviewDecisions(decisions) {
           rowData[REVIEW_IDX.NOTE] = note;
         }
 
-        const originalStatus = String(rowData[REVIEW_IDX.STATUS] || '').trim();
         const result = applyReviewDecision(reviewId, decision, rowData, targetRow);
 
         // [V6.0.077] Batch FACT_DELIVERY writes — collect rows, write once after loop
