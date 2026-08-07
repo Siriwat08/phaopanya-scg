@@ -846,8 +846,7 @@ function MIGRATION_HybridAliasSystem() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const startTime = new Date();
     const timeLimit = AI_CONFIG.TIME_LIMIT_MS || 5 * 60 * 1000;
-    const timedOut = false;
-
+    // [V6.0.084] CodeQL #61: ลบ const timedOut = false — unused (P1-5 เปลี่ยนใช้ ctx.timedOut)
     const ctx = { ss: ss, state: state, startTime: startTime, timeLimit: timeLimit, timedOut: false };
     const counts = { uuidFixed: 0, migrateCount: 0, scgCount: 0, factCount: 0 };
 
