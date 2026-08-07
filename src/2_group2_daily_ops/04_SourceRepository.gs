@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.081
+ * VERSION: 6.0.082
  * FILE: 04_SourceRepository.gs
  * LMDS V6.0 — Source Data Repository
  * ===================================================
@@ -313,7 +313,13 @@ function buildSourceObj_(row, rowNum) {
     }
   }
 
-  const hasGeo = !isNaN(rawLat) && !isNaN(rawLng) && rawLat !== 0 && rawLng !== 0;
+  // [V6.0.082] P1-9: Check GPS within Thailand bounds (audit F-P1-9)
+  //   Thailand: lat 5.5-20.5, lng 97.3-105.7
+  //   กันพิกัดผิด เช่น (1,1) หรือ (0,0) ที่ผ่าน hasGeo แต่ไม่ใช่ไทย
+  const isInThailand = function (lat, lng) {
+    return lat >= 5.0 && lat <= 21.0 && lng >= 96.0 && lng <= 106.0;
+  };
+  const hasGeo = !isNaN(rawLat) && !isNaN(rawLng) && rawLat !== 0 && rawLng !== 0 && isInThailand(rawLat, rawLng);
 
   // [FIX CodeQL js/unused-local-variable V5.5.035] ลบ resolvedAddr + rawAddr ที่ไม่ถูกใช้
   // (ใช้ scgAddr + sysAddr ด้านล่างแทน — เป็นชื่อที่สื่อความหมายกว่า)
