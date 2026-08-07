@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.081
+ * VERSION: 6.0.082
  * FILE: 21_AliasService.gs
  * LMDS V6.0 — Hybrid Alias Architecture (Global M_ALIAS)
  * ===================================================
@@ -171,7 +171,11 @@ function createGlobalAlias(masterUuid, variantName, entityType, confidence, sour
 
     // ล้าง Cache เพื่อให้การค้นหาครั้งถัดไปเห็นข้อมูลใหม่
     // [FIX CRIT-002] Use CACHE_KEY constants instead of hardcoded strings — Single Source of Truth
-    CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    if (typeof invalidateChunkedCache_ === 'function') {
+      invalidateChunkedCache_(CACHE_KEY.GLOBAL_ALIAS_ALL, null, [CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    } else {
+      CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    }
 
     // [V6.0.058] Increment Layer 5 circuit breaker counter (HUMAN source only)
     if (source === 'HUMAN' && typeof incrementAliasCircuitBreakerCount_ === 'function') {
@@ -334,7 +338,11 @@ function backfillAliasAuditFields() {
       invalidateChunkedCache_(CACHE_KEY.GLOBAL_ALIAS_ALL);
       invalidateChunkedCache_(CACHE_KEY.GLOBAL_ALIAS_REVERSE);
     } else {
-      CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+      if (typeof invalidateChunkedCache_ === 'function') {
+        invalidateChunkedCache_(CACHE_KEY.GLOBAL_ALIAS_ALL, null, [CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+      } else {
+        CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+      }
     }
 
     return result;
@@ -1243,7 +1251,11 @@ function migrateEntityAliasToGlobalBatch_(
       .getRange(mAliasSheet.getLastRow() + 1, 1, newRows.length, SCHEMA[SHEET.M_ALIAS].length)
       .setValues(newRows);
     // [FIX CRIT-002] Use CACHE_KEY constants instead of hardcoded strings — Single Source of Truth
-    CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    if (typeof invalidateChunkedCache_ === 'function') {
+      invalidateChunkedCache_(CACHE_KEY.GLOBAL_ALIAS_ALL, null, [CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    } else {
+      CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    }
   }
 
   logInfo(
@@ -1467,7 +1479,11 @@ function populateAliasFromSCGRawData_() {
       .getRange(mAliasSheet.getLastRow() + 1, 1, newRows.length, SCHEMA[SHEET.M_ALIAS].length)
       .setValues(newRows);
     // [FIX CRIT-002] Use CACHE_KEY constants instead of hardcoded strings — Single Source of Truth
-    CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    if (typeof invalidateChunkedCache_ === 'function') {
+      invalidateChunkedCache_(CACHE_KEY.GLOBAL_ALIAS_ALL, null, [CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    } else {
+      CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    }
   }
 
   logInfo(
@@ -1635,7 +1651,11 @@ function populateAliasFromFactDelivery_() {
       .getRange(mAliasSheet.getLastRow() + 1, 1, newRows.length, SCHEMA[SHEET.M_ALIAS].length)
       .setValues(newRows);
     // [FIX CRIT-002] Use CACHE_KEY constants instead of hardcoded strings — Single Source of Truth
-    CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    if (typeof invalidateChunkedCache_ === 'function') {
+      invalidateChunkedCache_(CACHE_KEY.GLOBAL_ALIAS_ALL, null, [CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    } else {
+      CacheService.getScriptCache().removeAll([CACHE_KEY.GLOBAL_ALIAS_ALL, CACHE_KEY.GLOBAL_ALIAS_REVERSE]);
+    }
   }
 
   logInfo(

@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.081
+ * VERSION: 6.0.082
  * FILE: 10b_MatchDecision.gs
  * LMDS V6.0 — Match Decision Rules + Scoring + Geo Coordinate Cache
  * ===================================================
@@ -485,7 +485,15 @@ function getCandidateResolvedCoords_(entityType, entityId) {
         }
       }
     } catch (e) {
-      // Non-fatal — return null
+      // [V6.0.082] P1-10: fail-closed — log error instead of silent fail (audit F-P1-10)
+      //   เดิม: catch กลืน error แล้วปล่อย cache ว่าง → safety guard ปิดเงียบ
+      //   ใหม่: log error + mark cache as failed → caller รู้ว่า cache พัง
+      logError(
+        'MatchDecision',
+        'getCandidateResolvedCoords_: cache build failed — safety guard active: ' + e.message,
+        e
+      );
+      _CANDIDATE_COORDS_CACHE_ = { PLACE: {}, PERSON: {}, _failed: true };
     }
   }
 

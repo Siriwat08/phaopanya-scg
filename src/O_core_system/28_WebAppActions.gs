@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.081
+ * VERSION: 6.0.082
  * FILE: 28_WebAppActions.gs
  * LMDS V6.0 — Web App Actions Server (Mobile Menu)
  * ===================================================
@@ -457,6 +457,19 @@ function getWebAppActionRegistry() {
 function runWebAppAction(actionId, params) {
   const startTime = new Date();
   params = params || {};
+
+  // [V6.0.082] P1-1: Add isAuthorizedDashboardUser_() gate (audit F-P1-1)
+  //   ก่อนหน้านี้ตรวจแค่ admin สำหรับ danger actions แต่ไม่ตรวกว่า user อยู่ใน DASHBOARD_USERS หรือไม่
+  //   ทำให้ผู้ที่ไม่อยู่ใน whitelist สามารถรัน safe actions ได้
+  if (typeof isAuthorizedDashboardUser_ === 'function' && !isAuthorizedDashboardUser_()) {
+    return {
+      ok: false,
+      actionId: actionId,
+      result: null,
+      message: 'Unauthorized — ไม่อยู่ใน DASHBOARD_USERS',
+      elapsedMs: 0
+    };
+  }
 
   try {
     // 1. ค้น registry
