@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.080
+ * VERSION: 6.0.081
  * FILE: 22c_WebAppActions.gs
  * LMDS V6.0 — Web App Actions
  * ===================================================
@@ -87,7 +87,11 @@ function safeParseJsonArray_(val) {
 function submitReviewDecision(reviewId, decision, note) {
   if (!isAuthorizedDashboardUser_()) throw new Error('Unauthorized');
   // [V6.0.004] RBAC: require reviewer/admin
-  if (typeof requirePermission_ === 'function') requirePermission_('action:approve_review');
+  if (typeof requirePermission_ !== 'function') {
+    logError('Security', '[SEC-002] requirePermission_ not loaded — denying operation');
+    throw new Error('Security system not ready');
+  }
+  requirePermission_('action:approve_review');
 
   // [V6.0.055] Use centralized input validation (B2 — Security Hardening)
   const validation = validateInput_(
@@ -293,7 +297,11 @@ function submitReviewDecision(reviewId, decision, note) {
  */
 function submitBulkReviewDecisions(decisions) {
   if (!isAuthorizedDashboardUser_()) throw new Error('Unauthorized');
-  if (typeof requirePermission_ === 'function') requirePermission_('action:approve_review');
+  if (typeof requirePermission_ !== 'function') {
+    logError('Security', '[SEC-002] requirePermission_ not loaded — denying operation');
+    throw new Error('Security system not ready');
+  }
+  requirePermission_('action:approve_review');
 
   // [V6.0.077] Validate input
   const validation = validateInput_(

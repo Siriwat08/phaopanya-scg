@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.080
+ * VERSION: 6.0.081
  * FILE: 21_AliasService.gs
  * LMDS V6.0 — Hybrid Alias Architecture (Global M_ALIAS)
  * ===================================================
@@ -887,7 +887,7 @@ function MIGRATION_HybridAliasSystem() {
     const elapsedSec = Math.round((new Date() - startTime) / 1000);
     const totalMigrated = counts.migrateCount + counts.scgCount + counts.factCount;
 
-    if (!timedOut) clearMigrationCheckpoint_();
+    if (!ctx.timedOut) clearMigrationCheckpoint_();
 
     logInfo(
       'AliasService',
@@ -901,13 +901,13 @@ function MIGRATION_HybridAliasSystem() {
         counts.factCount +
         ' รวม=' +
         totalMigrated +
-        (timedOut ? ' ⚠️ TIMEOUT' : '') +
+        (ctx.timedOut ? ' ⚠️ TIMEOUT' : '') +
         ' (' +
         elapsedSec +
         's)'
     );
 
-    const reportMsg = buildMigrationReport_(state, counts, elapsedSec, totalMigrated, timedOut);
+    const reportMsg = buildMigrationReport_(state, counts, elapsedSec, totalMigrated, ctx.timedOut);
     // [FIX B2 v5.5.002] เปลี่ยน ui.alert() เป็น safeUiAlert_() — trigger-safe (Rule 4)
     safeUiAlert_(reportMsg);
   } catch (err) {
@@ -1071,7 +1071,7 @@ function migrateStep2_PersonAlias_(ss, state, startTime, timeLimit) {
       timedOut = true;
     }
   );
-  if (!timedOut) saveMigrationCheckpoint_(3, 0);
+  if (!ctx.timedOut) saveMigrationCheckpoint_(3, 0);
   return { count: count, timedOut: timedOut };
 }
 
@@ -1100,7 +1100,7 @@ function migrateStep3_PlaceAlias_(ss, state, startTime, timeLimit) {
       timedOut = true;
     }
   );
-  if (!timedOut) saveMigrationCheckpoint_(4, 0);
+  if (!ctx.timedOut) saveMigrationCheckpoint_(4, 0);
   return { count: count, timedOut: timedOut };
 }
 
@@ -1229,7 +1229,10 @@ function migrateEntityAliasToGlobalBatch_(
       matchScore,
       'V52_LEGACY_MIGRATION',
       now,
-      true
+      true,
+      '', // [V6.0.081] P1-4: verified_by (col 8)
+      '', // review_id (col 9)
+      '' // verified_at (col 10)
     ]);
     count++;
   }
@@ -1437,11 +1440,23 @@ function populateAliasFromSCGRawData_() {
     const dedupKey = matchedType + '::' + matchedUuid + '::' + normKey;
     if (existingAliasSet.has(dedupKey)) continue;
     existingAliasSet.add(dedupKey); // update in-memory กัน dup ในรอบเดียวกัน
-    newRows.push([generateShortId('A'), matchedUuid, rawName, matchedType, 90, 'SCG_RAW_IMPORT', now, true]);
+    newRows.push([
+      generateShortId('A'),
+      matchedUuid,
+      rawName,
+      matchedType,
+      90,
+      'SCG_RAW_IMPORT',
+      now,
+      true,
+      '',
+      '',
+      ''
+    ]); // [V6.0.081] P1-4: +3 cols (verified_by, review_id, verified_at)
   }
 
   // [REF-003] Clear checkpoint on completion (only if loop finished without timeout)
-  if (!timedOut) {
+  if (!ctx.timedOut) {
     clearAliasEnrichCheckpoint_('SCG_RAW');
     if (typeof removeAutoResume_ === 'function') removeAutoResume_();
   }
@@ -1593,11 +1608,23 @@ function populateAliasFromFactDelivery_() {
     const dedupKey = matchedType + '::' + matchedUuid + '::' + normKey;
     if (existingAliasSet.has(dedupKey)) continue;
     existingAliasSet.add(dedupKey);
-    newRows.push([generateShortId('A'), matchedUuid, info.rawName, matchedType, 95, 'FACT_DELIVERY_IMPORT', now, true]);
+    newRows.push([
+      generateShortId('A'),
+      matchedUuid,
+      info.rawName,
+      matchedType,
+      95,
+      'FACT_DELIVERY_IMPORT',
+      now,
+      true,
+      '',
+      '',
+      ''
+    ]); // [V6.0.081] P1-4: +3 cols (verified_by, review_id, verified_at)
   }
 
   // [REF-003] Clear checkpoint on completion (only if loop finished without timeout)
-  if (!timedOut) {
+  if (!ctx.timedOut) {
     clearAliasEnrichCheckpoint_('FACT_DELIVERY');
     if (typeof removeAutoResume_ === 'function') removeAutoResume_();
   }

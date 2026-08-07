@@ -316,7 +316,17 @@
         gray: 'bg-gray-100 text-gray-600'
       };
       const cls = colorClasses[color] || colorClasses.gray;
-      return '<span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium ' + cls + '">' + value + '</span>';
+      // [V6.0.081] P1-3: Escape value to prevent XSS (audit F-P1-3)
+      const safeValue = globalThis.ViewHelpers
+        ? globalThis.ViewHelpers.escapeHtml(String(value || ''))
+        : String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+      return (
+        '<span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium ' + cls + '">' + safeValue + '</span>'
+      );
     }
 
     return DataTable;
