@@ -138,19 +138,9 @@ function createDestination(personId, placeId, geoId, lat, lng, deliveryDate) {
         safeDate = !isNaN(parsed.getTime()) ? parsed : now;
       }
 
-      const newRow = [
-        newId,
-        personId || '',
-        placeId || '',
-        geoId || '',
-        safeLat,
-        safeLng,
-        '',
-        safeDate,
-        1,
-        now,
-        APP_CONST.STATUS_ACTIVE
-      ];
+      // [V6.0.084] CodeQL #58/59/60: Remove useless || '' — P0-5 guard ข้างบน
+      //   ตรวจ !personId || !placeId || !geoId แล้ว → ถ้ามาถึงบรรทัดนี้ = ทั้ง 3 ตัว truthy แน่นอน
+      const newRow = [newId, personId, placeId, geoId, safeLat, safeLng, '', safeDate, 1, now, APP_CONST.STATUS_ACTIVE];
 
       // [FIX-05 v5.4.003] ใช้ getRange+setValues แทน appendRow เพื่อความเสถียร
       const lastRow = sheet.getLastRow();
