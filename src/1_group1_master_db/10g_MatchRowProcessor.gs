@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.082
+ * VERSION: 6.0.083
  * FILE: 10g_MatchRowProcessor.gs
  * LMDS V6.0 — Match Row Processor (processOneRow + Decision Dispatcher)
  * ===================================================
@@ -310,6 +310,23 @@ function handleCreateNew_(srcObj, decision, personResult, placeResult, geoId, ge
     }
     if (!destId) {
       destId = createDestination(personId, placeId, geoId, srcObj.rawLat, srcObj.rawLng, srcObj.deliveryDate);
+      // [V6.0.083] P1-8: Recheck after create — prevent race condition duplicate (audit F-P1-8)
+      //   ถ้า concurrent execution สร้าง destination ซ้อนกัน → recheck หลัง create
+      //   ถ้าเจอซ้ำ → ใช้ตัวเดิม ไม่ใช้ตัวใหม่ (createDestination มี lock แต่ lookup อยู่นอก lock)
+      if (destId && typeof resolveDestination === 'function') {
+        try {
+          const recheck = resolveDestination(personId, placeId, geoId);
+          if (recheck && recheck.status === 'FOUND' && recheck.destId !== destId) {
+            logWarn(
+              'MatchEngine',
+              'handleCreateNew_: race condition detected — using earlier destination ' + recheck.destId
+            );
+            destId = recheck.destId;
+          }
+        } catch (recheckErr) {
+          // Non-fatal — keep original destId
+        }
+      }
     }
   }
 
@@ -328,10 +345,11 @@ function handleCreateNew_(srcObj, decision, personResult, placeResult, geoId, ge
  */
 function handleReview_(srcObj, decision, personResult, placeResult, geoResult) {
   const qRes = enqueueReview(srcObj, decision, personResult, placeResult, geoResult);
-  if (qRes && qRes.rowData) {
-    // [FIX CRIT-006] ใช้ 'REVIEW' แทน 'SUCCESS' — แถวยังไม่ได้ประมวลผลจริง แค่อยู่ในคิวรอตรวจ
-    updateSyncStatus_([srcObj], 'REVIEW');
-  }
+  // [V6.0.083] P1-6: ย้าย updateSyncStatus_ ไปหลัง persistReviewRows_ (audit F-P1-6)
+  //   เดิม: mark REVIEW ทันที แม้ Q_REVIEW ยังไม่ถูกเขียนจริง (อยู่ใน batch)
+  //   ใหม่: ไม่ mark status ที่นี่ — ให้ caller (persistResult_) mark หลัง flush เท่านั้น
+  //   ถ้า execution ตายก่อน flush → source ยังเป็น PENDING → จะถูกหยิบซ้ำในรอบถัดไป
+  // qRes.rowData จะถูก persist ใน persistReviewRows_() โดย caller
   return {
     txId: null,
     factData: null,

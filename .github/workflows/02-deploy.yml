@@ -353,7 +353,13 @@ jobs:
           # 1. สร้าง version ใหม่ใน Apps Script
           version_description="auto-${{ github.sha }}"
           echo "  📝 สร้าง version: $version_description"
-          clasp deploy --description "$version_description" || echo "  ⚠️ deploy ล้มเหลว — ใช้ @HEAD แทน"
+          # [V6.0.083] P1-11: ห้ามกลืน exit code (audit F-P1-11)
+          #   เดิม: || echo กลืน error → deploy ล้มเหลวแต่ CI ผ่าน
+          #   ใหม่: ตรวจ exit code จริง → fail CI ถ้า deploy ล้มเหลว
+          if ! clasp deploy --description "$version_description"; then
+            echo "::error::clasp deploy failed — aborting"
+            exit 1
+          fi
 
           # 2. [FIX] อัปเดต Web App deployment ให้ชี้ไป version ล่าสุด
           #   สาเหตุ: clasp push อัปเดตโค้ดที่ @HEAD แต่ Web App URL ใช้ version เฉพาะ

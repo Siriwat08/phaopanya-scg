@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.082
+ * VERSION: 6.0.083
  * FILE: 10_MatchEngine.gs
  * LMDS V6.0 — Core Match & Resolution Engine
  * ===================================================
@@ -664,6 +664,9 @@ function loadSourceBatch_() {
 function persistResult_(factData, reviewData) {
   persistFactRows_(factData);
   persistReviewRows_(reviewData);
+  // [V6.0.083] P1-6: Mark REVIEW status หลัง Q_REVIEW ถูกเขียนจริง (audit F-P1-6)
+  //   เดิม: handleReview_ mark REVIEW ก่อน persist → ถ้าตายก่อน flush = ข้อมูลหาย
+  //   ใหม่: mark ที่นี่หลัง persistReviewRows_ เสร็จ → ถ้าตายก่อน = source ยัง PENDING
 }
 
 /**
