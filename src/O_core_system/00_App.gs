@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.080
+ * VERSION: 6.0.081
  * FILE: 00_App.gs
  * LMDS V6.0 — Application Entry Point & Menu Controller
  * ===================================================
@@ -273,7 +273,11 @@ function runFullPipeline() {
   // [FIX CodeQL js/unused-local-variable V5.5.035] ui ไม่ถูกใช้ — ใช้ safeUiAlert_() แทน
 
   // [V6.0.010 P3.16] RBAC: require admin to run pipeline
-  if (typeof requirePermission_ === 'function') requirePermission_('action:run_pipeline');
+  if (typeof requirePermission_ !== 'function') {
+    logError('Security', '[SEC-002] requirePermission_ not loaded — denying operation');
+    throw new Error('Security system not ready');
+  }
+  requirePermission_('action:run_pipeline');
 
   // [ADD v003] LockService กัน double-click
   const lock = LockService.getScriptLock();
@@ -1269,7 +1273,11 @@ function runPipelinePreflightStrict_UI() {
 function runTestMatchDryRun_UI() {
   try {
     // RBAC: require admin to run dry-run (consistency with runFullPipeline)
-    if (typeof requirePermission_ === 'function') requirePermission_('action:run_pipeline');
+    if (typeof requirePermission_ !== 'function') {
+      logError('Security', '[SEC-002] requirePermission_ not loaded — denying operation');
+      throw new Error('Security system not ready');
+    }
+    requirePermission_('action:run_pipeline');
 
     const ui = SpreadsheetApp.getUi();
     const confirm = ui.alert(
@@ -1344,7 +1352,11 @@ function runTestMatchDryRun_UI() {
 function runTestMatchDryRunForceAll_UI() {
   try {
     // RBAC: require admin to run dry-run (consistency with runFullPipeline)
-    if (typeof requirePermission_ === 'function') requirePermission_('action:run_pipeline');
+    if (typeof requirePermission_ !== 'function') {
+      logError('Security', '[SEC-002] requirePermission_ not loaded — denying operation');
+      throw new Error('Security system not ready');
+    }
+    requirePermission_('action:run_pipeline');
 
     const ui = SpreadsheetApp.getUi();
 
@@ -1583,7 +1595,11 @@ function analyzeRule5PlaceOnlyImpact_UI() {
  */
 function snapshotSaveBaseline_UI() {
   try {
-    if (typeof requirePermission_ === 'function') requirePermission_('action:run_pipeline');
+    if (typeof requirePermission_ !== 'function') {
+      logError('Security', '[SEC-002] requirePermission_ not loaded — denying operation');
+      throw new Error('Security system not ready');
+    }
+    requirePermission_('action:run_pipeline');
 
     const ui = SpreadsheetApp.getUi();
     const confirm = ui.alert(
@@ -1622,7 +1638,11 @@ function snapshotSaveBaseline_UI() {
  */
 function snapshotCompare_UI() {
   try {
-    if (typeof requirePermission_ === 'function') requirePermission_('action:run_pipeline');
+    if (typeof requirePermission_ !== 'function') {
+      logError('Security', '[SEC-002] requirePermission_ not loaded — denying operation');
+      throw new Error('Security system not ready');
+    }
+    requirePermission_('action:run_pipeline');
 
     const result = snapshotCompare_();
     if (!result.ok && result.message.indexOf('ไม่พบ baseline') === 0) {
@@ -1685,7 +1705,11 @@ function snapshotCompare_UI() {
  */
 function snapshotClearBaseline_UI() {
   try {
-    if (typeof requirePermission_ === 'function') requirePermission_('action:run_pipeline');
+    if (typeof requirePermission_ !== 'function') {
+      logError('Security', '[SEC-002] requirePermission_ not loaded — denying operation');
+      throw new Error('Security system not ready');
+    }
+    requirePermission_('action:run_pipeline');
 
     const ui = SpreadsheetApp.getUi();
     const confirm = ui.alert(

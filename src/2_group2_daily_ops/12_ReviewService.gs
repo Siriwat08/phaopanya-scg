@@ -1,5 +1,5 @@
 /**
- * VERSION: 6.0.080
+ * VERSION: 6.0.081
  * FILE: 12_ReviewService.gs
  * LMDS V6.0 — Review Queue Service
  * ===================================================
@@ -203,7 +203,11 @@ function buildRecommendedAction_(personResult, placeResult, geoResult, decision)
 
 function applyAllPendingDecisions() {
   // [V6.0.010 P3.16] RBAC: require reviewer/admin to batch-apply decisions
-  if (typeof requirePermission_ === 'function') requirePermission_('action:approve_review');
+  if (typeof requirePermission_ !== 'function') {
+    logError('Security', '[SEC-002] requirePermission_ not loaded — denying operation');
+    throw new Error('Security system not ready');
+  }
+  requirePermission_('action:approve_review');
 
   // [PERF-008] Idiomatic LockService pattern (เหมือน fetchDataFromSCGJWD)
   //   เดิมใช้ try-catch + hasLock แยก 2 step + ข้อความ error ซ้ำซ้อน 2 อัน
