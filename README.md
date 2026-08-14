@@ -280,7 +280,7 @@ clasp push
 
 ```bash
 # 1. Final checks
-claspa push --dry-run
+clasp push --dry-run
 
 # 2. Create backup
 # (Manually in Google Sheets: File → Make a copy)
