@@ -6,6 +6,11 @@
         "userSymbol": "Sheets",
         "version": "v4",
         "serviceId": "sheets"
+      },
+      {
+        "userSymbol": "Maps",
+        "version": "v1",
+        "serviceId": "maps"
       }
     ]
   },
