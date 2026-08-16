@@ -166,24 +166,39 @@ function evaluateRule4_FullMatch_(
 }
 
 /**
- * evaluateRule5_GeoPersonAnchor — [V6.0.016] geo + person → AUTO_MATCH
- *   มี geo-distance guard: >1km → REVIEW, >500m → ลด confidence
+ * evaluateRule5_GeoPersonAnchor — geo + person requires place evidence
+ *   If place is absent or unresolved, fail closed to REVIEW; otherwise retain
+ *   the existing geo-distance guard for direct callers.
  * @param {Object} srcObj
  * @param {Object} personResult
  * @param {Object} placeResult
  * @param {Object} geoResult
- * @param {boolean} isGeoInMaster
- * @param {boolean} isPersonInMaster
+ * @param {{isGeoInMaster:boolean,isPersonInMaster:boolean,isPlaceInMaster:boolean}} masterMatchState
  * @return {Object|null} decision or null
  * @private
  */
-function evaluateRule5_GeoPersonAnchor_(srcObj, personResult, placeResult, geoResult, isGeoInMaster, isPersonInMaster) {
+function evaluateRule5_GeoPersonAnchor_(srcObj, personResult, placeResult, geoResult, masterMatchState) {
+  const isGeoInMaster = masterMatchState.isGeoInMaster;
+  const isPersonInMaster = masterMatchState.isPersonInMaster;
+  const isPlaceInMaster = masterMatchState.isPlaceInMaster;
   if (!(isGeoInMaster && isPersonInMaster)) return null;
 
   const placeResultForScore = { confidence: 0 };
   let confidence = Math.min(95, calculateWeightedScore(srcObj, personResult, placeResultForScore, geoResult));
   let reason = APP_CONST.MATCH_GEO;
   let evidence = 'name|geo';
+
+  // [R1] Geo and person alone cannot prove the destination place. Do not
+  // create a partial destination or FACT row when place evidence is absent.
+  if (!isPlaceInMaster) {
+    return {
+      action: 'REVIEW',
+      reason: APP_CONST.MATCH_GEO_PERSON_NO_PLACE,
+      confidence: confidence,
+      priority: 1,
+      evidence: evidence + '|no_place'
+    };
+  }
 
   // Geo-distance guard
   if (srcObj.hasGeo && srcObj.rawLat && srcObj.rawLng) {

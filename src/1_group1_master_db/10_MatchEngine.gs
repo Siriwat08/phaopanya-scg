@@ -187,7 +187,11 @@ function prepareMatchEngineContext_() {
   //   Checkpoint เดิมเก็บ "ตำแหน่ง" ใน Array แต่ Array หดเล็กลงทุกรอบ ทำให้ตำแหน่งชี้ผิด → ข้อมูลถูกข้ามไป (BUG)
   resetProcessingState_(); // [REF-018] renamed from clearCheckpoint_ — ล้าง stale processing state
   const startIndex = 0;
+  const sourceAccounting = getSourceBatchAccounting_();
   const pendingRows = loadSourceBatch_(); // [REF-002] Abstraction layer
+  finalizeSourceBatchAccounting_(sourceAccounting, pendingRows.length);
+
+  logInfo('MatchEngine', 'Source accounting: ' + formatSourceBatchAccounting_(sourceAccounting));
 
   if (pendingRows.length === 0) {
     logInfo('MatchEngine', 'ไม่มีแถวที่ต้องประมวลผล');
@@ -199,6 +203,7 @@ function prepareMatchEngineContext_() {
 
   return {
     pendingRows: pendingRows,
+    sourceAccounting: sourceAccounting,
     startIndex: startIndex,
     processed: 0,
     autoMatched: 0,
@@ -406,7 +411,7 @@ function logPipelineRun_(ctx, startTime) {
       ctx.errorCount, // errors
       matchRate, // match_rate (%)
       elapsedSec, // elapsed_sec
-      '' // notes (empty for auto runs)
+      ctx.sourceAccounting ? formatSourceBatchAccounting_(ctx.sourceAccounting) : ''
     ];
     sheet.appendRow(row);
     logInfo(
@@ -424,6 +429,24 @@ function logPipelineRun_(ctx, startTime) {
   } catch (e) {
     logWarn('MatchEngine', 'logPipelineRun_ failed (non-fatal): ' + e.message);
   }
+}
+
+/**
+ * formatSourceBatchAccounting_ — แปลง source accounting เป็น notes ที่อ่านย้อนกลับได้
+ * @param {Object} sourceAccounting
+ * @return {string}
+ * @private
+ */
+function formatSourceBatchAccounting_(sourceAccounting) {
+  return [
+    'source_total=' + sourceAccounting.sourceRows,
+    'missing_invoice=' + sourceAccounting.missingInvoice,
+    'skip_success=' + sourceAccounting.skippedSyncSuccess,
+    'skip_review=' + sourceAccounting.skippedReview,
+    'skip_fact=' + sourceAccounting.skippedFactDelivery,
+    'pending=' + sourceAccounting.matchEnginePending,
+    'reconciled=' + sourceAccounting.reconciled
+  ].join(';');
 }
 
 /**
@@ -538,15 +561,12 @@ function makeMatchDecision(srcObj, personResult, placeResult, geoResult) {
   );
   if (decision) return decision;
 
-  // Rule 5: geo + person → AUTO_MATCH (Geo Anchor) [V6.0.016]
-  decision = evaluateRule5_GeoPersonAnchor_(
-    srcObj,
-    personResult,
-    placeResult,
-    geoResult,
-    isGeoInMaster,
-    isPersonInMaster
-  );
+  // Rule 5: geo + person requires place evidence; otherwise REVIEW [R1]
+  decision = evaluateRule5_GeoPersonAnchor_(srcObj, personResult, placeResult, geoResult, {
+    isGeoInMaster: isGeoInMaster,
+    isPersonInMaster: isPersonInMaster,
+    isPlaceInMaster: isPlaceInMaster
+  });
   if (decision) return decision;
 
   // Rule 5b: geo + place only → REVIEW [V6.0.016]

@@ -173,13 +173,9 @@ function handleAutoMatch_(srcObj, decision, personId, placeId, geoId) {
   if (placeId) statsToDefer.placeIds.push(placeId);
   if (geoId) statsToDefer.geoIds.push(geoId);
 
-  // [FIX Phase-B #13] Flag incomplete destination for Rule 5 (geo + person only — V6.0.016)
-  //   [V6.0.016] Rule 5 ตอนนี้ AUTO_MATCH เฉพาะ geo+person (place อาจตกไป REVIEW)
-  //   ดังนั้น partial ที่เข้าถึงตรงนี้คือ "มี person แต่ไม่มี place" เท่านั้น
-  //   Rule 5 (geo+person, place missing) สร้าง destination ที่ placeId='' (by design)
-  //   เดิม: ไม่มี flag บอกว่า incomplete → reviewer เห็น GEO_ANCHOR ธรรมดา ไม่รู้ว่าขาด place
-  //   ตอนนี้: enrich reason/evidence ด้วย PARTIAL_MATCH_NO_PLACE
-  //   ไม่เปลี่ยน logic การทำงาน — แค่เพิ่ม flag ใน MATCH_REASON column ของ FACT_DELIVERY เพื่อ audit
+  // [R1] Normal Rule 5 dispatch now sends geo+person with no place to REVIEW.
+  //   Keep this defensive flag for externally created incomplete AUTO_MATCH
+  //   decisions so a partial destination remains auditable if one is encountered.
   let enrichedDecision = decision;
   const hasPerson = !!personId;
   const hasPlace = !!placeId;

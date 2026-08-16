@@ -18,7 +18,7 @@
  *     - getSheetByNameSafe_()                   → 03_SetupSheets.gs
  *     - logInfo() / logWarn()                   → 03_SetupSheets.gs
  *   EXPORTS TO:
- *     - 10_MatchEngine.gs (getUnprocessedRows, getAllSourceRows, buildSourceObj_, updateSyncStatus_)
+ *     - 10_MatchEngine.gs (getUnprocessedRows, getAllSourceRows, getSourceBatchAccounting_, buildSourceObj_, updateSyncStatus_)
  *     - 00_App.gs (runFullPipeline, runLoadSource menus)
  *     - 10d_MatchTestHarness.gs (getAllSourceRowsForceAll)
  *     - 18_ServiceSCG.gs (source write from SCG API)
@@ -165,6 +165,100 @@ function getUnprocessedRows() {
   }
 
   return unprocessed;
+}
+
+/**
+ * getSourceBatchAccounting_ — สรุปจำนวนแถว SOURCE ก่อนใช้เงื่อนไข skip ของ Match Engine
+ *
+ * ใช้เพื่อ reconciliation เท่านั้น: ห้ามเปลี่ยนแถว, ห้ามเปลี่ยน cache, และห้ามนำผลไป
+ * เปลี่ยนพฤติกรรมของ getAllSourceRows() / getUnprocessedRows(). จำนวน FACT_DELIVERY ที่ข้าม
+ * จะถูกเติมภายหลังด้วย finalizeSourceBatchAccounting_() เมื่อ Match Engine ทราบ pending จริงแล้ว
+ *
+ * @return {{sourceRows:number,missingInvoice:number,skippedSyncSuccess:number,skippedReview:number,
+ *          statusEligible:number,skippedFactDelivery:number,matchEnginePending:number,reconciled:boolean}}
+ * @private
+ */
+function getSourceBatchAccounting_() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const srcSheet = ss.getSheetByName(SHEET.SOURCE);
+    if (!srcSheet || srcSheet.getLastRow() < 2) return createEmptySourceBatchAccounting_();
+
+    const colsToRead = Math.min(SRC_READ_COLS, srcSheet.getLastColumn());
+    const totalRows = srcSheet.getLastRow() - 1;
+    const allData = srcSheet.getRange(2, 1, totalRows, colsToRead).getValues();
+    return summarizeSourceRowsForAccounting_(allData);
+  } catch (e) {
+    logError('SourceRepo', 'getSourceBatchAccounting_ ล้มเหลว: ' + e.message, e);
+    return createEmptySourceBatchAccounting_();
+  }
+}
+
+/**
+ * finalizeSourceBatchAccounting_ — เติมผลหลังตรวจ FACT_DELIVERY และตรวจ total reconciliation
+ * @param {Object} sourceAccounting
+ * @param {number} pendingCount
+ * @return {Object} source accounting ที่เติมค่าแล้ว
+ * @private
+ */
+function finalizeSourceBatchAccounting_(sourceAccounting, pendingCount) {
+  const accounting = sourceAccounting || createEmptySourceBatchAccounting_();
+  accounting.matchEnginePending = Math.max(0, pendingCount || 0);
+  accounting.skippedFactDelivery = Math.max(0, accounting.statusEligible - accounting.matchEnginePending);
+  accounting.reconciled =
+    accounting.sourceRows ===
+    accounting.missingInvoice +
+      accounting.skippedSyncSuccess +
+      accounting.skippedReview +
+      accounting.skippedFactDelivery +
+      accounting.matchEnginePending;
+  return accounting;
+}
+
+/**
+ * summarizeSourceRowsForAccounting_ — จัดประเภท SOURCE rows ตาม skip contract ปัจจุบัน
+ * @param {Array<Array<*>>} allData
+ * @return {Object} source accounting ก่อน FACT_DELIVERY skip
+ * @private
+ */
+function summarizeSourceRowsForAccounting_(allData) {
+  const accounting = createEmptySourceBatchAccounting_();
+  accounting.sourceRows = allData.length;
+
+  allData.forEach((row) => {
+    if (!row[SRC_IDX.INVOICE_NO]) {
+      accounting.missingInvoice++;
+      return;
+    }
+
+    const sync = String(row[SRC_IDX.SYNC_STATUS] || '').trim();
+    if (sync === SCG_CONFIG.SYNC_DONE_VALUE) {
+      accounting.skippedSyncSuccess++;
+    } else if (sync === 'REVIEW') {
+      accounting.skippedReview++;
+    } else {
+      accounting.statusEligible++;
+    }
+  });
+  return accounting;
+}
+
+/**
+ * createEmptySourceBatchAccounting_ — คืน schema มาตรฐานสำหรับ source accounting
+ * @return {Object}
+ * @private
+ */
+function createEmptySourceBatchAccounting_() {
+  return {
+    sourceRows: 0,
+    missingInvoice: 0,
+    skippedSyncSuccess: 0,
+    skippedReview: 0,
+    statusEligible: 0,
+    skippedFactDelivery: 0,
+    matchEnginePending: 0,
+    reconciled: false
+  };
 }
 
 /**

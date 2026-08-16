@@ -35,6 +35,335 @@
  * ===================================================
  */
 
+// ============================================================
+// SECTION: MASTER_PLACE Acceptance Contract (R0)
+//   Fixtures are de-identified and never write to source/master sheets.
+//   This is a decision-contract baseline, not a Google Sheets production run.
+// ============================================================
+
+/**
+ * runMasterPlaceAcceptanceContractTests_ — R0 acceptance gate for MP-01..MP-09.
+ *   Runs only pure decision fixtures where the contract can be evaluated without
+ *   a master-sheet write. Cases that require a spreadsheet copy remain explicitly
+ *   pending rather than being represented as a false pass.
+ *
+ * @return {{passed:number,knownGapsConfirmed:number,pendingEvidence:number,
+ *   unexpectedFailures:number,readyForR1:boolean,results:Array}}
+ * @private
+ */
+function runMasterPlaceAcceptanceContractTests_() {
+  const testCases = getMasterPlaceAcceptanceCases_();
+  const results = testCases.map(runMasterPlaceAcceptanceCase_);
+  const summary = summarizeMasterPlaceAcceptanceResults_(results);
+
+  logInfo(
+    'MatchTestHarness',
+    'MASTER_PLACE acceptance R0: passed=' +
+      summary.passed +
+      ' known_gaps=' +
+      summary.knownGapsConfirmed +
+      ' pending_evidence=' +
+      summary.pendingEvidence +
+      ' unexpected_failures=' +
+      summary.unexpectedFailures
+  );
+
+  return {
+    passed: summary.passed,
+    knownGapsConfirmed: summary.knownGapsConfirmed,
+    pendingEvidence: summary.pendingEvidence,
+    unexpectedFailures: summary.unexpectedFailures,
+    readyForR1: summary.unexpectedFailures === 0 && summary.knownGapsConfirmed === 1,
+    results: results
+  };
+}
+
+/**
+ * getMasterPlaceAcceptanceCases_ — source-of-truth fixtures for MP-01..MP-09.
+ *   Google Sheets-only assertions are intentionally represented as pending.
+ * @return {Array<Object>}
+ * @private
+ */
+function getMasterPlaceAcceptanceCases_() {
+  return getMasterPlaceDecisionCases_().concat(getMasterPlaceSheetEvidenceCases_());
+}
+
+/**
+ * getMasterPlaceDecisionCases_ — cases whose dispatcher outcome is testable
+ *   without writes or master-data lookups.
+ * @return {Array<Object>}
+ * @private
+ */
+function getMasterPlaceDecisionCases_() {
+  return [
+    createMasterPlaceAcceptanceCase_(
+      'MP-01',
+      'new identity with reverse geo',
+      'Google Sheets run',
+      createAcceptanceDecisionInput_(
+        createAcceptanceSource_({ rawAddress: 'REVERSE-GEO-ALPHA' }),
+        createAcceptanceResults_('NOT_FOUND', 'NOT_FOUND', 'NOT_FOUND')
+      ),
+      { action: 'CREATE_NEW', reason: 'NEW_GEO_WITH_GPS' },
+      ''
+    ),
+    createMasterPlaceAcceptanceCase_(
+      'MP-02',
+      'duplicate normalized identity',
+      'Google Sheets run',
+      createAcceptanceDecisionInput_(createAcceptanceSource_(), createAcceptanceResults_('FOUND', 'FOUND', 'FOUND')),
+      { action: 'AUTO_MATCH', reason: APP_CONST.MATCH_FULL },
+      ''
+    ),
+    createMasterPlaceAcceptanceCase_(
+      'MP-03',
+      'text variation accepted by resolver',
+      'Controlled offline + Google Sheets run',
+      createAcceptanceDecisionInput_(
+        createAcceptanceSource_({ rawPersonName: 'TEST ALPHA  BRANCH', rawPlaceName: 'TEST-ALPHA-BRANCH' }),
+        createAcceptanceResults_('FOUND', 'BRANCH_MATCH', 'FOUND')
+      ),
+      { action: 'AUTO_MATCH', reason: APP_CONST.MATCH_FULL },
+      ''
+    ),
+    createMasterPlaceAcceptanceCase_(
+      'MP-05',
+      'missing or invalid coordinates',
+      'Controlled offline + Google Sheets run',
+      createAcceptanceDecisionInput_(
+        createAcceptanceSource_({ hasGeo: false, rawLat: '', rawLng: '' }),
+        createAcceptanceResults_('NOT_FOUND', 'NOT_FOUND', 'NOT_FOUND')
+      ),
+      { action: 'REVIEW', reason: 'INVALID_LATLNG' },
+      ''
+    ),
+    createMasterPlaceAcceptanceCase_(
+      'MP-06',
+      'reverse geo differs from raw destination address',
+      'Google Sheets run',
+      createAcceptanceDecisionInput_(
+        createAcceptanceSource_({ rawPlaceName: 'RAW-DESTINATION-ALPHA', rawAddress: 'REVERSE-GEO-ALPHA' }),
+        createAcceptanceResults_('NOT_FOUND', 'NOT_FOUND', 'NOT_FOUND')
+      ),
+      { action: 'CREATE_NEW', reason: 'NEW_GEO_WITH_GPS' },
+      ''
+    ),
+    createMasterPlaceAcceptanceCase_(
+      'MP-07',
+      'geo and person found but place absent',
+      'Code contract + simulation + Google Sheets run',
+      createAcceptanceDecisionInput_(
+        createAcceptanceSource_(),
+        createAcceptanceResults_('FOUND', 'NOT_FOUND', 'FOUND')
+      ),
+      { action: 'REVIEW', reason: APP_CONST.MATCH_GEO_PERSON_NO_PLACE },
+      'R1'
+    )
+  ];
+}
+
+/**
+ * getMasterPlaceSheetEvidenceCases_ — cases that cannot be proven by dry-run.
+ * @return {Array<Object>}
+ * @private
+ */
+function getMasterPlaceSheetEvidenceCases_() {
+  return [
+    createMasterPlaceAcceptanceCase_(
+      'MP-04',
+      'same identity with material GPS change',
+      'Controlled offline + Google Sheets run',
+      null,
+      { action: 'REVIEW', reason: 'DISTANCE_GUARD_OR_EVIDENCE_REQUIRED' },
+      ''
+    ),
+    createMasterPlaceAcceptanceCase_(
+      'MP-08',
+      'approved review reprocess preserves reverse geo',
+      'Code contract + Google Sheets run',
+      null,
+      { action: 'PRESERVE_REVERSE_GEO', reason: 'REPROCESS_TRACE_BACK' },
+      'R2'
+    ),
+    createMasterPlaceAcceptanceCase_(
+      'MP-09',
+      'batch accounting reconciles every eligible source row',
+      'Code contract + Google Sheets run',
+      null,
+      { action: 'ACCOUNT_ALL_ROWS', reason: 'BATCH_RECONCILIATION' },
+      'R3'
+    )
+  ];
+}
+
+/**
+ * createMasterPlaceAcceptanceCase_ — creates a de-identified contract fixture.
+ * @return {Object}
+ * @private
+ */
+function createMasterPlaceAcceptanceCase_(id, title, evidenceClass, decisionInput, expected, remediationPhase) {
+  return {
+    id: id,
+    title: title,
+    evidenceClass: evidenceClass,
+    decisionInput: decisionInput,
+    expected: expected,
+    remediationPhase: remediationPhase
+  };
+}
+
+/**
+ * createAcceptanceDecisionInput_ — combines de-identified source and resolver fixtures.
+ * @return {Object}
+ * @private
+ */
+function createAcceptanceDecisionInput_(source, resolverResults) {
+  return {
+    source: source,
+    personResult: resolverResults.personResult,
+    placeResult: resolverResults.placeResult,
+    geoResult: resolverResults.geoResult
+  };
+}
+
+/**
+ * createAcceptanceSource_ — returns minimum source shape used by dispatcher.
+ * @return {Object}
+ * @private
+ */
+function createAcceptanceSource_(overrides) {
+  const source = {
+    sourceRow: 'ACCEPTANCE-ROW',
+    invoiceNo: 'TEST-INVOICE',
+    rawPersonName: 'TEST ALPHA BRANCH',
+    rawPlaceName: 'TEST-PLACE-ALPHA',
+    rawAddress: 'REVERSE-GEO-ALPHA',
+    rawLat: 13.7563,
+    rawLng: 100.5018,
+    hasGeo: true,
+    province: ''
+  };
+  return Object.assign(source, overrides || {});
+}
+
+/**
+ * createAcceptanceResults_ — returns minimum resolver shape used by dispatcher.
+ * @return {Object}
+ * @private
+ */
+function createAcceptanceResults_(personStatus, placeStatus, geoStatus) {
+  return {
+    personResult: { status: personStatus, confidence: 100 },
+    placeResult: { status: placeStatus, confidence: 100 },
+    geoResult: { status: geoStatus, confidence: 100, geoId: '' }
+  };
+}
+
+/**
+ * runMasterPlaceAcceptanceCase_ — evaluates a decision fixture or records why
+ *   a Sheets-only evidence case is deliberately pending.
+ * @return {Object}
+ * @private
+ */
+function runMasterPlaceAcceptanceCase_(testCase) {
+  if (!testCase.decisionInput) return createPendingAcceptanceResult_(testCase);
+
+  const inputs = testCase.decisionInput;
+  const decision = makeMatchDecision(inputs.source, inputs.personResult, inputs.placeResult, inputs.geoResult);
+  const matchesExpectation =
+    decision.action === testCase.expected.action && decision.reason === testCase.expected.reason;
+
+  if (matchesExpectation) return createPassedAcceptanceResult_(testCase, decision);
+  if (testCase.remediationPhase) return createKnownGapAcceptanceResult_(testCase, decision);
+  return createFailedAcceptanceResult_(testCase, decision);
+}
+
+/**
+ * createPendingAcceptanceResult_ — marks evidence requiring a test spreadsheet.
+ * @return {Object}
+ * @private
+ */
+function createPendingAcceptanceResult_(testCase) {
+  return {
+    id: testCase.id,
+    title: testCase.title,
+    verdict: testCase.remediationPhase ? 'PENDING_' + testCase.remediationPhase : 'PENDING_SHEETS_RUN',
+    expected: testCase.expected,
+    actual: null,
+    evidenceClass: testCase.evidenceClass,
+    note: 'Dry-run cannot prove writes, reprocess persistence, or batch reconciliation.'
+  };
+}
+
+/**
+ * createPassedAcceptanceResult_ — records a matching dispatcher outcome.
+ * @return {Object}
+ * @private
+ */
+function createPassedAcceptanceResult_(testCase, decision) {
+  return {
+    id: testCase.id,
+    title: testCase.title,
+    verdict: 'PASS',
+    expected: testCase.expected,
+    actual: { action: decision.action, reason: decision.reason },
+    evidenceClass: testCase.evidenceClass,
+    note: 'Decision contract passed; required Google Sheets evidence remains outstanding.'
+  };
+}
+
+/**
+ * createKnownGapAcceptanceResult_ — records an approved remediation baseline.
+ * @return {Object}
+ * @private
+ */
+function createKnownGapAcceptanceResult_(testCase, decision) {
+  return {
+    id: testCase.id,
+    title: testCase.title,
+    verdict: 'KNOWN_GAP_CONFIRMED',
+    expected: testCase.expected,
+    actual: { action: decision.action, reason: decision.reason },
+    evidenceClass: testCase.evidenceClass,
+    note: 'Expected pre-remediation baseline for ' + testCase.remediationPhase + '.'
+  };
+}
+
+/**
+ * createFailedAcceptanceResult_ — records an unexpected decision mismatch.
+ * @return {Object}
+ * @private
+ */
+function createFailedAcceptanceResult_(testCase, decision) {
+  return {
+    id: testCase.id,
+    title: testCase.title,
+    verdict: 'FAIL',
+    expected: testCase.expected,
+    actual: { action: decision.action, reason: decision.reason },
+    evidenceClass: testCase.evidenceClass,
+    note: 'Unexpected contract mismatch; stop before remediation changes.'
+  };
+}
+
+/**
+ * summarizeMasterPlaceAcceptanceResults_ — counts R0 result categories.
+ * @return {{passed:number,knownGapsConfirmed:number,pendingEvidence:number,unexpectedFailures:number}}
+ * @private
+ */
+function summarizeMasterPlaceAcceptanceResults_(results) {
+  return results.reduce(
+    function (summary, result) {
+      if (result.verdict === 'PASS') summary.passed++;
+      else if (result.verdict === 'KNOWN_GAP_CONFIRMED') summary.knownGapsConfirmed++;
+      else if (result.verdict === 'FAIL') summary.unexpectedFailures++;
+      else summary.pendingEvidence++;
+      return summary;
+    },
+    { passed: 0, knownGapsConfirmed: 0, pendingEvidence: 0, unexpectedFailures: 0 }
+  );
+}
+
 /**
  * runTestMatchDryRun_ — [V6.0.012 P1.7] Dry-run matching on SOURCE data
  *   Reads unprocessed source rows, calls resolvePerson/Place/Geo + makeMatchDecision

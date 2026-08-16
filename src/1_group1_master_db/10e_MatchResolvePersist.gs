@@ -182,7 +182,8 @@ function resolveAndPersistMerge_(srcObj, candidates, optReviewId) {
         safeGeoEnrich.province || '',
         safeGeoEnrich.district || '',
         safeGeoEnrich.subDistrict || '',
-        safeGeoEnrich.postcode || ''
+        safeGeoEnrich.postcode || '',
+        rawAddr
       );
       targetPlaceId = newPlaceId;
       logInfo('MatchEngine', 'resolveAndPersistMerge_: สร้าง Place ใหม่ — ' + newPlaceId);
@@ -318,7 +319,8 @@ function resolveAndPersistCreate_(srcObj) {
       safeGeoEnrich.province,
       safeGeoEnrich.district,
       safeGeoEnrich.subDistrict,
-      safeGeoEnrich.postcode
+      safeGeoEnrich.postcode,
+      rawAddr
     );
   }
 
@@ -469,7 +471,8 @@ function reprocResolveOrCreatePlaceForReview_(rawPlace, rawAddr) {
         geoEnrich.province,
         geoEnrich.district,
         geoEnrich.subDistrict,
-        geoEnrich.postcode
+        geoEnrich.postcode,
+        rawAddr
       );
       return { placeId: newPlaceId, error: null };
     }
