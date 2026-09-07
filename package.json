@@ -15,7 +15,7 @@
     "status": "clasp status"
   },
   "devDependencies": {
-    "@google/clasp": "^3.3.0",
+    "@google/clasp": "^3.4.1",
     "@types/google-apps-script": "^1.0.0",
     "eslint": "^8.57.0",
     "eslint-plugin-googleappsscript": "^1.0.5",
